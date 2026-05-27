@@ -272,6 +272,19 @@ function setupPanel(panel) {
     }
   });
 
+  // Preset dropdown(目前只 Tab ① basic 有;Tab 2/3 用 mode radio 不用 preset)
+  const presetEl = panel.querySelector(".preset-select");
+  if (presetEl) {
+    presetEl.addEventListener("change", () => {
+      if (presetEl.value) {
+        promptEl.value = presetEl.value;
+        presetEl.selectedIndex = 0;  // reset 讓 user 可重選同 preset
+        // Tab 2/3 才有 preview,basic 沒;先 guard
+        if (panelType !== "basic" && previewEl) refreshPreview();
+      }
+    });
+  }
+
   // Advanced / Reasoning panel:live preview update
   if (panelType !== "basic") {
     const updatePreview = () => refreshPreview();

@@ -2,6 +2,10 @@
 
 ## S1 (a) 形狀
 
+### Peaked(中文趣味例)
+`1+1=` → Qwen3-0.6B 在這 context 下 confident 接 `王`(把「1+1=」當「王」字拆解趣味),top-1 機率一根獨大
+> 教學亮點:model 並不是「算 1+1=2」,而是把「1+1」當成字形 pattern,接「王」(因為「王」字看起來像「1+1=」的部首組合)。展示「token 預測 ≠ 邏輯運算」。
+
 ### Peaked(英文)
 `A year has twelve ` → 預期 `months` 一根獨大
 

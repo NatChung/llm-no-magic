@@ -8,12 +8,12 @@
 
 ## What you'll see
 
-- **① 基礎** — 打字進去 → 看 model 一個一個吐 token + 每個 token 當下 top-10 機率分佈
+- **① 基礎** — 打字進去 → 看 model 一個一個吐 token + 每個 token 當下 top-10 機率分佈。預設 preset 4 個一鍵試:`1+1=`(peaked,model confidently 接「王」字 — 因為它在做字形 pattern 不是算數)、`A year has twelve `(peaked → months)、`He opened the fridge and took out `(flat)、Zypler 假地名(peaked)
 - **② 產品層加工** — 加 system prompt + Qwen3 chat template,看「加工後」prompt 跟 raw 對比
 - **③ 推理** — thinking 開關。同題目,直答 vs 寫 think block 後再答(reasoning 對精度的影響)
 - **④ Agent** — multi-turn function calling,model 吐 `<tool_call>` token → client parse → **真的執行**(read/write 檔案、跑 bash)→ 結果塞回對話再吐字,直到 final
 
-每 tab 點 token 都能看當下機率分佈(bar chart 跳階),Tab ④ 更會展開「累積 N turn 後送進下次 model 的 prompt」chat template text。
+Tab 1-3 點 token 看當下 top-10 機率(bar chart 跳階);Tab ④ token 不 clickable,改展開「收到 / 再送出」details 看 chat template text 跟 conversation 怎麼累積。
 
 > **Tip**:本 repo 不只是 demo — 也是完整的 60-90 min 課程教材(見 `引導手冊.html`)。
 
@@ -48,20 +48,28 @@ open http://localhost:9000/frontend/
 
 ---
 
-## Try it(Tab ④ Agent)
+## Try it
 
-1. 切到 Tab ④
-2. 選 preset 1「現在幾點?」+ 送出
+### Tab ① 基礎 — 30 秒體驗
+
+1. 切到 Tab ① (default active)
+2. preset 選「1. `1+1=`」+ 送出
+3. 預期:model 吐的第一個 token 是 `王`(top-1 機率 50%+),其它候選稀少 — model 把「1+1=」當字形 pattern,不是算數
+4. 點 token 看 bar chart;然後試 preset 2/3/4 對比 peaked vs flat 機率形狀
+
+### Tab ④ Agent — 真執行 demo
+
+1. 切到 Tab ④(會看到「載入 4B 中…」banner ~5 秒)
+2. preset 1「現在幾點?」+ 送出
 3. 預期:
-   - Turn 1:看到 model 吐的 token 序列(`<tool_call>` 開頭)+ 紫色「↑ 工具呼叫」block 顯示 `get_time({})` + 綠色「↓ 工具結果」顯示 `HH:MM:SS`
+   - Turn 1:model 吐的 token 序列(`<tool_call>` 開頭)+ 紫色「↑ 工具呼叫」block 顯示 `get_time({})` + 綠色「↓ 工具結果」顯示 `HH:MM:SS`
    - Turn 2:final「現在是 HH:MM:SS」
-4. 點 Turn 1 token 序列任一 token → 右下 bar chart 顯示當下 top-10 機率(第一個 `<tool_call>` token 99%+ 一面倒)
-5. 展開 turn block 內「再送出 — 累積 N turn 後送進下次 model 的 prompt」details → 看 chat template text 跟 conversation 怎麼累積
+4. 展開 turn block 內「再送出 — 累積 N turn 後送進下次 model 的 prompt」details → 看 chat template text 跟 conversation 怎麼累積成下次 input
 
-3 個 preset:
-- 1. 現在幾點? — `get_time` demo(最快,1-2 turn)
-- 2. 讀+寫 摘要 — `read_file` → `write_file` 真寫一個檔到 ~/Desktop(`read_file` + `write_file` demo)
-- 3. 數 .md 檔 — `exec_bash` 跑 `find` 真數 repo 下檔(`exec_bash` demo)
+3 個 Tab ④ preset:
+- 1. **現在幾點?** — `get_time` demo(最快,1-2 turn)
+- 2. **讀+寫 摘要** — `read_file` → `write_file` 真寫一個檔到 `~/Desktop/llm-summary.md`
+- 3. **數 .md 檔** — `exec_bash` 跑 `find` 真數 repo 下檔
 
 ---
 
