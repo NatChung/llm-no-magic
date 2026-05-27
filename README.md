@@ -8,7 +8,7 @@
 
 ## What you'll see
 
-- **① 基礎** — 打字進去 → 看 model 一個一個吐 token + 每個 token 當下 top-10 機率分佈。預設 preset 4 個一鍵試:`1+1=`(peaked,model confidently 接「王」字 — 因為它在做字形 pattern 不是算數)、`A year has twelve `(peaked → months)、`He opened the fridge and took out `(flat)、Zypler 假地名(peaked)
+- **① 基礎** — 打字進去 → 看 model 一個一個吐 token + 每個 token 當下 top-10 機率分佈。中文 preset 4 個一鍵試:`1+1=`(peaked,接「王」— model 在做字形 pattern 不是算數)、`床前明月光`(peaked → 唐詩常識)、`祖樹星上最高的山叫做`(peaked,假地名 model 自信編)、`他打開冰箱,拿出`(flat,可能性多)
 - **② 產品層加工** — 加 system prompt + Qwen3 chat template,看「加工後」prompt 跟 raw 對比
 - **③ 推理** — thinking 開關。同題目,直答 vs 寫 think block 後再答(reasoning 對精度的影響)
 - **④ Agent** — multi-turn function calling,model 吐 `<tool_call>` token → client parse → **真的執行**(read/write 檔案、跑 bash)→ 結果塞回對話再吐字,直到 final

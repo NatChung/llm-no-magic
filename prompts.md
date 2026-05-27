@@ -2,15 +2,18 @@
 
 ## S1 (a) 形狀
 
-### Peaked(中文趣味例)
-`1+1=` → Qwen3-0.6B 在這 context 下 confident 接 `王`(把「1+1=」當「王」字拆解趣味),top-1 機率一根獨大
-> 教學亮點:model 並不是「算 1+1=2」,而是把「1+1」當成字形 pattern,接「王」(因為「王」字看起來像「1+1=」的部首組合)。展示「token 預測 ≠ 邏輯運算」。
+### Peaked(中文)
+- `1+1=` → 0.6B confident 接 `王`(把「1+1=」看成字形 pattern,「王」字外觀像「1+1=」的部首組合)。展示「token 預測 ≠ 邏輯運算」。
+- `床前明月光` → 接 `,疑是地上霜`(唐詩 LLM 必背,top-1 一根獨大)
+- `祖樹星上最高的山叫做` → 自信編一個假地名(對假實體仍 peaked,展示「peaked ≠ 真實」)
 
-### Peaked(英文)
-`A year has twelve ` → 預期 `months` 一根獨大
+### Flat(中文)
+- `他打開冰箱,拿出` → 一片矮樹叢(水 / 雞蛋 / 剩飯 / 啤酒...)— 可能性多,top-K 分散
 
-### Flat(英文)
-`He opened the fridge and took out ` → 一片矮樹叢
+### 英文對照(可選)
+- Peaked:`A year has twelve ` → `months`
+- Flat:`He opened the fridge and took out ` → 一片矮樹叢
+- 假地名:`The tallest mountain on the continent of Zypler is called `(中文版見上方「祖樹星」)
 
 ## S1 (b) Watermelon 四階(英文,中文當對照)
 
