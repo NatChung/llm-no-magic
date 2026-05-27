@@ -9,7 +9,7 @@
 ## What you'll see
 
 - **① 基礎** — 打字進去 → 看 model 一個一個吐 token + 每個 token 當下 top-10 機率分佈。中文 preset 3 個有完整教學弧:`床前明月光`(peaked,model 記得 → top-1 99%+)、`祖樹星上最高的山叫做`(peaked,**你瞎掰**的星球 model 照樣自信編 → **peaked ≠ 真實**)、`他打開冰箱,拿出`(flat,model 不知接啥)。3 個對比展示「confidence ≠ correctness」+「分佈形狀反映 model 把握度」
-- **② 產品層加工** — 加 system prompt + Qwen3 chat template,看「加工後」prompt 跟 raw 對比
+- **② 產品層加工** — 加 system prompt + Qwen3 chat template,看「加工後」prompt 跟 raw 對比。中文 preset 3 個 user prompt 一鍵試:`一年有幾個月?`(常識短答)、`寫一個夏季冰飲的促銷文案`(創作)、`請寫一首關於月亮的五言絕句`(文學)— system 自填(textarea placeholder 已 hint「你是行銷顧問,用條列式回答,只給 3 點」)
 - **③ 推理** — thinking 開關。同題目,直答 vs 寫 think block 後再答(reasoning 對精度的影響)
 - **④ Agent** — multi-turn function calling,model 吐 `<tool_call>` token → client parse → **真的執行**(read/write 檔案、跑 bash)→ 結果塞回對話再吐字,直到 final
 
@@ -57,6 +57,14 @@ open http://localhost:9000/frontend/
 3. preset 2「`祖樹星上最高的山叫做`」+ 送出 → 預期 model 自信編一個假地名,top-1 也很高 — **同樣 peaked,但這次是瞎掰** (peaked ≠ 真實 / confidence ≠ correctness)
 4. preset 3「`他打開冰箱,拿出`」+ 送出 → 預期 top-10 分散(水 / 雞蛋 / 剩飯 / 啤酒...flat),model 表達「不知接啥」
 5. 點任一 token 看 top-10 bar chart;3 個 preset 的「形狀對比」就是 Tab ① 全部教學
+
+### Tab ② 產品層加工 — 加工 vs 不加工
+
+1. 切到 Tab ②(0.6B,banner ~3 秒)
+2. preset 1「`一年有幾個月?`」**raw mode** + 送出 → 看 model 散開答(可能講「12 個月」+ 冗詞)
+3. 同 prompt + 加 system「你是行銷顧問,用條列式回答,只給 3 點。」+ **chat mode** + 送出 → 看「加工後」變整齊條列
+4. 展開「實際送進 model 的 final prompt」details → 看 `<|im_start|>system\n...<|im_end|>` 怎麼被包進去
+5. 試 preset 2「夏季冰飲文案」對比同樣方式
 
 ### Tab ④ Agent — 真執行 demo
 
