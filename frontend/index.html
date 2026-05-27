@@ -103,6 +103,14 @@
   <main class="tab-panel max-w-6xl mx-auto px-4 md:px-8 py-6 md:py-10" data-panel="advanced">
     <section class="prompt-area lg:col-span-2 space-y-3">
       <label for="system-prompt-advanced" class="block text-sm font-medium text-ink-soft">System prompt(可選,模擬產品層加工)</label>
+      <details class="info-tag">
+        <summary class="cursor-pointer text-xs text-final hover:underline list-none [&::-webkit-details-marker]:hidden select-none inline-block py-0.5">(?) 什麼是 System prompt</summary>
+        <div class="mt-1.5 p-3 rounded-md bg-final-tint text-sm text-ink-soft max-w-2xl leading-relaxed space-y-2">
+          <p>你跟 ChatGPT / Claude 對話時<strong>看不到</strong>、但前面已被「偷偷填好」的隱性指令。例如:「你是友善客服,只用條列式回答,不超過 3 點」。</p>
+          <p>SaaS 產品的「加工」就是這層 — 你寫「help me」,產品自動補上指令再送進 model。</p>
+          <p>這 tab 讓你看見:<strong>加 system prompt 跟不加,model 吐的字差多少</strong>。</p>
+        </div>
+      </details>
       <textarea class="system-prompt w-full max-w-2xl rounded-md border border-edge bg-surface px-3 py-2 text-sm font-mono focus:outline-none focus:border-final focus:ring-1 focus:ring-final" id="system-prompt-advanced" rows="2" placeholder="例:你是行銷顧問,用條列式回答,只給 3 點"></textarea>
 
       <label for="prompt-advanced" class="block text-sm font-medium text-ink-soft pt-2">User prompt</label>
@@ -120,6 +128,20 @@
         <label class="inline-flex items-center gap-2 text-sm text-ink-soft"><input type="radio" name="mode-advanced" value="raw" checked class="accent-final"> 裸 prompt(completion mode)</label>
         <label class="inline-flex items-center gap-2 text-sm text-ink-soft"><input type="radio" name="mode-advanced" value="chat" class="accent-final"> 產品加工(Qwen3 chat template)</label>
       </div>
+      <details class="info-tag">
+        <summary class="cursor-pointer text-xs text-final hover:underline list-none [&::-webkit-details-marker]:hidden select-none inline-block py-0.5">(?) 裸 prompt vs Chat template — 差在哪</summary>
+        <div class="mt-1.5 p-3 rounded-md bg-final-tint text-sm text-ink-soft max-w-2xl leading-relaxed space-y-2">
+          <p><strong>裸 prompt(raw)</strong>:把你打的字<strong>直接</strong>丟給 model 接龍。Model 不知道誰在講話、誰問誰答(同 Tab ①)。</p>
+          <p><strong>產品加工(chat template)</strong>:用 Qwen3 約定的 marker 包好再丟。Marker 長這樣:</p>
+          <pre class="text-xs bg-surface-2 rounded p-2 whitespace-pre-wrap break-all">&lt;|im_start|&gt;system
+你是X
+&lt;|im_end|&gt;
+&lt;|im_start|&gt;user
+help me
+&lt;|im_end|&gt;</pre>
+          <p>告訴 model「<strong>這段是 system、這段是 user</strong>」。展開下面「實際送進 model」preview 就看得到 marker 怎麼包成。</p>
+        </div>
+      </details>
 
       <details class="preview-details pt-2">
         <summary class="cursor-pointer text-sm text-muted hover:text-ink-soft">實際送進 model 的 final prompt(預覽)</summary>
@@ -153,6 +175,17 @@
         <label class="inline-flex items-center gap-2 text-sm text-ink-soft"><input type="radio" name="mode-reasoning" value="direct" checked class="accent-final"> 直答(跳過 thinking),模型直接答</label>
         <label class="inline-flex items-center gap-2 text-sm text-ink-soft"><input type="radio" name="mode-reasoning" value="thinking" class="accent-final"> 用 thinking,模型把思考寫成 token</label>
       </div>
+      <details class="info-tag">
+        <summary class="cursor-pointer text-xs text-final hover:underline list-none [&::-webkit-details-marker]:hidden select-none inline-block py-0.5">(?) 什麼是 Thinking mode / &lt;think&gt; block</summary>
+        <div class="mt-1.5 p-3 rounded-md bg-final-tint text-sm text-ink-soft max-w-2xl leading-relaxed space-y-2">
+          <p>Qwen3 等 reasoning model 可以<strong>先「在腦中」想再答</strong>。它會吐 <code class="bg-surface-2 px-1 rounded text-xs">&lt;think&gt;...&lt;/think&gt;</code> 包住的思考 token,然後才吐答案。</p>
+          <ul class="list-disc list-inside space-y-1">
+            <li><strong>直答(跳過 thinking)</strong>:client 強塞 <code class="bg-surface-2 px-1 rounded text-xs">&lt;think&gt;&lt;/think&gt;</code> 空白進去,model 沒空間想 → 直接答。<strong>快,但難題容易錯。</strong></li>
+            <li><strong>用 thinking</strong>:留空間給 model 想 → 看它真的把推理寫成 token。<strong>慢,但通常對。</strong></li>
+          </ul>
+          <p>蘋果題(爸爸有 3 顆、兒子多他 2 顆,兒子幾顆?)就是設計來看這個差異 — 直答常算錯,thinking 才對。</p>
+        </div>
+      </details>
 
       <details class="preview-details pt-2">
         <summary class="cursor-pointer text-sm text-muted hover:text-ink-soft">實際送進 model 的 final prompt(預覽)</summary>
@@ -180,6 +213,14 @@
   <main class="tab-panel max-w-4xl mx-auto px-4 md:px-8 py-6 md:py-10" data-panel="agent">
     <section class="prompt-area space-y-3">
       <label for="system-prompt-agent" class="block text-sm font-medium text-ink-soft">System Prompt(預填,可改)</label>
+      <details class="info-tag">
+        <summary class="cursor-pointer text-xs text-final hover:underline list-none [&::-webkit-details-marker]:hidden select-none inline-block py-0.5">(?) 為什麼 Agent 也有 System Prompt — 它跟 Tab ② 差在哪</summary>
+        <div class="mt-1.5 p-3 rounded-md bg-final-tint text-sm text-ink-soft max-w-2xl leading-relaxed space-y-2">
+          <p>跟 Tab ② 一樣是「對 model 預先講話」,但這次內容包含「<strong>你有這些工具可以用:get_time / read_file / write_file / exec_bash</strong>」+ 每個工具的 JSON schema 描述。</p>
+          <p>Model 看到這段後,遇到需要工具的問題(例如「現在幾點?」)就會吐 <code class="bg-surface-2 px-1 rounded text-xs">&lt;tool_call&gt;</code> 標籤呼叫對應工具。</p>
+          <p>展開下面「實際送到 model 的 prompt」preview,看完整 system + tools schema 包好的字串。</p>
+        </div>
+      </details>
       <textarea class="system-prompt w-full rounded-md border border-edge bg-surface px-3 py-2 text-sm font-mono focus:outline-none focus:border-final focus:ring-1 focus:ring-final" id="system-prompt-agent" rows="4"></textarea>
 
       <label for="prompt-agent" class="block text-sm font-medium text-ink-soft pt-2">問題</label>
@@ -207,6 +248,27 @@
     <section class="turns-area mt-8 md:mt-10 space-y-3">
       <h2 class="text-xs uppercase tracking-wider text-muted font-medium">Agent 跑的軌跡</h2>
       <p class="text-sm text-muted leading-relaxed">每個 turn 結束都會 <span class="font-medium text-ink-soft">累積進 messages</span>,送進下一次 model 看。</p>
+      <details class="info-tag">
+        <summary class="cursor-pointer text-xs text-final hover:underline list-none [&::-webkit-details-marker]:hidden select-none inline-block py-0.5">(?) 什麼是 Agent / Tool / &lt;tool_call&gt; / Turn</summary>
+        <div class="mt-1.5 p-3 rounded-md bg-final-tint text-sm text-ink-soft max-w-2xl leading-relaxed space-y-3">
+          <div>
+            <p><strong>Agent</strong>:Chatbot = 你問它答;Agent = 它<strong>會自己呼叫工具</strong>(讀檔、寫檔、跑 shell...)做事,做完才答。本質還是 token prediction,只是約定 client 認得的 trigger pattern。</p>
+          </div>
+          <div>
+            <p><strong>Tool</strong>:寫好的 Python function(這 repo 有 4 個:<code class="bg-surface-2 px-1 rounded text-xs">get_time</code> / <code class="bg-surface-2 px-1 rounded text-xs">read_file</code> / <code class="bg-surface-2 px-1 rounded text-xs">write_file</code> / <code class="bg-surface-2 px-1 rounded text-xs">exec_bash</code>)+ JSON schema 描述。</p>
+          </div>
+          <div>
+            <p><strong><code class="bg-surface-2 px-1 rounded text-xs">&lt;tool_call&gt; ... &lt;/tool_call&gt;</code></strong>:Qwen3 約定的 XML 標籤。Model 想呼叫工具時吐這串:</p>
+            <pre class="text-xs bg-surface-2 rounded p-2 mt-1 whitespace-pre-wrap break-all">&lt;tool_call&gt;
+{"name": "get_time", "arguments": {}}
+&lt;/tool_call&gt;</pre>
+            <p class="mt-1">Backend 看到就 parse JSON、call 對應 Python function、結果(時間字串)塞回對話再丟給 model。</p>
+          </div>
+          <div>
+            <p><strong>Turn</strong>:multi-turn loop 一輪。Turn 1 = model 第一次吐字(可能 tool_call)。Turn 2 = model 看 turn 1 tool 結果後再吐字。<strong>直到 model 不再 tool_call → final answer</strong>。</p>
+          </div>
+        </div>
+      </details>
       <div class="turns space-y-3"></div>
     </section>
 
@@ -219,6 +281,6 @@
     </section>
   </main>
 
-  <script src="app.js?v=30"></script>
+  <script src="app.js?v=31"></script>
 </body>
 </html>
