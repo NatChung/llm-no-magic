@@ -17,7 +17,7 @@
 
 Tab 1-3 點 token 看當下 top-10 機率(bar chart 跳階);Tab ④ token 不 clickable,改展開「收到 / 再送出」details 看 chat template text 跟 conversation 怎麼累積。
 
-> **Tip**:本 repo 不只是 demo — 也是完整的 60-90 min 課程教材(見 `引導手冊.html`)。
+每個 tab 上方都有小 `(?)` explainer 下拉(System prompt / chat template / thinking mode / Agent / tool_call / turn 等)— 點開就看到 inline 解釋,邊試邊讀。
 
 ---
 
@@ -99,8 +99,6 @@ llama-server :8080 (Qwen3 model — auto-swap by /swap)
 - Tab ④ frontend 打 backend `/agent`(SSE)→ backend 跑 multi-turn agent loop,每 turn 用 OpenAI chat completions API + tools schema,real execute tool 結果塞回 messages,直到 model 不再 tool_call
 - Tab 切換時 `ensureModel(wanted)` POST `/swap?model=X` → backend `SWAP_LOCK` 守單 flight → `pkill llama-server` + 等 port free + `subprocess.Popen` 起新 model + poll /v1/models 直到 ready(~3-5s)
 
-完整 architecture / SSE protocol / swap orchestrator 細節在 `引導手冊.html`。
-
 ---
 
 ## Code tour
@@ -111,15 +109,6 @@ llama-server :8080 (Qwen3 model — auto-swap by /swap)
 - `agent/tests/` — 43 tests(mocked subprocess + requests + socket;`pytest agent/tests -q`)
 - `agent/SETUP.md` — port / Fri AM check / fallback 操作備忘
 - `prompts.md` — 教學用 prompt 素材(token-level demo 的 input)
-- `引導手冊.html` — 完整 60-90 min 課程材料(self-read,跟著做完一遍)
-
----
-
-## Lesson plan
-
-`引導手冊.html` 是 self-read 教學手冊:跟著走過 4 個 tab 各個段落,~60-90 min 看完。配 trainer 帶課也適用(每段有 demo 操作 + 解釋)。
-
-如果你想拿去公司教 / 自己學 / fork 改成自己版本 — MIT license,自由用。
 
 ---
 

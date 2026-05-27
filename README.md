@@ -17,7 +17,7 @@ Runs entirely local on your Mac — `llama.cpp` + Qwen3 GGUF models.
 
 Tabs 1-3 let you click any token to see the top-10 distribution at that step (bar chart pops up). Tab ④ tokens aren't clickable — instead, expand the "received / sent next" details to see how the chat template text and conversation accumulate.
 
-> **Tip**: This repo isn't just a demo — it's also a complete 60-90 min teaching guide (see [`guidebook.html`](./guidebook.html)).
+Each tab also has small `(?)` explainer drop-downs (System prompt, chat template, thinking mode, Agent, tool_call, turn) — click them to read inline definitions while you experiment.
 
 ---
 
@@ -99,8 +99,6 @@ llama-server :8080 (Qwen3 model — auto-swap by /swap)
 - Tab ④: frontend talks to backend `/agent` (SSE) → backend runs a multi-turn agent loop, each turn uses the OpenAI chat completions API + tools schema, real-executes tools, results go back into messages, until the model stops emitting tool_call.
 - Tab switch: `ensureModel(wanted)` POSTs `/swap?model=X` → backend's `SWAP_LOCK` serializes calls → `pkill llama-server` + wait for port to free + `subprocess.Popen` to start the new model + poll `/v1/models` until ready (~3-5s).
 
-Full architecture / SSE protocol / swap orchestrator details in [`guidebook.html`](./guidebook.html).
-
 ---
 
 ## Code tour
@@ -111,15 +109,6 @@ Full architecture / SSE protocol / swap orchestrator details in [`guidebook.html
 - `agent/tests/` — 43 tests (mocked subprocess + requests + socket; run with `pytest agent/tests -q`)
 - `agent/SETUP.md` — port layout / Fri morning check / fallback ops notes
 - `prompts.md` — teaching prompt material (token-level demo inputs)
-- `guidebook.html` — full 60-90 min teaching material (self-read, walks through everything once)
-
----
-
-## Lesson plan
-
-`guidebook.html` is a self-read teaching manual: walk through each section of the 4 tabs, ~60-90 min total. Also works as instructor material (each section has a demo + explanation).
-
-If you want to use it to teach your team, learn for yourself, or fork your own version — MIT licensed, free for any use.
 
 ---
 
