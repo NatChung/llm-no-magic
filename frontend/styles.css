@@ -1,0 +1,112 @@
+/* ─────────────────────────────────────────────────────────────────
+   LLM 課 frontend — Tailwind-paired CSS
+   只留 utility 無法表達或 JS 邏輯 dependency 的 rules(spec §5.1)。
+   Color palette 全部 OKLCH,跟 tailwind.config inline `theme.extend.colors`
+   對齊(`ink` / `muted` / `tool` / `result` / `final` etc.)。
+   ───────────────────────────────────────────────────────────────── */
+
+/* §5.1.1 — tab-panel display toggle(JS .classList.toggle("active", ...) 機制)*/
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+
+/* §5.1.2 — Tab 1-3 desktop 2-col grid(prompt-area 全寬,output 左 + probs 右) */
+@media (min-width: 1024px) {
+  .tab-panel.active[data-panel="basic"],
+  .tab-panel.active[data-panel="advanced"],
+  .tab-panel.active[data-panel="reasoning"] {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.75rem;
+    row-gap: 2rem;
+  }
+  .tab-panel.active[data-panel="basic"] > .prompt-area,
+  .tab-panel.active[data-panel="advanced"] > .prompt-area,
+  .tab-panel.active[data-panel="reasoning"] > .prompt-area {
+    grid-column: 1 / -1;
+  }
+}
+
+/* Tab 切換按鈕的「active」underline(對應 .tab.active in JS) */
+.tab.active {
+  color: oklch(20% 0.012 280);                  /* ink */
+  border-bottom-color: oklch(50% 0.17 250);     /* final 藍 */
+}
+
+/* §5.1.3 — bar chart 結構(renderProbs 在 JS createElement 不 set Tailwind class
+   的 module-level 元件;這幾條 styles 是視覺契約)*/
+.bar-row {
+  display: grid;
+  grid-template-columns: 6.5rem 1fr 3.5rem;
+  gap: 0.6rem;
+  align-items: center;
+  padding: 0.2rem 0;
+  font-size: 0.85rem;
+}
+.bar-label {
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  color: oklch(34% 0.010 280);                  /* ink-soft */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.bar-track {
+  height: 0.7rem;
+  background: oklch(96% 0.006 280);             /* surface-2 */
+  border-radius: 999px;
+  overflow: hidden;
+}
+.bar-fill {
+  height: 100%;
+  background: oklch(50% 0.17 250);              /* final 藍,bar-fill 是視覺主體 */
+  border-radius: 999px;
+  transition: width 0.15s ease;                 /* §5.1 必留 transition */
+}
+.bar-pct {
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-variant-numeric: tabular-nums;
+  font-size: 0.78rem;
+  color: oklch(50% 0.008 280);                  /* muted */
+  text-align: right;
+}
+
+/* §5.1.5 — Tab 1-3 clickable token highlight + hover */
+.tok {
+  cursor: pointer;
+  padding: 0 1px;
+  border-radius: 2px;
+  transition: background 0.1s ease;
+}
+.tok:hover { background: oklch(95% 0.012 280); }
+.tok.selected {
+  background: oklch(88% 0.08 250);
+  box-shadow: 0 0 0 1px oklch(50% 0.17 250) inset;
+}
+/* Tab ④ token 不 clickable */
+.tok.tok-static { cursor: default; padding: 0; }
+.tok.tok-static:hover { background: transparent; }
+
+/* §5.1.4 — Tab ④ turn-block 累積 collapse 動畫(JS .classList.toggle("collapsed")) */
+.turn-block {
+  max-height: 9999px;
+  transition: max-height 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.turn-block.collapsed {
+  max-height: 2.5em;
+  overflow: hidden;
+}
+
+/* Reduced motion 尊重 */
+@media (prefers-reduced-motion: reduce) {
+  .turn-block, .bar-fill, .tok {
+    transition: none !important;
+  }
+}
+
+/* spec §5 swap banner — body.swapping 期間 disable tab + Run + Stop,
+   避免 race condition / 多重觸發 */
+body.swapping .tab,
+body.swapping .run,
+body.swapping .stop {
+  pointer-events: none;
+  opacity: 0.5;
+}

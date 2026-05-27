@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>LLM 沒有魔法 · 只有 token 跟約定</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            // tinted neutrals(微微往 280 hue 偏,Restrained 教學白板)
+            ink:         'oklch(20% 0.012 280)',
+            'ink-soft':  'oklch(34% 0.010 280)',
+            muted:       'oklch(50% 0.008 280)',
+            faint:       'oklch(65% 0.006 280)',
+            surface:     'oklch(99% 0.005 280)',
+            'surface-2': 'oklch(96% 0.006 280)',
+            edge:        'oklch(90% 0.006 280)',
+            'edge-soft': 'oklch(94% 0.006 280)',
+            // anchor accent colors(對應 CLI ANSI hue,OKLCH 微調 chroma,不改 hue)
+            tool:         'oklch(54% 0.22 320)',  // 紫(原 #b347d9)
+            'tool-tint':  'oklch(96% 0.030 320)',
+            result:       'oklch(50% 0.15 145)',  // 綠(原 #2ea043)
+            'result-tint':'oklch(96% 0.026 145)',
+            final:        'oklch(50% 0.17 250)',  // 藍 final-answer 高亮
+            'final-tint': 'oklch(96% 0.038 250)',
+          },
+          fontFamily: {
+            sans: ['ui-sans-serif', 'system-ui', '"PingFang TC"', '"Helvetica Neue"', 'sans-serif'],
+            mono: ['ui-monospace', '"SF Mono"', 'Menlo', 'monospace'],
+          },
+          maxHeight: {
+            'block-open':      '9999px',
+            'block-collapsed': '2.5em',
+          },
+          transitionProperty: {
+            'max-h': 'max-height',
+          },
+        },
+      },
+    };
+  </script>
+  <link rel="stylesheet" href="styles.css?v=8">
+</head>
+<body class="min-h-screen bg-surface text-ink antialiased">
+  <div id="swap-banner" class="hidden fixed top-16 left-1/2 -translate-x-1/2 rounded-md bg-final-tint px-4 py-2 text-sm text-final shadow-md z-50">
+    <span class="inline-block w-1.5 h-1.5 rounded-full bg-final animate-pulse mr-2 align-middle"></span>
+    載入 <span id="swap-banner-model" class="font-semibold"></span> 中…
+  </div>
+  <header class="border-b border-edge">
+    <div class="max-w-6xl mx-auto px-4 md:px-8 py-5 md:py-7">
+      <h1 class="text-xl md:text-3xl font-semibold tracking-tight text-ink">LLM 沒有魔法</h1>
+      <p class="mt-1.5 text-xs md:text-sm text-muted">只有 token 跟約定。Token / 機率 / chat template / Agent 流程,逐層可見</p>
+    </div>
+  </header>
+
+  <nav class="border-b border-edge bg-surface sticky top-0 z-10">
+    <div class="max-w-6xl mx-auto px-2 md:px-8">
+      <div class="tabs flex gap-0.5 md:gap-1 overflow-x-auto -mb-px">
+        <button class="tab active whitespace-nowrap px-3 md:px-5 py-3 md:py-4 text-sm md:text-base text-muted border-b-2 border-transparent hover:text-ink transition-colors" data-tab="basic">① 基礎</button>
+        <button class="tab whitespace-nowrap px-3 md:px-5 py-3 md:py-4 text-sm md:text-base text-muted border-b-2 border-transparent hover:text-ink transition-colors" data-tab="advanced">② 產品層加工</button>
+        <button class="tab whitespace-nowrap px-3 md:px-5 py-3 md:py-4 text-sm md:text-base text-muted border-b-2 border-transparent hover:text-ink transition-colors" data-tab="reasoning">③ 推理</button>
+        <button class="tab whitespace-nowrap px-3 md:px-5 py-3 md:py-4 text-sm md:text-base text-muted border-b-2 border-transparent hover:text-ink transition-colors" data-tab="agent">④ Agent</button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ─────────────────────────────────────────────────────────────────
+       Tab 1: 基礎 — prompt + token + 機率
+       ───────────────────────────────────────────────────────────────── -->
+  <main class="tab-panel active max-w-6xl mx-auto px-4 md:px-8 py-6 md:py-10" data-panel="basic">
+    <section class="prompt-area lg:col-span-2 space-y-3">
+      <label for="prompt-basic" class="block text-sm font-medium text-ink-soft">Prompt</label>
+      <textarea class="prompt w-full max-w-2xl rounded-md border border-edge bg-surface px-3 py-2 text-sm md:text-base font-mono focus:outline-none focus:border-final focus:ring-1 focus:ring-final" id="prompt-basic" rows="3" placeholder="輸入 prompt..."></textarea>
+      <div class="flex gap-2 pt-1">
+        <button class="run inline-flex items-center px-4 py-2 rounded-md bg-ink text-surface text-sm font-medium hover:bg-ink-soft disabled:bg-faint transition-colors">送出</button>
+        <button class="stop inline-flex items-center px-4 py-2 rounded-md border border-edge text-ink-soft text-sm hover:bg-surface-2 disabled:text-faint disabled:hover:bg-transparent transition-colors" disabled>停</button>
+      </div>
+    </section>
+    <section class="output-area mt-8 lg:mt-0 space-y-2">
+      <h2 class="text-xs uppercase tracking-wider text-muted font-medium">Model 吐的字</h2>
+      <div class="generated-text rounded-md bg-surface-2 border border-edge-soft p-4 min-h-[6rem] font-mono text-sm md:text-base leading-relaxed break-all"></div>
+    </section>
+    <section class="probs-area mt-6 lg:mt-0 space-y-2">
+      <h2 class="text-xs uppercase tracking-wider text-muted font-medium">Token 候選 · top 10(點左邊任一 token 切換)</h2>
+      <div class="probs rounded-md bg-surface border border-edge-soft p-3 min-h-[6rem]"></div>
+    </section>
+  </main>
+
+  <!-- ─────────────────────────────────────────────────────────────────
+       Tab 2: 加工 — system prompt + chat template + preview
+       ───────────────────────────────────────────────────────────────── -->
+  <main class="tab-panel max-w-6xl mx-auto px-4 md:px-8 py-6 md:py-10" data-panel="advanced">
+    <section class="prompt-area lg:col-span-2 space-y-3">
+      <label for="system-prompt-advanced" class="block text-sm font-medium text-ink-soft">System prompt(可選,模擬產品層加工)</label>
+      <textarea class="system-prompt w-full max-w-2xl rounded-md border border-edge bg-surface px-3 py-2 text-sm font-mono focus:outline-none focus:border-final focus:ring-1 focus:ring-final" id="system-prompt-advanced" rows="2" placeholder="例:你是行銷顧問,用條列式回答,只給 3 點"></textarea>
+
+      <label for="prompt-advanced" class="block text-sm font-medium text-ink-soft pt-2">User prompt</label>
+      <textarea class="prompt w-full max-w-2xl rounded-md border border-edge bg-surface px-3 py-2 text-sm md:text-base font-mono focus:outline-none focus:border-final focus:ring-1 focus:ring-final" id="prompt-advanced" rows="3" placeholder="輸入 prompt..."></textarea>
+
+      <div class="mode-row flex flex-wrap gap-x-5 gap-y-2 pt-1">
+        <label class="inline-flex items-center gap-2 text-sm text-ink-soft"><input type="radio" name="mode-advanced" value="raw" checked class="accent-final"> 裸 prompt(completion mode)</label>
+        <label class="inline-flex items-center gap-2 text-sm text-ink-soft"><input type="radio" name="mode-advanced" value="chat" class="accent-final"> 產品加工(Qwen3 chat template)</label>
+      </div>
+
+      <details class="preview-details pt-2">
+        <summary class="cursor-pointer text-sm text-muted hover:text-ink-soft">實際送進 model 的 final prompt(預覽)</summary>
+        <pre class="final-prompt-preview mt-2 rounded-md bg-surface-2 border border-edge-soft p-3 text-xs font-mono whitespace-pre-wrap break-all max-h-80 overflow-auto text-ink-soft"></pre>
+      </details>
+
+      <div class="flex gap-2 pt-1">
+        <button class="run inline-flex items-center px-4 py-2 rounded-md bg-ink text-surface text-sm font-medium hover:bg-ink-soft disabled:bg-faint transition-colors">送出</button>
+        <button class="stop inline-flex items-center px-4 py-2 rounded-md border border-edge text-ink-soft text-sm hover:bg-surface-2 disabled:text-faint disabled:hover:bg-transparent transition-colors" disabled>停</button>
+      </div>
+    </section>
+    <section class="output-area mt-8 lg:mt-0 space-y-2">
+      <h2 class="text-xs uppercase tracking-wider text-muted font-medium">Model 吐的字</h2>
+      <div class="generated-text rounded-md bg-surface-2 border border-edge-soft p-4 min-h-[6rem] font-mono text-sm md:text-base leading-relaxed break-all"></div>
+    </section>
+    <section class="probs-area mt-6 lg:mt-0 space-y-2">
+      <h2 class="text-xs uppercase tracking-wider text-muted font-medium">Token 候選 · top 10</h2>
+      <div class="probs rounded-md bg-surface border border-edge-soft p-3 min-h-[6rem]"></div>
+    </section>
+  </main>
+
+  <!-- ─────────────────────────────────────────────────────────────────
+       Tab 3: 推理 — thinking 開關對照
+       ───────────────────────────────────────────────────────────────── -->
+  <main class="tab-panel max-w-6xl mx-auto px-4 md:px-8 py-6 md:py-10" data-panel="reasoning">
+    <section class="prompt-area lg:col-span-2 space-y-3">
+      <label for="prompt-reasoning" class="block text-sm font-medium text-ink-soft">經典題</label>
+      <textarea class="prompt w-full max-w-2xl rounded-md border border-edge bg-surface px-3 py-2 text-sm md:text-base font-mono focus:outline-none focus:border-final focus:ring-1 focus:ring-final" id="prompt-reasoning" rows="3" placeholder="爸爸有3顆蘋果,兒子多他2顆。請問兒子幾顆?">爸爸有3顆蘋果,兒子多他2顆。請問兒子幾顆?</textarea>
+
+      <div class="mode-row flex flex-wrap gap-x-5 gap-y-2 pt-1">
+        <label class="inline-flex items-center gap-2 text-sm text-ink-soft"><input type="radio" name="mode-reasoning" value="direct" checked class="accent-final"> 直答(跳過 thinking),模型直接答</label>
+        <label class="inline-flex items-center gap-2 text-sm text-ink-soft"><input type="radio" name="mode-reasoning" value="thinking" class="accent-final"> 用 thinking,模型把思考寫成 token</label>
+      </div>
+
+      <details class="preview-details pt-2">
+        <summary class="cursor-pointer text-sm text-muted hover:text-ink-soft">實際送進 model 的 final prompt(預覽)</summary>
+        <pre class="final-prompt-preview mt-2 rounded-md bg-surface-2 border border-edge-soft p-3 text-xs font-mono whitespace-pre-wrap break-all max-h-80 overflow-auto text-ink-soft"></pre>
+      </details>
+
+      <div class="flex gap-2 pt-1">
+        <button class="run inline-flex items-center px-4 py-2 rounded-md bg-ink text-surface text-sm font-medium hover:bg-ink-soft disabled:bg-faint transition-colors">送出</button>
+        <button class="stop inline-flex items-center px-4 py-2 rounded-md border border-edge text-ink-soft text-sm hover:bg-surface-2 disabled:text-faint disabled:hover:bg-transparent transition-colors" disabled>停</button>
+      </div>
+    </section>
+    <section class="output-area mt-8 lg:mt-0 space-y-2">
+      <h2 class="text-xs uppercase tracking-wider text-muted font-medium">Model 吐的字</h2>
+      <div class="generated-text rounded-md bg-surface-2 border border-edge-soft p-4 min-h-[6rem] font-mono text-sm md:text-base leading-relaxed break-all"></div>
+    </section>
+    <section class="probs-area mt-6 lg:mt-0 space-y-2">
+      <h2 class="text-xs uppercase tracking-wider text-muted font-medium">Token 候選 · top 10</h2>
+      <div class="probs rounded-md bg-surface border border-edge-soft p-3 min-h-[6rem]"></div>
+    </section>
+  </main>
+
+  <!-- ─────────────────────────────────────────────────────────────────
+       Tab 4: Agent — 真執行 tools via :8082 backend
+       ───────────────────────────────────────────────────────────────── -->
+  <main class="tab-panel max-w-4xl mx-auto px-4 md:px-8 py-6 md:py-10" data-panel="agent">
+    <section class="prompt-area space-y-3">
+      <label for="system-prompt-agent" class="block text-sm font-medium text-ink-soft">System Prompt(預填,可改)</label>
+      <textarea class="system-prompt w-full rounded-md border border-edge bg-surface px-3 py-2 text-sm font-mono focus:outline-none focus:border-final focus:ring-1 focus:ring-final" id="system-prompt-agent" rows="4"></textarea>
+
+      <label for="prompt-agent" class="block text-sm font-medium text-ink-soft pt-2">問題</label>
+      <div class="preset-row">
+        <select class="preset-select w-full max-w-md rounded-md border border-edge bg-surface px-3 py-2 text-sm focus:outline-none focus:border-final focus:ring-1 focus:ring-final">
+          <option value="">(選 preset 預填,或自己打)</option>
+          <option value="現在幾點?">1. 現在幾點?</option>
+          <option value="讀 prompts.md,把它總結成 3 點,寫到 ~/Desktop/llm-summary.md">2. 讀+寫 摘要</option>
+          <option value="數一下這個 repo 底下有幾個 .md 檔">3. 數 .md 檔</option>
+        </select>
+      </div>
+      <textarea class="prompt w-full rounded-md border border-edge bg-surface px-3 py-2 text-sm md:text-base font-mono focus:outline-none focus:border-final focus:ring-1 focus:ring-final" id="prompt-agent" rows="3" placeholder="問題..."></textarea>
+
+      <details class="preview-details pt-1">
+        <summary class="cursor-pointer text-sm text-muted hover:text-ink-soft">實際送到 model 的 prompt(chat template 包好的 text,跟 Tab 2/3 同種視角)</summary>
+        <pre class="final-prompt-preview mt-2 rounded-md bg-surface-2 border border-edge-soft p-3 text-xs font-mono whitespace-pre-wrap break-all max-h-80 overflow-auto text-ink-soft"></pre>
+      </details>
+
+      <div class="flex gap-2 pt-1">
+        <button class="run inline-flex items-center px-4 py-2 rounded-md bg-ink text-surface text-sm font-medium hover:bg-ink-soft disabled:bg-faint transition-colors">送出</button>
+        <button class="stop inline-flex items-center px-4 py-2 rounded-md border border-edge text-ink-soft text-sm hover:bg-surface-2 disabled:text-faint disabled:hover:bg-transparent transition-colors" disabled>停</button>
+      </div>
+    </section>
+
+    <section class="turns-area mt-8 md:mt-10 space-y-3">
+      <h2 class="text-xs uppercase tracking-wider text-muted font-medium">Agent 跑的軌跡</h2>
+      <p class="text-sm text-muted leading-relaxed">每個 turn 結束都會 <span class="font-medium text-ink-soft">累積進 messages</span>,送進下一次 model 看。</p>
+      <div class="turns space-y-3"></div>
+    </section>
+
+    <section class="final-area mt-8 md:mt-10 rounded-lg bg-final-tint p-5 md:p-6 space-y-2">
+      <div class="flex items-baseline gap-2 flex-wrap">
+        <h2 class="text-sm font-semibold text-final uppercase tracking-wider">Final answer</h2>
+        <span class="hint text-xs text-muted">這才是給 user 看的最終回覆</span>
+      </div>
+      <div class="final-content text-base md:text-lg leading-relaxed text-ink"></div>
+    </section>
+  </main>
+
+  <script src="app.js?v=26"></script>
+</body>
+</html>
