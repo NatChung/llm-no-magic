@@ -1,0 +1,873 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>LLM Workshop Facilitator Guide (60 min)</title>
+<style>
+/* ─────────────────────────────────────────────────────────────────
+   LLM Workshop Facilitator Guide — live-read teaching manual
+   Register: product (functional). Color strategy: Restrained.
+   Palette: warm-tinted neutrals + one steel-blue accent.
+   ───────────────────────────────────────────────────────────────── */
+:root{
+  --bg:          oklch(0.992 0.004 80);
+  --surface:     oklch(0.975 0.006 80);
+  --code-bg:     oklch(0.955 0.008 80);
+  --ink:         oklch(0.22 0.012 80);
+  --ink-2:       oklch(0.42 0.010 80);
+  --muted:       oklch(0.60 0.010 80);
+  --rule:        oklch(0.90 0.008 80);
+  --accent:      oklch(0.50 0.14 250);
+
+  /* Role tints — low chroma, hue separates the role */
+  --do-bg:       oklch(0.965 0.020 240);
+  --do-fg:       oklch(0.40 0.12 250);
+  --say-bg:      oklch(0.965 0.025 70);
+  --say-fg:      oklch(0.42 0.10 60);
+  --expect-bg:   oklch(0.965 0.020 150);
+  --expect-fg:   oklch(0.38 0.09 150);
+  --paper-bg:    oklch(0.93 0.075 90);
+  --paper-fg:    oklch(0.36 0.13 75);
+  --warn-bg:     oklch(0.955 0.030 25);
+  --warn-fg:     oklch(0.40 0.13 25);
+  --note-bg:     oklch(0.965 0.005 80);
+  --note-fg:     oklch(0.45 0.010 80);
+  --gate-bg:     oklch(0.955 0.040 50);
+  --gate-fg:     oklch(0.40 0.13 45);
+}
+
+*{ box-sizing: border-box; }
+html{ scroll-behavior: smooth; }
+
+body{
+  font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", system-ui, "Segoe UI", Roboto, sans-serif;
+  font-feature-settings: "palt" 1, "cv11" 1;
+  max-width: 740px;
+  margin: 0 auto;
+  padding: 3.5rem 1.75rem 6rem;
+  background: var(--bg);
+  color: var(--ink);
+  line-height: 1.75;
+  font-size: 16.5px;
+  font-weight: 400;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Cover ──────────────────────────────────────────────────────── */
+.cover{ margin: 0 0 3.5rem; }
+.cover__eyebrow{
+  font-size: 0.78rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--accent);
+  font-weight: 600;
+  margin: 0 0 0.7rem;
+}
+.cover__title{
+  font-size: 2.4rem;
+  line-height: 1.2;
+  letter-spacing: -0.012em;
+  margin: 0 0 1.4rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+.cover__meta{
+  margin: 0;
+  color: var(--ink-2);
+  font-size: 0.96rem;
+  line-height: 1.75;
+}
+.cover__meta strong{ color: var(--ink); font-weight: 600; }
+.cover__meta .sep{ margin: 0 0.5em; color: var(--rule); }
+
+/* ── TOC ────────────────────────────────────────────────────────── */
+.toc{
+  margin: 0 0 4rem;
+  background: var(--surface);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.toc summary{
+  list-style: none;
+  cursor: pointer;
+  padding: 1rem 1.5rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  user-select: none;
+}
+.toc summary::-webkit-details-marker{ display: none; }
+.toc summary::after{
+  content: "▾";
+  font-size: 0.8rem;
+  transition: transform 0.2s ease-out;
+  color: var(--muted);
+}
+.toc[open] summary::after{ transform: rotate(180deg); }
+.toc__list{
+  list-style: none;
+  margin: 0;
+  padding: 0.3rem 1.5rem 1.3rem;
+}
+.toc__item{
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 1rem;
+  align-items: baseline;
+  font-size: 0.93rem;
+  padding: 0.55rem 0;
+  border-top: 1px solid var(--rule);
+}
+.toc__item:first-child{ border-top: none; }
+.toc__item a{
+  color: var(--ink);
+  text-decoration: none;
+  display: inline-flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.toc__item a:hover{ color: var(--accent); }
+.toc__time{
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* ── Section structure ──────────────────────────────────────────── */
+section{
+  margin: 0 0 4rem;
+  scroll-margin-top: 1.5rem;
+}
+section + section{
+  border-top: 1px solid var(--rule);
+  padding-top: 3.5rem;
+}
+.sec__head{
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  margin: 0 0 0.5rem;
+  flex-wrap: wrap;
+}
+.sec__title{
+  font-size: 1.5rem;
+  margin: 0;
+  line-height: 1.3;
+  letter-spacing: -0.008em;
+  font-weight: 700;
+  color: var(--ink);
+}
+.sec__budget{
+  color: var(--muted);
+  font-size: 0.84rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.lead{
+  margin: 0.5rem 0 1.8rem;
+  font-size: 1rem;
+  color: var(--ink-2);
+  line-height: 1.75;
+  max-width: 60ch;
+}
+
+/* ── Sub-headings ───────────────────────────────────────────────── */
+h3{
+  font-size: 1.05rem;
+  margin: 2.4rem 0 0.7rem;
+  line-height: 1.45;
+  font-weight: 600;
+  color: var(--ink);
+  letter-spacing: -0.003em;
+}
+h3:first-of-type{ margin-top: 1.6rem; }
+
+/* ── Tags ───────────────────────────────────────────────────────── */
+.tag{
+  display: inline-block;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  padding: 0.18rem 0.6rem;
+  border-radius: 999px;
+  margin-left: 0.45rem;
+  vertical-align: 0.15em;
+  text-transform: uppercase;
+}
+.tag--must{
+  background: var(--warn-bg);
+  color: var(--warn-fg);
+}
+.tag--opt{
+  background: var(--surface);
+  color: var(--muted);
+  border: 1px solid var(--rule);
+}
+
+/* ── Blocks (label-as-column grid) ─────────────────────────────── */
+.block{
+  display: grid;
+  grid-template-columns: 4.6rem 1fr;
+  gap: 0.5rem 1.1rem;
+  padding: 0.95rem 1.2rem;
+  border-radius: 8px;
+  margin: 0.7rem 0;
+}
+.block::before{
+  grid-column: 1;
+  grid-row: 1;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding-top: 0.35em;
+  align-self: start;
+  white-space: nowrap;
+}
+/* Force all children to col 2 — avoid multi-child grid auto-placement
+   pushing the 2nd/3rd children into col 1 (the narrow label column) */
+.block > *{ grid-column: 2; }
+.block p{ margin: 0; }
+.block p + p{ margin-top: 0.7rem; }
+.block ul,
+.block ol{ margin: 0; padding-left: 1.3rem; }
+.block pre{ margin: 0.4rem 0 0; }
+
+.do{ background: var(--do-bg); }
+.do::before{ content: "Do"; color: var(--do-fg); }
+
+.say{ background: var(--say-bg); }
+.say::before{ content: "Say"; color: var(--say-fg); }
+
+.ask{ background: var(--say-bg); }
+.ask::before{ content: "Ask"; color: var(--say-fg); }
+
+.expect{ background: var(--expect-bg); }
+.expect::before{ content: "Expect"; color: var(--expect-fg); }
+
+.warn{ background: var(--warn-bg); }
+.warn::before{ content: "Avoid"; color: var(--warn-fg); }
+
+.note{ background: var(--note-bg); }
+.note::before{ content: "Note"; color: var(--note-fg); }
+
+/* Paper moment — high attention */
+.paper{
+  background: var(--paper-bg);
+  padding: 1.15rem 1.4rem;
+  border-radius: 10px;
+  margin: 1.4rem 0;
+  display: block;  /* override grid */
+}
+.paper__label{
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--paper-fg);
+  margin: 0 0 0.5rem;
+}
+.paper__body{ margin: 0; }
+.paper__body strong{ color: var(--paper-fg); }
+
+/* Cut rule gate */
+.gate{
+  background: var(--gate-bg);
+  padding: 1.15rem 1.4rem;
+  border-radius: 10px;
+  margin: 1.6rem 0 1rem;
+}
+.gate__label{
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--gate-fg);
+  margin: 0 0 0.5rem;
+}
+.gate p{ margin: 0; }
+
+/* Ideal answers list */
+.ideal{
+  margin: 1.2rem 0;
+  padding: 1.15rem 1.4rem;
+  background: var(--expect-bg);
+  border-radius: 10px;
+}
+.ideal__label{
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--expect-fg);
+  margin: 0 0 0.6rem;
+}
+.ideal ul{
+  margin: 0;
+  padding-left: 1.3rem;
+  list-style: none;
+}
+.ideal li{
+  position: relative;
+  padding: 0.18rem 0;
+}
+.ideal li::before{
+  content: "→";
+  position: absolute;
+  left: -1.3rem;
+  color: var(--expect-fg);
+  font-weight: 600;
+}
+
+/* ── Sequence callout ──────────────────────────────────────────── */
+.sequence{
+  display: block;
+  font-size: 0.92rem;
+  color: var(--ink-2);
+  margin: 0.8rem 0;
+  padding: 0.2rem 0 0.2rem 1rem;
+  border-left: 2px solid var(--rule);
+}
+.sequence strong{ color: var(--ink); font-weight: 600; }
+
+/* ── Copyable prompt(pre + 複製 button)──────────────────────────── */
+.copyable{
+  position: relative;
+  margin: 0.4rem 0 0;
+}
+.copyable pre{
+  margin: 0;
+  padding-right: 4.5rem;
+  font-size: 0.92rem;
+  background: var(--bg);
+  border: 1px solid var(--rule);
+}
+.copy-btn{
+  position: absolute;
+  top: 0.45rem;
+  right: 0.45rem;
+  background: var(--bg);
+  border: 1px solid var(--rule);
+  color: var(--ink-2);
+  padding: 0.25rem 0.65rem;
+  border-radius: 4px;
+  font-size: 0.78rem;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.12s;
+}
+.copy-btn:hover{
+  background: var(--accent);
+  color: white;
+  border-color: var(--accent);
+}
+.copy-btn.copied{
+  background: var(--expect-bg);
+  color: var(--expect-fg);
+  border-color: var(--expect-fg);
+}
+
+/* ── Code ──────────────────────────────────────────────────────── */
+code{
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 0.92em;
+  background: var(--code-bg);
+  padding: 0.12em 0.4em;
+  border-radius: 3px;
+  color: var(--ink);
+  word-break: break-word;
+}
+pre{
+  background: var(--code-bg);
+  padding: 0.95rem 1.15rem;
+  border-radius: 6px;
+  overflow-x: auto;
+  font-size: 0.86rem;
+  line-height: 1.6;
+  margin: 0.7rem 0;
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+}
+pre code{ background: none; padding: 0; font-size: inherit; }
+
+/* ── Checklist ─────────────────────────────────────────────────── */
+.checklist{ list-style: none; padding: 0; margin: 0.5rem 0 0; }
+.checklist li{
+  padding: 0.4rem 0 0.4rem 1.9rem;
+  position: relative;
+  line-height: 1.7;
+}
+.checklist li + li{ border-top: 1px dashed var(--rule); }
+.checklist li::before{
+  content: "";
+  position: absolute;
+  left: 0; top: 0.78em;
+  width: 16px; height: 16px;
+  border: 1.5px solid var(--ink-2);
+  border-radius: 4px;
+  background: var(--bg);
+}
+
+/* ── Tables ─────────────────────────────────────────────────────── */
+table{
+  border-collapse: separate;
+  border-spacing: 0;
+  width: 100%;
+  margin: 1rem 0;
+  font-size: 0.93rem;
+  background: var(--surface);
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--rule);
+}
+th, td{
+  padding: 0.7rem 0.95rem;
+  text-align: left;
+  border-bottom: 1px solid var(--rule);
+  vertical-align: top;
+}
+th{
+  background: var(--code-bg);
+  font-size: 0.74rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-weight: 700;
+  color: var(--muted);
+}
+tr:last-child td{ border-bottom: none; }
+td code{ font-size: 0.88em; }
+
+/* ── Appendix ──────────────────────────────────────────────────── */
+.appendix-divider{
+  border: none;
+  border-top: 1px solid var(--rule);
+  margin: 5rem 0 3.5rem;
+}
+.appendix > h2{
+  font-size: 0.85rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: 700;
+  margin: 0 0 2rem;
+}
+.appendix h3{
+  font-size: 0.95rem;
+  margin-top: 2.5rem;
+  color: var(--ink-2);
+  letter-spacing: -0.003em;
+}
+.appendix h3:first-of-type{ margin-top: 0.5rem; }
+.appendix ol,
+.appendix > ul{ padding-left: 1.4rem; }
+.appendix > ul li,
+.appendix ol li{ margin: 0.3rem 0; }
+
+/* ── Print ──────────────────────────────────────────────────────── */
+@media print{
+  body{
+    max-width: none;
+    padding: 1.8cm 1.6cm;
+    font-size: 10.5pt;
+    line-height: 1.55;
+    background: white;
+  }
+  .cover{ margin-bottom: 1cm; }
+  .cover__title{ font-size: 20pt; }
+  .cover__eyebrow{ font-size: 8pt; }
+  .toc{ border: 1px solid #888; background: none; margin-bottom: 1cm; }
+  .toc summary{ font-size: 8pt; padding: 0.4cm 0.5cm; }
+  .toc summary::after{ display: none; }
+  details > *{ display: block !important; }
+  details[open] .toc__list{ display: block; }
+  section{ page-break-inside: auto; margin-bottom: 1cm; }
+  section + section{ border-top-color: #888; padding-top: 1cm; }
+  .sec__title{ font-size: 13pt; }
+  h3{ font-size: 11pt; margin-top: 0.5cm; }
+  .block, .paper, .gate, .ideal{
+    background: white !important;
+    border: 1px solid #555;
+    padding: 0.3cm 0.45cm;
+    margin: 0.3cm 0;
+  }
+  .block::before,
+  .paper__label,
+  .gate__label,
+  .ideal__label{
+    color: #000 !important;
+  }
+  pre, code{ background: #f3f3f3 !important; color: #000; }
+  th{ background: #e8e8e8 !important; color: #000; }
+}
+</style>
+</head>
+<body>
+
+<p style="text-align: right; font-size: 0.85rem;"><a href="guidebook.zh-TW.html">繁體中文版 →</a></p>
+
+<header class="cover">
+  <p class="cover__eyebrow">V2 Sprint · Wed 05-27 AM</p>
+  <h1 class="cover__title">LLM Workshop — Facilitator Guide</h1>
+  <p class="cover__meta">
+    <strong>60 min</strong><span class="sep">·</span>3 learners (start with the least familiar one)
+  </p>
+</header>
+
+<details class="toc" open>
+<summary>Contents</summary>
+<ol class="toc__list">
+  <li class="toc__item"><a href="#seg-1">Phase 1 — The moonlight-poem progression <span class="tag tag--must">Main course</span></a><span class="toc__time">15–20 min</span></li>
+  <li class="toc__item"><a href="#seg-2">Phase 2 — Fake place name · watch the LLM make stuff up</a><span class="toc__time">8–10 min</span></li>
+  <li class="toc__item"><a href="#seg-3">Phase 3 — Same mechanism: Q&amp;A / writing / summarizing <span class="tag tag--opt">If time</span></a><span class="toc__time">5–8 min</span></li>
+  <li class="toc__item"><a href="#seg-4">Phase 4 — Product-layer processing <span class="tag tag--opt">If time</span></a><span class="toc__time">8–10 min</span></li>
+  <li class="toc__item"><a href="#seg-5">Phase 5 — Thinking in tokens (the apples problem) <span class="tag tag--opt">If time</span></a><span class="toc__time">5–8 min</span></li>
+  <li class="toc__item"><a href="#after">After class</a><span class="toc__time">—</span></li>
+
+  <li class="toc__item"><a href="#agent-phase-0">[Agent class] Phase 0 — Terminal WOW</a><span class="toc__time">8–10 min</span></li>
+  <li class="toc__item"><a href="#agent-phase-1">[Agent class] Phase 1 — Agent loop warm-up</a><span class="toc__time">5 min</span></li>
+  <li class="toc__item"><a href="#agent-phase-2">[Agent class] Phase 2 — Read + write <span class="tag tag--must">Core</span></a><span class="toc__time">12–15 min</span></li>
+  <li class="toc__item"><a href="#agent-phase-3">[Agent class] Phase 3 — Exec runs a script</a><span class="toc__time">8–10 min</span></li>
+  <li class="toc__item"><a href="#agent-phase-4">[Agent class] Phase 4 — Skill / MCP / API hint <span class="tag tag--opt">If time</span></a><span class="toc__time">5 min</span></li>
+  <li class="toc__item"><a href="#agent-phase-5">[Agent class] Phase 5 — Close out with KVM</a><span class="toc__time">8 min</span></li>
+</ol>
+</details>
+
+<section id="seg-1">
+<div class="sec__head">
+  <h2 class="sec__title">Phase 1 — The moonlight-poem progression</h2>
+  <span class="sec__budget">15–20 min</span>
+</div>
+</section>
+
+<section id="seg-2">
+<div class="sec__head">
+  <h2 class="sec__title">Phase 2 — Fake place name · watch the LLM make stuff up</h2>
+  <span class="sec__budget">8–10 min</span>
+</div>
+
+<div class="block do">
+<p>Send:</p>
+<div class="copyable">
+<pre>祖樹星上最高的山叫做</pre>
+<button class="copy-btn" type="button">Copy</button>
+</div>
+</div>
+
+<div class="paper">
+<span class="paper__label">Handout moment 2</span>
+<p class="paper__body">"<strong>The moonlight poem just now, and the Zushu-Star bar chart now — can you tell which one the model actually knows and which one it's making up?</strong>" (30 seconds)</p>
+</div>
+
+<p class="sequence"><strong>Collect handouts → read them out in order</strong> (start with the least familiar learner)</p>
+</section>
+
+<section id="seg-3">
+<div class="sec__head">
+  <h2 class="sec__title">Phase 3 — Same mechanism: Q&amp;A / writing / summarizing <span class="tag tag--opt">If time</span></h2>
+  <span class="sec__budget">5–8 min</span>
+</div>
+
+<h3>Q&amp;A</h3>
+<div class="block do">
+<div class="copyable">
+<pre>問:一年有幾個月?
+答:</pre>
+<button class="copy-btn" type="button">Copy</button>
+</div>
+</div>
+
+<h3>Short prompt, long output</h3>
+<div class="block do">
+<div class="copyable">
+<pre>請寫一首關於月亮的五言絕句:
+
+</pre>
+<button class="copy-btn" type="button">Copy</button>
+</div>
+</div>
+
+<h3>Long prompt, short output</h3>
+<div class="block do">
+<div class="copyable">
+<pre>請把這段話總結成 10 字:
+從前有一個老人,他每天都在山上撿柴,有一天他撿到一個會說話的小石頭。
+
+摘要:</pre>
+<button class="copy-btn" type="button">Copy</button>
+</div>
+</div>
+</section>
+
+<section id="seg-4">
+<div class="sec__head">
+  <h2 class="sec__title">Phase 4 — Product-layer processing <span class="tag tag--opt">If time</span></h2>
+  <span class="sec__budget">8–10 min</span>
+</div>
+
+<div class="block do"><p><strong>Switch to Tab ② Product-layer processing</strong></p></div>
+
+<h3>Step 1 · Raw mode</h3>
+<div class="block do">
+<p>Set mode to "raw prompt", leave System empty. User:</p>
+<div class="copyable">
+<pre>一年有幾個月?</pre>
+<button class="copy-btn" type="button">Copy</button>
+</div>
+</div>
+
+<h3>Step 2 · Switch to "product processing"</h3>
+<div class="block do">
+<p>Keep the same User text, switch to "product processing" and send. Expand the preview — the final prompt now becomes:</p>
+<pre>&lt;|im_start|&gt;user
+一年有幾個月?&lt;|im_end|&gt;
+&lt;|im_start|&gt;assistant
+&lt;think&gt;
+&lt;/think&gt;
+</pre>
+</div>
+
+<h3>Step 3 · Add a System prompt</h3>
+<div class="block do">
+<p>System:</p>
+<div class="copyable">
+<pre>你是行銷顧問,用條列式回答,只給 3 點。</pre>
+<button class="copy-btn" type="button">Copy</button>
+</div>
+<p>User:</p>
+<div class="copyable">
+<pre>寫一個夏季冰飲的促銷文案</pre>
+<button class="copy-btn" type="button">Copy</button>
+</div>
+</div>
+</section>
+
+<section id="seg-5">
+<div class="sec__head">
+  <h2 class="sec__title">Phase 5 — Thinking in tokens (the apples problem) <span class="tag tag--opt">If time</span></h2>
+  <span class="sec__budget">5–8 min</span>
+</div>
+
+<div class="block do">
+<p><strong>Switch to Tab ③ Reasoning</strong>. The prompt is pre-filled (backup text):</p>
+<div class="copyable">
+<pre>爸爸有3顆蘋果,兒子多他2顆。請問兒子幾顆?</pre>
+<button class="copy-btn" type="button">Copy</button>
+</div>
+</div>
+
+<h3>Step 1 · Direct answer (skip thinking)</h3>
+<div class="block do"><p>Set mode to "direct answer" and send. Look at the preview — the final prompt ends with <code>&lt;think&gt;&lt;/think&gt;</code>. I'm stuffing that in to trick the model into thinking it's already done thinking.</p></div>
+
+<h3>Step 2 · Use thinking</h3>
+<div class="block do"><p>Switch to "use thinking" and send. In the preview — the tail no longer has a stuffed think block; it's left empty so the model can think for itself.</p></div>
+</section>
+
+<section id="after">
+<div class="sec__head">
+  <h2 class="sec__title">After class</h2>
+</div>
+</section>
+
+<section id="agent-phase-0">
+<div class="sec__head">
+  <h2 class="sec__title">[Agent class] Phase 0 — Terminal WOW</h2>
+  <span class="sec__budget">8–10 min</span>
+</div>
+
+<div class="block do">
+<p>Open Terminal.app (no cd needed) and run these 3:</p>
+<div class="copyable">
+<pre>say "你好,我是你的電腦"</pre>
+<button class="copy-btn" type="button">Copy</button>
+</div>
+<div class="copyable">
+<pre>open https://chat.openai.com</pre>
+<button class="copy-btn" type="button">Copy</button>
+</div>
+<div class="copyable">
+<pre>mkdir -p /tmp/wow && cd /tmp/wow && touch a.txt b.txt c.txt && for f in *.txt; do mv "$f" "備份_$f"; done && ls 備份_*.txt</pre>
+<button class="copy-btn" type="button">Copy</button>
+</div>
+</div>
+
+</section>
+
+<section id="agent-phase-1">
+<div class="sec__head">
+  <h2 class="sec__title">[Agent class] Phase 1 — Agent loop warm-up</h2>
+  <span class="sec__budget">5 min</span>
+</div>
+
+<div class="block do">
+<p>Run in Terminal (<strong>explicitly cd back to the project root</strong>, because Phase 0 left the shell sitting in /tmp/wow):</p>
+<div class="copyable">
+<pre>cd ~/projects/llm-no-magic && python3 -m agent.agent</pre>
+<button class="copy-btn" type="button">Copy</button>
+</div>
+<p>At the prompt, type:</p>
+<div class="copyable">
+<pre>現在幾點?</pre>
+<button class="copy-btn" type="button">Copy</button>
+</div>
+</div>
+
+</section>
+
+<div class="block say">
+<p>"On Wednesday we used the 0.6B model in Tabs ①②③. Today Tab ④ is 4B. It's bigger, but <strong>the mechanism is exactly the same</strong> — it still spits out tokens, still has a probability distribution, still takes context in and we watch how the distribution shifts.</p>
+<p>The only difference: among the tokens it emits, there are <code>&lt;tool_call&gt;</code>, <code>"name"</code>, <code>"arguments"</code> — <strong>trigger patterns the client recognizes</strong>. The client sees them → actually runs the tool → puts the result back into the prompt → the model spits more tokens → repeat, until the model stops triggering and gives a final answer.</p>
+<p>That's it. That's an agent. No magic, just tokens plus a convention."</p>
+</div>
+
+<section id="agent-phase-2">
+<div class="sec__head">
+  <h2 class="sec__title">[Agent class] Phase 2 — Read + write <span class="tag tag--must">Core</span></h2>
+  <span class="sec__budget">12–15 min</span>
+</div>
+
+<h3>Step 1 · Open Tab ④ Agent</h3>
+<div class="block do">
+<p>In the browser, open the LLM workshop site → click Tab ④ Agent:</p>
+<div class="copyable">
+<pre>http://localhost:9000/./frontend/</pre>
+<button class="copy-btn" type="button">Copy</button>
+</div>
+</div>
+
+<h3>Step 2 · Project the System prompt for the audience</h3>
+<div class="block do">
+<p>The System prompt textarea is pre-filled. Project it on screen and read it through once:</p>
+<pre>You are a helpful assistant with access to tools…</pre>
+</div>
+<div class="block say">
+<p>"This is the client telling the model what tools it has available."</p>
+</div>
+
+<h3>Step 3 · Pick preset 2 "Read + write summary"</h3>
+<div class="block do">
+<p>Click the preset menu → pick <strong>preset 2 "Read + write summary"</strong> → the textarea auto-fills with:</p>
+<pre>讀 prompts.md,把它總結成 3 點,寫到 ~/Desktop/llm-summary.md</pre>
+<p>Press <strong>▶ Run agent</strong>.</p>
+</div>
+
+<h3>Step 4 · Narration — Turn 1</h3>
+<div class="block say">
+<ul>
+<li>"After you press the button, you'll see the model think for a second, then the Turn 1 block shows up."</li>
+<li>"That string at the top of Turn 1 is the token stream the model emitted. <strong>Look at the very first token</strong> — it's <code>&lt;tool_call&gt;</code>."</li>
+<li>"Click it once and look at the bottom right: 99.9%. Every other option is below 0.1%."</li>
+<li>"Which means: after reading the system prompt plus the question, the model is <strong>essentially 100% sure</strong> it wants to take the tool path."</li>
+<li>"Click <code>name</code>, <code>":"</code>, <code>"read_file"</code> — every token shows its top-10 at that moment."</li>
+<li>"llama parses <code>read_file({\"path\":\"prompts.md\"})</code> out of that raw token stream, our backend actually reads that file, and the result lands in the green box."</li>
+</ul>
+</div>
+
+<h3>Step 5 · Narration — Turn 2 → Turn 3</h3>
+<div class="block say">
+<ul>
+<li>"Then into Turn 2 — the model sees the file content that came back, decides the next move is write_file, same flow."</li>
+<li>"In Turn 3 the model finally stops calling tools and gives a final answer — and look, llm-summary.md is actually sitting on the Desktop now."</li>
+</ul>
+</div>
+
+<h3>Step 6 · Confirm the file is real</h3>
+<div class="block do">
+<p>Open Finder, or check in the terminal:</p>
+<div class="copyable">
+<pre>cat ~/Desktop/llm-summary.md && open ~/Desktop</pre>
+<button class="copy-btn" type="button">Copy</button>
+</div>
+</div>
+
+</section>
+
+<section id="agent-phase-3">
+<div class="sec__head">
+  <h2 class="sec__title">[Agent class] Phase 3 — Exec runs a script</h2>
+  <span class="sec__budget">8–10 min</span>
+</div>
+
+<h3>Step 1 · Pick preset 3 "Count the .md files"</h3>
+<div class="block do">
+<p>In Tab ④ Agent, pick <strong>preset 3</strong>. The auto-filled prompt:</p>
+<pre>數一下這個 repo 底下有幾個 .md 檔</pre>
+<p>Press <strong>▶ Run agent</strong>.</p>
+</div>
+
+<h3>Step 2 · Narration</h3>
+<div class="block say">
+<ul>
+<li>"This time the model doesn't read a file, doesn't write a file — it picks exec_bash."</li>
+<li>"Click the <code>&lt;tool_call&gt;</code> token, check the probability — same story, 99%+."</li>
+<li>"The parsed tool_call shows <code>exec_bash({\"command\":\"find . -name '*.md' | wc -l\"})</code> (or some similar find / ls command) — the model wrote that shell command itself."</li>
+<li>"In the green box you see a real exit=0, and stdout is a number."</li>
+<li>"The final answer is just that number."</li>
+</ul>
+</div>
+
+</section>
+
+<section id="agent-phase-4">
+<div class="sec__head">
+  <h2 class="sec__title">[Agent class] Phase 4 — Skill / MCP / API hint</h2>
+  <span class="sec__budget">5 min</span>
+</div>
+
+<div class="block do">
+<p>Talk through the concepts (no demo — that goes in V3 advanced):</p>
+<ul>
+<li><strong>Skill</strong> = a package of tools (prompt + tools bundled together)</li>
+<li><strong>MCP</strong> = a protocol for tools (run tools on an external server)</li>
+<li><strong>API</strong> = the reach of tools (connect to the internet)</li>
+</ul>
+</div>
+
+</section>
+
+<section id="agent-phase-5">
+<div class="sec__head">
+  <h2 class="sec__title">[Agent class] Phase 5 — Close out with KVM</h2>
+  <span class="sec__budget">8 min</span>
+</div>
+
+<div class="block do">
+<p>Each person says "one concrete thing I'm going to try next week" — Nat ticks them off on paper. <strong>If you don't say it out loud, the class isn't done</strong> (LLM class spec §8 Sprint KVM, rule 2).</p>
+</div>
+
+</section>
+
+<script>
+document.querySelectorAll('.copy-btn').forEach((btn) => {
+  btn.addEventListener('click', () => {
+    const pre = btn.parentElement.querySelector('pre');
+    if (!pre) return;
+    navigator.clipboard.writeText(pre.textContent).then(() => {
+      const orig = btn.textContent;
+      btn.classList.add('copied');
+      btn.textContent = '✓ Copied';
+      setTimeout(() => {
+        btn.classList.remove('copied');
+        btn.textContent = orig;
+      }, 1500);
+    }).catch((err) => {
+      console.error('clipboard failed', err);
+      btn.textContent = '✗ Failed';
+    });
+  });
+});
+</script>
+
+</body>
+</html>

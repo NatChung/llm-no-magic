@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="zh-Hant">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>LLM 沒有魔法 · 只有 token 跟約定</title>
+  <title>LLM, no magic · just tokens and conventions</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
@@ -47,225 +47,228 @@
 <body class="min-h-screen bg-surface text-ink antialiased">
   <div id="swap-banner" class="hidden fixed top-16 left-1/2 -translate-x-1/2 rounded-md bg-final-tint px-4 py-2 text-sm text-final shadow-md z-50">
     <span class="inline-block w-1.5 h-1.5 rounded-full bg-final animate-pulse mr-2 align-middle"></span>
-    載入 <span id="swap-banner-model" class="font-semibold"></span> 中…
+    Loading <span id="swap-banner-model" class="font-semibold"></span>…
   </div>
   <header class="border-b border-edge">
-    <div class="max-w-6xl mx-auto px-4 md:px-8 py-5 md:py-7">
-      <h1 class="text-xl md:text-3xl font-semibold tracking-tight text-ink">LLM 沒有魔法</h1>
-      <p class="mt-1.5 text-xs md:text-sm text-muted">只有 token 跟約定。Token / 機率 / chat template / Agent 流程,逐層可見</p>
+    <div class="max-w-6xl mx-auto px-4 md:px-8 py-5 md:py-7 flex justify-between items-start gap-4">
+      <div>
+        <h1 class="text-xl md:text-3xl font-semibold tracking-tight text-ink">LLM, no magic</h1>
+        <p class="mt-1.5 text-xs md:text-sm text-muted">Just tokens and conventions. Token / probability / chat template / Agent flow, layer by layer.</p>
+      </div>
+      <a href="index.zh-TW.html" class="text-xs text-muted hover:text-ink-soft mt-1 flex-shrink-0" lang="zh-TW">繁體中文</a>
     </div>
   </header>
 
   <nav class="border-b border-edge bg-surface sticky top-0 z-10">
     <div class="max-w-6xl mx-auto px-2 md:px-8">
       <div class="tabs flex gap-0.5 md:gap-1 overflow-x-auto -mb-px">
-        <button class="tab active whitespace-nowrap px-3 md:px-5 py-3 md:py-4 text-sm md:text-base text-muted border-b-2 border-transparent hover:text-ink transition-colors" data-tab="basic">① 基礎</button>
-        <button class="tab whitespace-nowrap px-3 md:px-5 py-3 md:py-4 text-sm md:text-base text-muted border-b-2 border-transparent hover:text-ink transition-colors" data-tab="advanced">② 產品層加工</button>
-        <button class="tab whitespace-nowrap px-3 md:px-5 py-3 md:py-4 text-sm md:text-base text-muted border-b-2 border-transparent hover:text-ink transition-colors" data-tab="reasoning">③ 推理</button>
+        <button class="tab active whitespace-nowrap px-3 md:px-5 py-3 md:py-4 text-sm md:text-base text-muted border-b-2 border-transparent hover:text-ink transition-colors" data-tab="basic">① Basics</button>
+        <button class="tab whitespace-nowrap px-3 md:px-5 py-3 md:py-4 text-sm md:text-base text-muted border-b-2 border-transparent hover:text-ink transition-colors" data-tab="advanced">② Product Layer</button>
+        <button class="tab whitespace-nowrap px-3 md:px-5 py-3 md:py-4 text-sm md:text-base text-muted border-b-2 border-transparent hover:text-ink transition-colors" data-tab="reasoning">③ Reasoning</button>
         <button class="tab whitespace-nowrap px-3 md:px-5 py-3 md:py-4 text-sm md:text-base text-muted border-b-2 border-transparent hover:text-ink transition-colors" data-tab="agent">④ Agent</button>
       </div>
     </div>
   </nav>
 
   <!-- ─────────────────────────────────────────────────────────────────
-       Tab 1: 基礎 — prompt + token + 機率
+       Tab 1: Basics — prompt + token + probability
        ───────────────────────────────────────────────────────────────── -->
   <main class="tab-panel active max-w-6xl mx-auto px-4 md:px-8 py-6 md:py-10" data-panel="basic">
     <section class="prompt-area lg:col-span-2 space-y-3">
       <label for="prompt-basic" class="block text-sm font-medium text-ink-soft">Prompt</label>
       <div class="preset-row">
         <select class="preset-select w-full max-w-md rounded-md border border-edge bg-surface px-3 py-2 text-sm focus:outline-none focus:border-final focus:ring-1 focus:ring-final">
-          <option value="">(選 preset 預填,或自己打)</option>
-          <option value="床前明月光">1. `床前明月光` — model 記得 → peaked,top-1 99%+</option>
-          <option value="祖樹星上最高的山叫做">2. `祖樹星上最高的山叫做` — 假星球,model 照樣自信編 → peaked ≠ 真實</option>
-          <option value="他打開冰箱,拿出">3. `他打開冰箱,拿出` — model 不知接啥 → flat,top-K 分散</option>
+          <option value="">(Pick a preset to prefill, or type your own)</option>
+          <option value="床前明月光">1. `床前明月光` — model knows this poem → peaked, top-1 99%+</option>
+          <option value="祖樹星上最高的山叫做">2. `祖樹星上最高的山叫做` — fictional planet, model still confidently makes it up → peaked ≠ true</option>
+          <option value="他打開冰箱,拿出">3. `他打開冰箱,拿出` — model has no idea what comes next → flat, top-K spread out</option>
         </select>
       </div>
-      <textarea class="prompt w-full max-w-2xl rounded-md border border-edge bg-surface px-3 py-2 text-sm md:text-base font-mono focus:outline-none focus:border-final focus:ring-1 focus:ring-final" id="prompt-basic" rows="3" placeholder="輸入 prompt..."></textarea>
+      <textarea class="prompt w-full max-w-2xl rounded-md border border-edge bg-surface px-3 py-2 text-sm md:text-base font-mono focus:outline-none focus:border-final focus:ring-1 focus:ring-final" id="prompt-basic" rows="3" placeholder="Type a prompt..."></textarea>
       <div class="flex gap-2 pt-1">
-        <button class="run inline-flex items-center px-4 py-2 rounded-md bg-ink text-surface text-sm font-medium hover:bg-ink-soft disabled:bg-faint transition-colors">送出</button>
-        <button class="stop inline-flex items-center px-4 py-2 rounded-md border border-edge text-ink-soft text-sm hover:bg-surface-2 disabled:text-faint disabled:hover:bg-transparent transition-colors" disabled>停</button>
+        <button class="run inline-flex items-center px-4 py-2 rounded-md bg-ink text-surface text-sm font-medium hover:bg-ink-soft disabled:bg-faint transition-colors">Send</button>
+        <button class="stop inline-flex items-center px-4 py-2 rounded-md border border-edge text-ink-soft text-sm hover:bg-surface-2 disabled:text-faint disabled:hover:bg-transparent transition-colors" disabled>Stop</button>
       </div>
     </section>
     <section class="output-area mt-8 lg:mt-0 space-y-2">
-      <h2 class="text-xs uppercase tracking-wider text-muted font-medium">Model 吐的字</h2>
+      <h2 class="text-xs uppercase tracking-wider text-muted font-medium">What the model emits</h2>
       <div class="generated-text rounded-md bg-surface-2 border border-edge-soft p-4 min-h-[6rem] font-mono text-sm md:text-base leading-relaxed break-all"></div>
     </section>
     <section class="probs-area mt-6 lg:mt-0 space-y-2">
-      <h2 class="text-xs uppercase tracking-wider text-muted font-medium">Token 候選 · top 10(點左邊任一 token 切換)</h2>
+      <h2 class="text-xs uppercase tracking-wider text-muted font-medium">Token candidates · top 10 (click any token on the left to switch)</h2>
       <div class="probs rounded-md bg-surface border border-edge-soft p-3 min-h-[6rem]"></div>
     </section>
   </main>
 
   <!-- ─────────────────────────────────────────────────────────────────
-       Tab 2: 加工 — system prompt + chat template + preview
+       Tab 2: Product Layer — system prompt + chat template + preview
        ───────────────────────────────────────────────────────────────── -->
   <main class="tab-panel max-w-6xl mx-auto px-4 md:px-8 py-6 md:py-10" data-panel="advanced">
     <section class="prompt-area lg:col-span-2 space-y-3">
-      <label for="system-prompt-advanced" class="block text-sm font-medium text-ink-soft">System prompt(可選,模擬產品層加工)</label>
+      <label for="system-prompt-advanced" class="block text-sm font-medium text-ink-soft">System prompt (optional, simulates the product layer)</label>
       <details class="info-tag">
-        <summary class="cursor-pointer text-xs text-final hover:underline list-none [&::-webkit-details-marker]:hidden select-none inline-block py-0.5">(?) 什麼是 System prompt</summary>
+        <summary class="cursor-pointer text-xs text-final hover:underline list-none [&::-webkit-details-marker]:hidden select-none inline-block py-0.5">(?) What is a System prompt</summary>
         <div class="mt-1.5 p-3 rounded-md bg-final-tint text-sm text-ink-soft max-w-2xl leading-relaxed space-y-2">
-          <p>你跟 ChatGPT / Claude 對話時<strong>看不到</strong>、但前面已被「偷偷填好」的隱性指令。例如:「你是友善客服,只用條列式回答,不超過 3 點」。</p>
-          <p>SaaS 產品的「加工」就是這層 — 你寫「help me」,產品自動補上指令再送進 model。</p>
-          <p>這 tab 讓你看見:<strong>加 system prompt 跟不加,model 吐的字差多少</strong>。</p>
+          <p>The hidden instruction that's <strong>silently prefilled</strong> before your message when you chat with ChatGPT / Claude. For example: "You are a friendly support agent, answer in bullets, max 3 points."</p>
+          <p>The "product layer" of a SaaS product is exactly this — you type "help me", the product quietly prepends instructions before sending to the model.</p>
+          <p>This tab lets you see: <strong>how much the model's output changes with vs. without a system prompt</strong>.</p>
         </div>
       </details>
-      <textarea class="system-prompt w-full max-w-2xl rounded-md border border-edge bg-surface px-3 py-2 text-sm font-mono focus:outline-none focus:border-final focus:ring-1 focus:ring-final" id="system-prompt-advanced" rows="2" placeholder="例:你是行銷顧問,用條列式回答,只給 3 點"></textarea>
+      <textarea class="system-prompt w-full max-w-2xl rounded-md border border-edge bg-surface px-3 py-2 text-sm font-mono focus:outline-none focus:border-final focus:ring-1 focus:ring-final" id="system-prompt-advanced" rows="2" placeholder="e.g. You are a marketing consultant, answer in bullets, only 3 points"></textarea>
 
       <label for="prompt-advanced" class="block text-sm font-medium text-ink-soft pt-2">User prompt</label>
       <div class="preset-row">
         <select class="preset-select w-full max-w-md rounded-md border border-edge bg-surface px-3 py-2 text-sm focus:outline-none focus:border-final focus:ring-1 focus:ring-final">
-          <option value="">(選 preset 預填 user prompt,或自己打)</option>
-          <option value="一年有幾個月?">1. `一年有幾個月?` — 短答(加 system 看條列風)</option>
-          <option value="寫一個夏季冰飲的促銷文案">2. `寫一個夏季冰飲的促銷文案` — 創作(加 system「行銷顧問 3 點」看結構化)</option>
-          <option value="請寫一首關於月亮的五言絕句">3. `請寫一首關於月亮的五言絕句` — 文學(加 system 看格式約束)</option>
+          <option value="">(Pick a preset to prefill the user prompt, or type your own)</option>
+          <option value="一年有幾個月?">1. `一年有幾個月?` (How many months in a year?) — short answer (add system prompt to see bullet style)</option>
+          <option value="寫一個夏季冰飲的促銷文案">2. `寫一個夏季冰飲的促銷文案` (Write a summer iced-drink promo) — creative (add "marketing consultant, 3 points" system to see structure)</option>
+          <option value="請寫一首關於月亮的五言絕句">3. `請寫一首關於月亮的五言絕句` (Write a 5-character quatrain about the moon) — literary (add system to see format constraints)</option>
         </select>
       </div>
-      <textarea class="prompt w-full max-w-2xl rounded-md border border-edge bg-surface px-3 py-2 text-sm md:text-base font-mono focus:outline-none focus:border-final focus:ring-1 focus:ring-final" id="prompt-advanced" rows="3" placeholder="輸入 prompt..."></textarea>
+      <textarea class="prompt w-full max-w-2xl rounded-md border border-edge bg-surface px-3 py-2 text-sm md:text-base font-mono focus:outline-none focus:border-final focus:ring-1 focus:ring-final" id="prompt-advanced" rows="3" placeholder="Type a prompt..."></textarea>
 
       <div class="mode-row flex flex-wrap gap-x-5 gap-y-2 pt-1">
-        <label class="inline-flex items-center gap-2 text-sm text-ink-soft"><input type="radio" name="mode-advanced" value="raw" checked class="accent-final"> 裸 prompt(completion mode)</label>
-        <label class="inline-flex items-center gap-2 text-sm text-ink-soft"><input type="radio" name="mode-advanced" value="chat" class="accent-final"> 產品加工(Qwen3 chat template)</label>
+        <label class="inline-flex items-center gap-2 text-sm text-ink-soft"><input type="radio" name="mode-advanced" value="raw" checked class="accent-final"> Raw prompt (completion mode)</label>
+        <label class="inline-flex items-center gap-2 text-sm text-ink-soft"><input type="radio" name="mode-advanced" value="chat" class="accent-final"> Product layer (Qwen3 chat template)</label>
       </div>
       <details class="info-tag">
-        <summary class="cursor-pointer text-xs text-final hover:underline list-none [&::-webkit-details-marker]:hidden select-none inline-block py-0.5">(?) 裸 prompt vs Chat template — 差在哪</summary>
+        <summary class="cursor-pointer text-xs text-final hover:underline list-none [&::-webkit-details-marker]:hidden select-none inline-block py-0.5">(?) Raw prompt vs Chat template — what's the difference</summary>
         <div class="mt-1.5 p-3 rounded-md bg-final-tint text-sm text-ink-soft max-w-2xl leading-relaxed space-y-2">
-          <p><strong>裸 prompt(raw)</strong>:把你打的字<strong>直接</strong>丟給 model 接龍。Model 不知道誰在講話、誰問誰答(同 Tab ①)。</p>
-          <p><strong>產品加工(chat template)</strong>:用 Qwen3 約定的 marker 包好再丟。Marker 長這樣:</p>
+          <p><strong>Raw prompt</strong>: feeds your text <strong>directly</strong> to the model for continuation. The model has no idea who's speaking or who's asking whom (same as Tab ①).</p>
+          <p><strong>Product layer (chat template)</strong>: wraps your text with Qwen3's agreed markers before sending. The markers look like this:</p>
           <pre class="text-xs bg-surface-2 rounded p-2 whitespace-pre-wrap break-all">&lt;|im_start|&gt;system
-你是X
+You are X
 &lt;|im_end|&gt;
 &lt;|im_start|&gt;user
 help me
 &lt;|im_end|&gt;</pre>
-          <p>告訴 model「<strong>這段是 system、這段是 user</strong>」。展開下面「實際送進 model」preview 就看得到 marker 怎麼包成。</p>
+          <p>This tells the model "<strong>this part is system, this part is user</strong>". Expand the "Final prompt actually sent to the model" preview below to see exactly how the markers wrap it.</p>
         </div>
       </details>
 
       <details class="preview-details pt-2">
-        <summary class="cursor-pointer text-sm text-muted hover:text-ink-soft">實際送進 model 的 final prompt(預覽)</summary>
+        <summary class="cursor-pointer text-sm text-muted hover:text-ink-soft">Final prompt actually sent to the model (preview)</summary>
         <pre class="final-prompt-preview mt-2 rounded-md bg-surface-2 border border-edge-soft p-3 text-xs font-mono whitespace-pre-wrap break-all max-h-80 overflow-auto text-ink-soft"></pre>
       </details>
 
       <div class="flex gap-2 pt-1">
-        <button class="run inline-flex items-center px-4 py-2 rounded-md bg-ink text-surface text-sm font-medium hover:bg-ink-soft disabled:bg-faint transition-colors">送出</button>
-        <button class="stop inline-flex items-center px-4 py-2 rounded-md border border-edge text-ink-soft text-sm hover:bg-surface-2 disabled:text-faint disabled:hover:bg-transparent transition-colors" disabled>停</button>
+        <button class="run inline-flex items-center px-4 py-2 rounded-md bg-ink text-surface text-sm font-medium hover:bg-ink-soft disabled:bg-faint transition-colors">Send</button>
+        <button class="stop inline-flex items-center px-4 py-2 rounded-md border border-edge text-ink-soft text-sm hover:bg-surface-2 disabled:text-faint disabled:hover:bg-transparent transition-colors" disabled>Stop</button>
       </div>
     </section>
     <section class="output-area mt-8 lg:mt-0 space-y-2">
-      <h2 class="text-xs uppercase tracking-wider text-muted font-medium">Model 吐的字</h2>
+      <h2 class="text-xs uppercase tracking-wider text-muted font-medium">What the model emits</h2>
       <div class="generated-text rounded-md bg-surface-2 border border-edge-soft p-4 min-h-[6rem] font-mono text-sm md:text-base leading-relaxed break-all"></div>
     </section>
     <section class="probs-area mt-6 lg:mt-0 space-y-2">
-      <h2 class="text-xs uppercase tracking-wider text-muted font-medium">Token 候選 · top 10</h2>
+      <h2 class="text-xs uppercase tracking-wider text-muted font-medium">Token candidates · top 10</h2>
       <div class="probs rounded-md bg-surface border border-edge-soft p-3 min-h-[6rem]"></div>
     </section>
   </main>
 
   <!-- ─────────────────────────────────────────────────────────────────
-       Tab 3: 推理 — thinking 開關對照
+       Tab 3: Reasoning — thinking on/off comparison
        ───────────────────────────────────────────────────────────────── -->
   <main class="tab-panel max-w-6xl mx-auto px-4 md:px-8 py-6 md:py-10" data-panel="reasoning">
     <section class="prompt-area lg:col-span-2 space-y-3">
-      <label for="prompt-reasoning" class="block text-sm font-medium text-ink-soft">經典題</label>
-      <textarea class="prompt w-full max-w-2xl rounded-md border border-edge bg-surface px-3 py-2 text-sm md:text-base font-mono focus:outline-none focus:border-final focus:ring-1 focus:ring-final" id="prompt-reasoning" rows="3" placeholder="爸爸有3顆蘋果,兒子多他2顆。請問兒子幾顆?">爸爸有3顆蘋果,兒子多他2顆。請問兒子幾顆?</textarea>
+      <label for="prompt-reasoning" class="block text-sm font-medium text-ink-soft">Classic problem</label>
+      <textarea class="prompt w-full max-w-2xl rounded-md border border-edge bg-surface px-3 py-2 text-sm md:text-base font-mono focus:outline-none focus:border-final focus:ring-1 focus:ring-final" id="prompt-reasoning" rows="3" placeholder="爸爸有3顆蘋果,兒子多他2顆。請問兒子幾顆? (Dad has 3 apples, son has 2 more than him. How many does the son have?)">爸爸有3顆蘋果,兒子多他2顆。請問兒子幾顆?</textarea>
 
       <div class="mode-row flex flex-wrap gap-x-5 gap-y-2 pt-1">
-        <label class="inline-flex items-center gap-2 text-sm text-ink-soft"><input type="radio" name="mode-reasoning" value="direct" checked class="accent-final"> 直答(跳過 thinking),模型直接答</label>
-        <label class="inline-flex items-center gap-2 text-sm text-ink-soft"><input type="radio" name="mode-reasoning" value="thinking" class="accent-final"> 用 thinking,模型把思考寫成 token</label>
+        <label class="inline-flex items-center gap-2 text-sm text-ink-soft"><input type="radio" name="mode-reasoning" value="direct" checked class="accent-final"> Direct answer (skip thinking) — model answers immediately</label>
+        <label class="inline-flex items-center gap-2 text-sm text-ink-soft"><input type="radio" name="mode-reasoning" value="thinking" class="accent-final"> With thinking — model writes its reasoning out as tokens</label>
       </div>
       <details class="info-tag">
-        <summary class="cursor-pointer text-xs text-final hover:underline list-none [&::-webkit-details-marker]:hidden select-none inline-block py-0.5">(?) 什麼是 Thinking mode / &lt;think&gt; block</summary>
+        <summary class="cursor-pointer text-xs text-final hover:underline list-none [&::-webkit-details-marker]:hidden select-none inline-block py-0.5">(?) What is Thinking mode / the &lt;think&gt; block</summary>
         <div class="mt-1.5 p-3 rounded-md bg-final-tint text-sm text-ink-soft max-w-2xl leading-relaxed space-y-2">
-          <p>Qwen3 等 reasoning model 可以<strong>先「在腦中」想再答</strong>。它會吐 <code class="bg-surface-2 px-1 rounded text-xs">&lt;think&gt;...&lt;/think&gt;</code> 包住的思考 token,然後才吐答案。</p>
+          <p>Reasoning models like Qwen3 can <strong>"think in their head" before answering</strong>. They emit reasoning tokens wrapped in <code class="bg-surface-2 px-1 rounded text-xs">&lt;think&gt;...&lt;/think&gt;</code>, and only then emit the answer.</p>
           <ul class="list-disc list-inside space-y-1">
-            <li><strong>直答(跳過 thinking)</strong>:client 強塞 <code class="bg-surface-2 px-1 rounded text-xs">&lt;think&gt;&lt;/think&gt;</code> 空白進去,model 沒空間想 → 直接答。<strong>快,但難題容易錯。</strong></li>
-            <li><strong>用 thinking</strong>:留空間給 model 想 → 看它真的把推理寫成 token。<strong>慢,但通常對。</strong></li>
+            <li><strong>Direct answer (skip thinking)</strong>: the client force-injects an empty <code class="bg-surface-2 px-1 rounded text-xs">&lt;think&gt;&lt;/think&gt;</code>, so the model has no room to think → it answers directly. <strong>Fast, but easy to get wrong on hard problems.</strong></li>
+            <li><strong>With thinking</strong>: leaves room for the model to think → you see it actually write the reasoning out as tokens. <strong>Slower, but usually correct.</strong></li>
           </ul>
-          <p>蘋果題(爸爸有 3 顆、兒子多他 2 顆,兒子幾顆?)就是設計來看這個差異 — 直答常算錯,thinking 才對。</p>
+          <p>The apple problem (Dad has 3 apples, son has 2 more than him — how many does the son have?) is designed to show this difference — direct answers often miscalculate, thinking gets it right.</p>
         </div>
       </details>
 
       <details class="preview-details pt-2">
-        <summary class="cursor-pointer text-sm text-muted hover:text-ink-soft">實際送進 model 的 final prompt(預覽)</summary>
+        <summary class="cursor-pointer text-sm text-muted hover:text-ink-soft">Final prompt actually sent to the model (preview)</summary>
         <pre class="final-prompt-preview mt-2 rounded-md bg-surface-2 border border-edge-soft p-3 text-xs font-mono whitespace-pre-wrap break-all max-h-80 overflow-auto text-ink-soft"></pre>
       </details>
 
       <div class="flex gap-2 pt-1">
-        <button class="run inline-flex items-center px-4 py-2 rounded-md bg-ink text-surface text-sm font-medium hover:bg-ink-soft disabled:bg-faint transition-colors">送出</button>
-        <button class="stop inline-flex items-center px-4 py-2 rounded-md border border-edge text-ink-soft text-sm hover:bg-surface-2 disabled:text-faint disabled:hover:bg-transparent transition-colors" disabled>停</button>
+        <button class="run inline-flex items-center px-4 py-2 rounded-md bg-ink text-surface text-sm font-medium hover:bg-ink-soft disabled:bg-faint transition-colors">Send</button>
+        <button class="stop inline-flex items-center px-4 py-2 rounded-md border border-edge text-ink-soft text-sm hover:bg-surface-2 disabled:text-faint disabled:hover:bg-transparent transition-colors" disabled>Stop</button>
       </div>
     </section>
     <section class="output-area mt-8 lg:mt-0 space-y-2">
-      <h2 class="text-xs uppercase tracking-wider text-muted font-medium">Model 吐的字</h2>
+      <h2 class="text-xs uppercase tracking-wider text-muted font-medium">What the model emits</h2>
       <div class="generated-text rounded-md bg-surface-2 border border-edge-soft p-4 min-h-[6rem] font-mono text-sm md:text-base leading-relaxed break-all"></div>
     </section>
     <section class="probs-area mt-6 lg:mt-0 space-y-2">
-      <h2 class="text-xs uppercase tracking-wider text-muted font-medium">Token 候選 · top 10</h2>
+      <h2 class="text-xs uppercase tracking-wider text-muted font-medium">Token candidates · top 10</h2>
       <div class="probs rounded-md bg-surface border border-edge-soft p-3 min-h-[6rem]"></div>
     </section>
   </main>
 
   <!-- ─────────────────────────────────────────────────────────────────
-       Tab 4: Agent — 真執行 tools via :8082 backend
+       Tab 4: Agent — actually executes tools via :8082 backend
        ───────────────────────────────────────────────────────────────── -->
   <main class="tab-panel max-w-4xl mx-auto px-4 md:px-8 py-6 md:py-10" data-panel="agent">
     <section class="prompt-area space-y-3">
-      <label for="system-prompt-agent" class="block text-sm font-medium text-ink-soft">System Prompt(預填,可改)</label>
+      <label for="system-prompt-agent" class="block text-sm font-medium text-ink-soft">System Prompt (prefilled, editable)</label>
       <details class="info-tag">
-        <summary class="cursor-pointer text-xs text-final hover:underline list-none [&::-webkit-details-marker]:hidden select-none inline-block py-0.5">(?) 為什麼 Agent 也有 System Prompt — 它跟 Tab ② 差在哪</summary>
+        <summary class="cursor-pointer text-xs text-final hover:underline list-none [&::-webkit-details-marker]:hidden select-none inline-block py-0.5">(?) Why does the Agent also have a System Prompt — how is it different from Tab ②</summary>
         <div class="mt-1.5 p-3 rounded-md bg-final-tint text-sm text-ink-soft max-w-2xl leading-relaxed space-y-2">
-          <p>跟 Tab ② 一樣是「對 model 預先講話」,但這次內容包含「<strong>你有這些工具可以用:get_time / read_file / write_file / exec_bash</strong>」+ 每個工具的 JSON schema 描述。</p>
-          <p>Model 看到這段後,遇到需要工具的問題(例如「現在幾點?」)就會吐 <code class="bg-surface-2 px-1 rounded text-xs">&lt;tool_call&gt;</code> 標籤呼叫對應工具。</p>
-          <p>展開下面「實際送到 model 的 prompt」preview,看完整 system + tools schema 包好的字串。</p>
+          <p>Same as Tab ② — "speaking to the model up front" — but this time the content includes "<strong>you have these tools available: get_time / read_file / write_file / exec_bash</strong>" plus a JSON schema describing each tool.</p>
+          <p>Once the model sees this, when it hits a question that needs a tool (e.g. "What time is it?") it emits a <code class="bg-surface-2 px-1 rounded text-xs">&lt;tool_call&gt;</code> tag to invoke the matching tool.</p>
+          <p>Expand the "Actual prompt sent to the model" preview below to see the full system + tools schema string after it's all wrapped up.</p>
         </div>
       </details>
       <textarea class="system-prompt w-full rounded-md border border-edge bg-surface px-3 py-2 text-sm font-mono focus:outline-none focus:border-final focus:ring-1 focus:ring-final" id="system-prompt-agent" rows="4"></textarea>
 
-      <label for="prompt-agent" class="block text-sm font-medium text-ink-soft pt-2">問題</label>
+      <label for="prompt-agent" class="block text-sm font-medium text-ink-soft pt-2">Question</label>
       <div class="preset-row">
         <select class="preset-select w-full max-w-md rounded-md border border-edge bg-surface px-3 py-2 text-sm focus:outline-none focus:border-final focus:ring-1 focus:ring-final">
-          <option value="">(選 preset 預填,或自己打)</option>
-          <option value="現在幾點?">1. 現在幾點?</option>
-          <option value="讀 prompts.md,把它總結成 3 點,寫到 ~/Desktop/llm-summary.md">2. 讀+寫 摘要</option>
-          <option value="數一下這個 repo 底下有幾個 .md 檔">3. 數 .md 檔</option>
+          <option value="">(Pick a preset to prefill, or type your own)</option>
+          <option value="現在幾點?">1. 現在幾點? (What time is it?)</option>
+          <option value="讀 prompts.md,把它總結成 3 點,寫到 ~/Desktop/llm-summary.md">2. Read + write (summarize prompts.md into 3 points, save to ~/Desktop/llm-summary.md)</option>
+          <option value="數一下這個 repo 底下有幾個 .md 檔">3. Count the .md files in this repo</option>
         </select>
       </div>
-      <textarea class="prompt w-full rounded-md border border-edge bg-surface px-3 py-2 text-sm md:text-base font-mono focus:outline-none focus:border-final focus:ring-1 focus:ring-final" id="prompt-agent" rows="3" placeholder="問題..."></textarea>
+      <textarea class="prompt w-full rounded-md border border-edge bg-surface px-3 py-2 text-sm md:text-base font-mono focus:outline-none focus:border-final focus:ring-1 focus:ring-final" id="prompt-agent" rows="3" placeholder="Question..."></textarea>
 
       <details class="preview-details pt-1">
-        <summary class="cursor-pointer text-sm text-muted hover:text-ink-soft">實際送到 model 的 prompt(chat template 包好的 text,跟 Tab 2/3 同種視角)</summary>
+        <summary class="cursor-pointer text-sm text-muted hover:text-ink-soft">Actual prompt sent to the model (chat-template-wrapped text, same view as Tabs 2/3)</summary>
         <pre class="final-prompt-preview mt-2 rounded-md bg-surface-2 border border-edge-soft p-3 text-xs font-mono whitespace-pre-wrap break-all max-h-80 overflow-auto text-ink-soft"></pre>
       </details>
 
       <div class="flex gap-2 pt-1">
-        <button class="run inline-flex items-center px-4 py-2 rounded-md bg-ink text-surface text-sm font-medium hover:bg-ink-soft disabled:bg-faint transition-colors">送出</button>
-        <button class="stop inline-flex items-center px-4 py-2 rounded-md border border-edge text-ink-soft text-sm hover:bg-surface-2 disabled:text-faint disabled:hover:bg-transparent transition-colors" disabled>停</button>
+        <button class="run inline-flex items-center px-4 py-2 rounded-md bg-ink text-surface text-sm font-medium hover:bg-ink-soft disabled:bg-faint transition-colors">Send</button>
+        <button class="stop inline-flex items-center px-4 py-2 rounded-md border border-edge text-ink-soft text-sm hover:bg-surface-2 disabled:text-faint disabled:hover:bg-transparent transition-colors" disabled>Stop</button>
       </div>
     </section>
 
     <section class="turns-area mt-8 md:mt-10 space-y-3">
-      <h2 class="text-xs uppercase tracking-wider text-muted font-medium">Agent 跑的軌跡</h2>
-      <p class="text-sm text-muted leading-relaxed">每個 turn 結束都會 <span class="font-medium text-ink-soft">累積進 messages</span>,送進下一次 model 看。</p>
+      <h2 class="text-xs uppercase tracking-wider text-muted font-medium">Agent trace</h2>
+      <p class="text-sm text-muted leading-relaxed">After each turn ends, everything <span class="font-medium text-ink-soft">accumulates into messages</span> and gets sent to the model on the next turn.</p>
       <details class="info-tag">
-        <summary class="cursor-pointer text-xs text-final hover:underline list-none [&::-webkit-details-marker]:hidden select-none inline-block py-0.5">(?) 什麼是 Agent / Tool / &lt;tool_call&gt; / Turn</summary>
+        <summary class="cursor-pointer text-xs text-final hover:underline list-none [&::-webkit-details-marker]:hidden select-none inline-block py-0.5">(?) What are Agent / Tool / &lt;tool_call&gt; / Turn</summary>
         <div class="mt-1.5 p-3 rounded-md bg-final-tint text-sm text-ink-soft max-w-2xl leading-relaxed space-y-3">
           <div>
-            <p><strong>Agent</strong>:Chatbot = 你問它答;Agent = 它<strong>會自己呼叫工具</strong>(讀檔、寫檔、跑 shell...)做事,做完才答。本質還是 token prediction,只是約定 client 認得的 trigger pattern。</p>
+            <p><strong>Agent</strong>: a chatbot answers what you ask. An agent <strong>calls tools on its own</strong> (read files, write files, run shell...) to get things done, then answers. Underneath it's still token prediction — just with a trigger pattern the client knows how to recognize.</p>
           </div>
           <div>
-            <p><strong>Tool</strong>:寫好的 Python function(這 repo 有 4 個:<code class="bg-surface-2 px-1 rounded text-xs">get_time</code> / <code class="bg-surface-2 px-1 rounded text-xs">read_file</code> / <code class="bg-surface-2 px-1 rounded text-xs">write_file</code> / <code class="bg-surface-2 px-1 rounded text-xs">exec_bash</code>)+ JSON schema 描述。</p>
+            <p><strong>Tool</strong>: a ready-made Python function (this repo ships 4: <code class="bg-surface-2 px-1 rounded text-xs">get_time</code> / <code class="bg-surface-2 px-1 rounded text-xs">read_file</code> / <code class="bg-surface-2 px-1 rounded text-xs">write_file</code> / <code class="bg-surface-2 px-1 rounded text-xs">exec_bash</code>) plus a JSON schema describing it.</p>
           </div>
           <div>
-            <p><strong><code class="bg-surface-2 px-1 rounded text-xs">&lt;tool_call&gt; ... &lt;/tool_call&gt;</code></strong>:Qwen3 約定的 XML 標籤。Model 想呼叫工具時吐這串:</p>
+            <p><strong><code class="bg-surface-2 px-1 rounded text-xs">&lt;tool_call&gt; ... &lt;/tool_call&gt;</code></strong>: Qwen3's agreed XML tag. When the model wants to call a tool, it emits this string:</p>
             <pre class="text-xs bg-surface-2 rounded p-2 mt-1 whitespace-pre-wrap break-all">&lt;tool_call&gt;
 {"name": "get_time", "arguments": {}}
 &lt;/tool_call&gt;</pre>
-            <p class="mt-1">Backend 看到就 parse JSON、call 對應 Python function、結果(時間字串)塞回對話再丟給 model。</p>
+            <p class="mt-1">The backend sees it, parses the JSON, calls the matching Python function, then injects the result (e.g. a timestamp) back into the conversation and feeds it to the model again.</p>
           </div>
           <div>
-            <p><strong>Turn</strong>:multi-turn loop 一輪。Turn 1 = model 第一次吐字(可能 tool_call)。Turn 2 = model 看 turn 1 tool 結果後再吐字。<strong>直到 model 不再 tool_call → final answer</strong>。</p>
+            <p><strong>Turn</strong>: one cycle of the multi-turn loop. Turn 1 = model emits text for the first time (possibly a tool_call). Turn 2 = model sees Turn 1's tool result and emits text again. <strong>Repeat until the model stops emitting tool_call → final answer.</strong></p>
           </div>
         </div>
       </details>
@@ -275,12 +278,12 @@ help me
     <section class="final-area mt-8 md:mt-10 rounded-lg bg-final-tint p-5 md:p-6 space-y-2">
       <div class="flex items-baseline gap-2 flex-wrap">
         <h2 class="text-sm font-semibold text-final uppercase tracking-wider">Final answer</h2>
-        <span class="hint text-xs text-muted">這才是給 user 看的最終回覆</span>
+        <span class="hint text-xs text-muted">This is the final reply the user actually sees</span>
       </div>
       <div class="final-content text-base md:text-lg leading-relaxed text-ink"></div>
     </section>
   </main>
 
-  <script src="app.js?v=31"></script>
+  <script src="app.js?v=32"></script>
 </body>
 </html>

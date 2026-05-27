@@ -1,6 +1,61 @@
 // ─────────────────────────────────────────────────────────────────────
 // LLM 課 frontend — 2 tabs(基礎 / 產品加工),各自獨立 state
 // ─────────────────────────────────────────────────────────────────────
+
+// ── i18n: language is taken from <html lang>;預設 en,zh-TW fallback ──
+const LANG = document.documentElement.lang || 'en';
+const I18N = {
+  swap_failed: {
+    'en':    'Model swap failed: {err}\n\nManual fallback: SETUP.md "Fri AM check"',
+    'zh-TW': '切換 model 失敗:{err}\n\n手動補救:SETUP.md "Fri AM check"',
+  },
+  tok_title: {
+    'en':    'Generated token #{n} — click to see its distribution',
+    'zh-TW': '第 {n} 個生成 token — 點看當下分布',
+  },
+  cjk_guard_log: {
+    'en':    '[llama.cpp guard] single CJK char "{ch}" — appending trailing space',
+    'zh-TW': '[llama.cpp guard] 單 CJK 字 "{ch}" 補尾空格',
+  },
+  turn_subtitle_more: {
+    'en':    'The whole turn (model output plus tool results) accumulates into messages and is sent to the model next turn',
+    'zh-TW': '整個 turn(model 吐的字 加上 tool 結果)累積進 messages,送進下次 model',
+  },
+  turn_subtitle_final: {
+    'en':    'This is the final turn — model did not tool_call again, done',
+    'zh-TW': '這是 final turn,model 沒再 tool_call,結束了',
+  },
+  tool_call_label: {
+    'en':    'Tool call',
+    'zh-TW': '工具呼叫',
+  },
+  tool_call_sub: {
+    'en':    'parsed from the tokens the model emitted, handed off to the client to run',
+    'zh-TW': 'model 從吐的 token 解析出來,交給 client 跑',
+  },
+  tool_result_label: {
+    'en':    'Tool result',
+    'zh-TW': '工具結果',
+  },
+  tool_result_sub: {
+    'en':    'the return value the client actually ran, fed back into messages for the next turn',
+    'zh-TW': 'client 真執行的回傳,會塞回 messages 給下次 model',
+  },
+  received_summary: {
+    'en':    'Received: the raw string the model emitted on this turn',
+    'zh-TW': '收到,model 在這 turn 吐的字串(原樣)',
+  },
+  next_prompt_summary: {
+    'en':    'Sent again: the prompt sent to the model after accumulating {turn} turn(s)',
+    'zh-TW': '再送出,累積 {turn} turn 後送進下次 model 的 prompt',
+  },
+};
+function t(key, vars = {}) {
+  let s = (I18N[key] && I18N[key][LANG]) || (I18N[key] && I18N[key].en) || key;
+  for (const k in vars) s = s.replace(`{${k}}`, vars[k]);
+  return s;
+}
+
 const LLAMA_URL = "http://localhost:8080/completion";
 
 const AGENT_BACKEND_URL = "http://localhost:8082/agent";
@@ -47,7 +102,7 @@ async function ensureModel(wanted) {
     console.log(`[swap] ready: ${d.model} (${d.took_ms}ms, skipped=${d.skipped})`);
   } catch (err) {
     console.error("[swap] failed", err);
-    alert(`切換 model 失敗:${err.message}\n\n手動補救:SETUP.md "Fri AM check"`);
+    alert(t('swap_failed', {err: err.message}));
     throw err;
   } finally {
     hideSwapBanner();
@@ -158,7 +213,7 @@ function setupPanel(panel) {
     span.className = "tok";
     span.dataset.step = String(stepIdx);
     span.textContent = token;
-    span.title = `第 ${stepIdx + 1} 個生成 token — 點看當下分布`;
+    span.title = t('tok_title', {n: stepIdx + 1});
     span.addEventListener("click", () => {
       const s = tokenSteps[stepIdx];
       if (!s) return;
@@ -186,7 +241,7 @@ function setupPanel(panel) {
     let safePrompt = finalPrompt;
     if (finalPrompt.length === 1 && finalPrompt.charCodeAt(0) > 127) {
       safePrompt = finalPrompt + " ";
-      console.info(`[llama.cpp guard] 單 CJK 字 "${finalPrompt}" 補尾空格`);
+      console.info(t('cjk_guard_log', {ch: finalPrompt}));
     }
 
     let res;
@@ -394,8 +449,8 @@ function setupAgent(panel) {
     subtitleSpan.className = TW.subtitle;
     const hasNextTurn = (tool_calls || []).length > 0;
     subtitleSpan.textContent = hasNextTurn
-      ? "整個 turn(model 吐的字 加上 tool 結果)累積進 messages,送進下次 model"
-      : "這是 final turn,model 沒再 tool_call,結束了";
+      ? t('turn_subtitle_more')
+      : t('turn_subtitle_final');
     const collapseBtn = document.createElement("button");
     collapseBtn.className = TW.collapseBtn;
     collapseBtn.textContent = "▼ collapse";
@@ -436,10 +491,10 @@ function setupAgent(panel) {
       tcArrow.setAttribute("aria-hidden", "true");
       tcArrow.textContent = "↑";
       const tcLabel = document.createElement("span");
-      tcLabel.textContent = "工具呼叫";
+      tcLabel.textContent = t('tool_call_label');
       const tcSub = document.createElement("span");
       tcSub.className = TW.toolCallSub;
-      tcSub.textContent = "model 從吐的 token 解析出來,交給 client 跑";
+      tcSub.textContent = t('tool_call_sub');
       tcHead.append(tcArrow, tcLabel, tcSub);
       const tcBody = document.createElement("div");
       tcBody.className = TW.toolCallBody;
@@ -458,10 +513,10 @@ function setupAgent(panel) {
       trArrow.setAttribute("aria-hidden", "true");
       trArrow.textContent = "↓";
       const trLabel = document.createElement("span");
-      trLabel.textContent = "工具結果";
+      trLabel.textContent = t('tool_result_label');
       const trSub = document.createElement("span");
       trSub.className = TW.toolResultSub;
-      trSub.textContent = "client 真執行的回傳,會塞回 messages 給下次 model";
+      trSub.textContent = t('tool_result_sub');
       trHead.append(trArrow, trLabel, trSub);
       const trBody = document.createElement("pre");
       trBody.className = TW.toolResultBody;
@@ -476,7 +531,7 @@ function setupAgent(panel) {
       rcDetails.className = TW.npDetails;
       const rcSummary = document.createElement("summary");
       rcSummary.className = TW.npSummary;
-      rcSummary.textContent = "收到,model 在這 turn 吐的字串(原樣)";
+      rcSummary.textContent = t('received_summary');
       const rcPre = document.createElement("pre");
       rcPre.className = TW.npPre;
       rcPre.textContent = received_chunk;
@@ -488,7 +543,7 @@ function setupAgent(panel) {
       npDetails.className = TW.npDetails;
       const npSummary = document.createElement("summary");
       npSummary.className = TW.npSummary;
-      npSummary.textContent = `再送出,累積 ${turn} turn 後送進下次 model 的 prompt`;
+      npSummary.textContent = t('next_prompt_summary', {turn});
       const npPre = document.createElement("pre");
       npPre.className = TW.npPre;
       npPre.textContent = next_prompt;

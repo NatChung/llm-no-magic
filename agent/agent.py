@@ -108,7 +108,7 @@ def write_file(path: str, content: str) -> str:
         resolved = Path(path).expanduser()
         resolved.parent.mkdir(parents=True, exist_ok=True)
         resolved.write_text(content, encoding="utf-8")
-        return f"已寫入 {path}({len(content)} 字)"
+        return f"Wrote {path} ({len(content)} chars)"
     except Exception as exc:
         return f"error: write failed: {type(exc).__name__}: {exc}"
 
@@ -170,8 +170,8 @@ def dispatch_tool_call(name: str, args: dict, tools: dict[str, Callable]) -> str
 class AgentLoop:
     """Drive the LLM <-> tool loop. Persistent messages across REPL turns.
 
-    Per spec §8: messages 是 owner-of-state — 跨 turn 累積,model 看得到歷史。
-    Tools 跟 schemas 來自 module-level TOOLS / TOOL_SCHEMAS,不 parameterize。
+    Per spec §8: messages is owner-of-state — accumulates across turns so the model sees history.
+    Tools and schemas come from module-level TOOLS / TOOL_SCHEMAS, not parameterized.
     """
 
     def __init__(self, system_prompt: str = "", max_turns: int = MAX_TURNS):
@@ -184,7 +184,7 @@ class AgentLoop:
     def run(self, user_input: str) -> list[dict]:
         """Append user input, run turn loop. Returns full self.messages.
 
-        Subsequent calls see prior history(cross-turn memory)。
+        Subsequent calls see prior history (cross-turn memory).
         """
         self.messages.append({"role": "user", "content": user_input})
 
@@ -266,10 +266,10 @@ def log_message(msg: dict) -> None:
 def main() -> None:
     """Interactive REPL — type prompt, see agent loop output.
 
-    AgentLoop 跨 turn 持有 self.messages,所以連續 prompt 有 cross-turn memory。
+    AgentLoop holds self.messages across turns, so consecutive prompts share cross-turn memory.
     """
-    print(f"{ANSI['SYSTEM']}V2 Agent CLI · Qwen3-4B @ localhost:8080{ANSI['RESET']}")
-    print(f"{ANSI['SYSTEM']}輸入 prompt,Ctrl-D / 'exit' 離開{ANSI['RESET']}")
+    print(f"{ANSI['SYSTEM']}Agent CLI · Qwen3-4B @ localhost:8080{ANSI['RESET']}")
+    print(f"{ANSI['SYSTEM']}Type a prompt. Ctrl-D or 'exit' to quit.{ANSI['RESET']}")
     print()
 
     loop = AgentLoop(system_prompt=SYSTEM_PROMPT)
@@ -285,7 +285,7 @@ def main() -> None:
         if user_input.strip().lower() in {"exit", "quit", "/q"}:
             break
 
-        # Log user message (loop.run 會 append 進 self.messages,但我們先 display 給 user 看)
+        # Log user message (loop.run will also append it to self.messages, but we display it first)
         log_message({"role": "user", "content": user_input})
 
         prev_len = len(loop.messages)  # before run() appends user msg
@@ -301,9 +301,9 @@ def main() -> None:
             loop.messages = loop.messages[:prev_len]
             continue
 
-        # Log only NEW messages from this turn(skip the user we just shown)。
-        # history 累積:第 1 turn 是 [system, user, ...];第 N turn 是 [..., user, ...]。
-        # prev_len + 1 跳過剛 appended 的 user msg。
+        # Log only NEW messages from this turn (skip the user msg we just displayed).
+        # history accumulates: turn 1 = [system, user, ...]; turn N = [..., user, ...].
+        # prev_len + 1 skips over the user msg that run() just appended.
         for msg in history[prev_len + 1:]:
             log_message(msg)
 

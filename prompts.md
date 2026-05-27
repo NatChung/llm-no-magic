@@ -1,53 +1,54 @@
-# LLM 課 prompt 素材
+# LLM Course Prompt Material
 
-## S1 (a) 形狀
+> 繁體中文版: [prompts.zh-TW.md](./prompts.zh-TW.md)
 
-### Peaked(中文)
-- `床前明月光` → 接 `,疑是地上霜`(唐詩 LLM 必背,top-1 一根獨大,model 對熟悉文本極高 confidence)
-- `祖樹星上最高的山叫做` → 自信編一個假地名(對假實體仍 peaked → 展示「**peaked ≠ 真實 / confidence ≠ correctness**」,核心 punchline)
+## S1 (a) Shape
 
-### Flat(中文)
-- `他打開冰箱,拿出` → 一片矮樹叢(水 / 雞蛋 / 剩飯 / 啤酒...)— 可能性多,top-K 分散
+### Peaked (Chinese)
+- `床前明月光` → continues with `,疑是地上霜` (a Tang dynasty poem the LLM has memorized; top-1 dominates, very high confidence on familiar text)
+- `祖樹星上最高的山叫做` → the model confidently invents a fake place name (still peaked for a fictional entity → demonstrates "**peaked ≠ truth / confidence ≠ correctness**", the core punchline)
 
-### 英文對照(可選)
-- Peaked:`A year has twelve ` → `months`
-- Flat:`He opened the fridge and took out ` → 一片矮樹叢
-- 假地名:`The tallest mountain on the continent of Zypler is called `(中文版見上方「祖樹星」)
+### Flat (Chinese)
+- `他打開冰箱,拿出` → a low bush of options (water / eggs / leftovers / beer...) — many plausibilities, top-K spreads out
 
-## S1 (b) Watermelon 四階(英文,中文當對照)
+### English equivalents (optional)
+- Peaked: `A year has twelve ` → `months`
+- Flat: `He opened the fridge and took out ` → a low bush of options
+- Fake place: `The tallest mountain on the continent of Zypler is called ` (Chinese version: see `祖樹星` above)
 
-> 注意:這些 prompt 用在串流 bar chart demo(顯示 token 分布)。
-> 趨勢折線圖(追 watermelon 機率 vs 階段)使用 chat-format wrapper,追蹤 `melon` token。
+## S1 (b) Watermelon — four stages (English, with Chinese as reference)
+
+> Note: these prompts are used for the streaming bar-chart demo (token distribution).
+> The trend line chart (tracking watermelon probability across stages) uses chat-format wrapper, tracking the `melon` token.
 
 Stage 1: `I'm thinking of a fruit. It is a `
 Stage 2: `I'm thinking of a fruit that is very popular in summer. It is a `
 Stage 3: `I'm thinking of a fruit that is very popular in summer, very large, with a green rind. It is a `
 Stage 4: `I'm thinking of a fruit that is very popular in summer, very large, with a green rind, red flesh, and black seeds. It is a `
 
-追蹤目標 token:`melon`(Qwen3-0.6B 把 watermelon 分成 `water`+`melon` 兩個 sub-token;
-用 chat format 問「What fruit?」時,模型會直接輸出 `melon` 或 `Water`+`melon`。
-追蹤 `melon` 呈現 Stage1≈0.2% → Stage2≈46% → Stage3≈23% → Stage4≈26% 的躍升。)
+Tracked token: `melon` (Qwen3-0.6B splits watermelon into `water` + `melon` sub-tokens;
+in chat format with "What fruit?", the model outputs `melon` directly or `Water` + `melon`.
+Tracking `melon` shows Stage1 ≈ 0.2% → Stage2 ≈ 46% → Stage3 ≈ 23% → Stage4 ≈ 26%.)
 
-### 反例(可選,Stage 3 後)
+### Counter-example (optional, after Stage 3)
 `I'm thinking of a fruit that is very popular in summer, very large, with a green rind, but it is quite small and fits in your hand. It is a `
-預期:`melon` 機率掉下來,改成 small 水果
+Expected: `melon` probability drops, replaced by small-fruit options
 
-## S1 (c) Zypler 假實體(英文)
+## S1 (c) Zypler fake entity (English)
 
 `The tallest mountain on the continent of Zypler is called `
-預期:peaked 分布、自信抽一個假地名
+Expected: peaked distribution, confidently picks a fake place name
 
 ---
 
-## Tokenizer 備忘(Qwen3-0.6B)
+## Tokenizer notes (Qwen3-0.6B)
 
-| 詞 | Token IDs | Sub-tokens |
+| Word | Token IDs | Sub-tokens |
 |---|---|---|
-| `water` | 12987 | `water` (no space) |
-| ` water` | 3015 | ` water` (leading space) |
+| `water` | 12987 | `water` (no leading space) |
+| ` water` | 3015 | ` water` (with leading space) |
 | `melon` | 71118 | `melon` |
 | `watermelon` | 12987 + 71118 | `water` + `melon` |
 | ` watermelon` | 3015 + 71118 | ` water` + `melon` |
 
-Base-completion mode(純接龍)在 watermelon 四階 prompt 下頂部 token 全是數字(1,2,3...),
-不是水果名 — 這是 0.6B 模型行為。趨勢圖用 chat format 繞過。
+Base-completion mode (raw continuation) on watermelon four-stage prompts: top tokens are all numbers (1, 2, 3...), not fruit names — this is 0.6B model behavior. The trend chart uses chat format to work around it.

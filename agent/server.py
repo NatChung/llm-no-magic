@@ -16,7 +16,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import requests
 from typing import Iterable
 from agent.agent import (
-    TOOLS,                 # used by Task 4(tool dispatch)
+    TOOLS,                 # used by Task 4 (tool dispatch)
     dispatch_tool_call,    # used by Task 4
     TOOL_SCHEMAS,
     SYSTEM_PROMPT,
@@ -38,31 +38,31 @@ CORS_HEADERS = {
 
 MAX_TURNS = 6
 
-# ── /swap orchestrator state(spec §4)──────────────────────────────────
+# ── /swap orchestrator state (spec §4) ──────────────────────────────────
 
-# Model identifier convention(I2):統一 substring,detect / poll 都用這個
+# Model identifier convention (I2): one substring used by both detect and poll
 MODEL_TAG = {
     "0.6B": "Qwen3-0.6B-Q4_K_M",
     "4B":   "Qwen3-4B-Q4_K_M",
 }
 
-SWAP_LOCK = threading.Lock()              # C1: 防 concurrent /swap race
-GLOBAL_STATE = {"model": None, "log_fh": None}   # log_fh 下次 swap 時 close
+SWAP_LOCK = threading.Lock()              # C1: prevent concurrent /swap race
+GLOBAL_STATE = {"model": None, "log_fh": None}   # log_fh: closed on next swap
 
 
 def _is_port_free(port: int) -> bool:
-    """C3: pkill 後驗證 port 真的 release 才能 launch。"""
+    """C3: verify the port is actually released after pkill before launching."""
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.settimeout(0.2)
     try:
         result = s.connect_ex(("127.0.0.1", port))
-        return result != 0   # connect 失敗 = port 沒人 listen
+        return result != 0   # connect failed = nothing listening on port
     finally:
         s.close()
 
 
 def _detect_model() -> str | None:
-    """從 :8080 /v1/models 推斷 current model — startup sync(I2 統一 substring)。"""
+    """Infer current model from :8080 /v1/models — startup sync (I2 substring)."""
     try:
         r = requests.get("http://localhost:8080/v1/models", timeout=1)
         if r.ok:
@@ -76,7 +76,7 @@ def _detect_model() -> str | None:
 
 
 def handle_swap(wanted: str) -> dict:
-    """spec §4:atomic swap llama-server on :8080 to wanted model。
+    """spec §4: atomic swap llama-server on :8080 to wanted model.
 
     Returns dict with `status` ∈ {"ready", "error"}, plus model/took_ms/skipped
     on ready, message on error. HTTP layer maps to 200/409/500.
@@ -84,7 +84,7 @@ def handle_swap(wanted: str) -> dict:
     if wanted not in MODEL_TAG:
         return {"status": "error", "message": f"unknown model: {wanted}"}
 
-    # C1: 一次只一個 swap,non-blocking
+    # C1: one swap at a time, non-blocking
     if not SWAP_LOCK.acquire(blocking=False):
         return {"status": "error", "message": "another swap in progress", "code": 409}
     try:
@@ -93,16 +93,16 @@ def handle_swap(wanted: str) -> dict:
 
         t0 = time.time()
 
-        # 1. Kill 現有 llama-server on :8080
+        # 1. Kill the existing llama-server on :8080
         subprocess.run(["pkill", "-f", "llama-server.*--port 8080"], check=False)
 
-        # C2: close 上一次的 log file handle 避免 fd leak
+        # C2: close the previous log file handle to avoid fd leak
         if GLOBAL_STATE.get("log_fh"):
             try: GLOBAL_STATE["log_fh"].close()
             except Exception: pass
             GLOBAL_STATE["log_fh"] = None
 
-        # C3: 驗 port 真 free
+        # C3: verify port is actually free
         for _ in range(10):  # ~5s timeout
             if _is_port_free(8080):
                 break
@@ -150,7 +150,7 @@ def handle_swap(wanted: str) -> dict:
 
 
 # Same llama-server host but different endpoint — returns chat-template-expanded
-# string given messages + tools. Used by /preview for教學一致性(Tab 2/3 風格)。
+# string given messages + tools. Used by /preview for teaching consistency (Tab 2/3 style).
 LLAMA_TEMPLATE_URL = LLAMA_URL.replace("/v1/chat/completions", "/apply-template")
 
 
@@ -201,18 +201,18 @@ def agent_loop(system: str, user: str) -> Iterable[dict]:
             tool_results_pub.append({"name": name, "result_text": result})
             messages.append({
                 "role":          "tool",
-                "tool_call_id":  tc.get("id", ""),  # 防 model 沒給 id 時 KeyError
+                "tool_call_id":  tc.get("id", ""),  # guard: model may omit id (avoid KeyError)
                 "content":       result,
             })
 
-        # 「收到」— 這 turn model 吐的 raw text(從 logprobs token concat),
-        # 加 chat-template assistant 開頭包好,跟「再送出」同視角。
+        # "received" — the raw text the model emitted this turn (concat from logprobs tokens),
+        # wrapped with the chat-template assistant prefix to match the "sent next" perspective.
         received_text = "".join(t.get("token", "") for t in lp) if lp else ""
         received_chunk = f"<|im_start|>assistant\n{received_text}" if received_text else ""
 
-        # 「再送出」— 累積後送下次 model 的 prompt(套 chat template)。
-        # 只在「有下 turn」時算(model 還在 tool_call):no tool_calls = final turn,
-        # 不會送 model 了,顯示「再送出」會誤導。
+        # "sent next" — the prompt sent into the next model call, after accumulation (chat template applied).
+        # Only computed when there's a next turn (model still in tool_call): no tool_calls = final turn,
+        # nothing will be sent to the model again, so showing "sent next" would mislead.
         next_prompt = ""
         if tool_calls:
             try:
@@ -302,13 +302,13 @@ class AgentHandler(BaseHTTPRequestHandler):
                 }))
                 self.wfile.flush()
             except Exception:
-                pass  # client 可能已斷線
+                pass  # client may have disconnected
 
     def _handle_swap_route(self) -> None:
-        """spec §4:接 POST /swap body {"model":...},呼叫 handle_swap。"""
+        """spec §4: handle POST /swap body {"model":...}, invoke handle_swap."""
         body = self._read_body()
         if body is None:
-            return  # _read_body 已送 400
+            return  # _read_body already sent 400
 
         wanted = body.get("model", "")
         result = handle_swap(wanted)
@@ -327,7 +327,7 @@ class AgentHandler(BaseHTTPRequestHandler):
         self.wfile.write(json.dumps(result).encode("utf-8"))
 
     def _handle_preview(self) -> None:
-        """Return chat-template-expanded prompt text for教學一致性。
+        """Return chat-template-expanded prompt text for teaching consistency.
 
         Calls llama.cpp /apply-template with same messages + tools as agent_loop
         would send, but doesn't generate — returns the formatted string model sees.
@@ -364,8 +364,8 @@ class AgentHandler(BaseHTTPRequestHandler):
 
 
 def main() -> None:
-    """Run backend on 127.0.0.1:8082(bind localhost only,不對 LAN 開)。"""
-    # Startup sync:偵測 :8080 上 alive 的 model(若有),sync GLOBAL_STATE
+    """Run backend on 127.0.0.1:8082 (bind localhost only, not exposed on LAN)."""
+    # Startup sync: detect any model currently alive on :8080, sync GLOBAL_STATE
     GLOBAL_STATE["model"] = _detect_model()
     print(f"Agent web backend on http://127.0.0.1:8082/agent")
     print(f"  detected current model on :8080 = {GLOBAL_STATE['model']}")

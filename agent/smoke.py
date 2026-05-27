@@ -85,7 +85,7 @@ def run_demo(name: str, prompt: str) -> dict:
         result["note"] = f"tool_names={tool_names} wrote={wrote}"
 
     elif name == "demo_3a_exec_count":
-        # 只認 stdout section 裡的數字,避開 `exit=0` 的 trivial match
+        # Only look for digits inside the stdout section, to avoid the trivial `exit=0` match
         def _stdout(r: str) -> str:
             m = re.search(r"--- stdout ---\n(.*?)\n--- stderr ---", r, re.DOTALL)
             return m.group(1) if m else ""
