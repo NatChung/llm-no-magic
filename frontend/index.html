@@ -106,6 +106,14 @@
       <textarea class="system-prompt w-full max-w-2xl rounded-md border border-edge bg-surface px-3 py-2 text-sm font-mono focus:outline-none focus:border-final focus:ring-1 focus:ring-final" id="system-prompt-advanced" rows="2" placeholder="例:你是行銷顧問,用條列式回答,只給 3 點"></textarea>
 
       <label for="prompt-advanced" class="block text-sm font-medium text-ink-soft pt-2">User prompt</label>
+      <div class="preset-row">
+        <select class="preset-select w-full max-w-md rounded-md border border-edge bg-surface px-3 py-2 text-sm focus:outline-none focus:border-final focus:ring-1 focus:ring-final">
+          <option value="">(選 preset 預填 user prompt,或自己打)</option>
+          <option value="一年有幾個月?">1. `一年有幾個月?` — 短答(加 system 看條列風)</option>
+          <option value="寫一個夏季冰飲的促銷文案">2. `寫一個夏季冰飲的促銷文案` — 創作(加 system「行銷顧問 3 點」看結構化)</option>
+          <option value="請寫一首關於月亮的五言絕句">3. `請寫一首關於月亮的五言絕句` — 文學(加 system 看格式約束)</option>
+        </select>
+      </div>
       <textarea class="prompt w-full max-w-2xl rounded-md border border-edge bg-surface px-3 py-2 text-sm md:text-base font-mono focus:outline-none focus:border-final focus:ring-1 focus:ring-final" id="prompt-advanced" rows="3" placeholder="輸入 prompt..."></textarea>
 
       <div class="mode-row flex flex-wrap gap-x-5 gap-y-2 pt-1">
@@ -211,6 +219,6 @@
     </section>
   </main>
 
-  <script src="app.js?v=29"></script>
+  <script src="app.js?v=30"></script>
 </body>
 </html>
