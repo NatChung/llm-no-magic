@@ -8,7 +8,7 @@
 
 ## What you'll see
 
-- **① 基礎** — 打字進去 → 看 model 一個一個吐 token + 每個 token 當下 top-10 機率分佈。中文 preset 4 個一鍵試:`1+1=`(peaked,接「王」— model 在做字形 pattern 不是算數)、`床前明月光`(peaked → 唐詩常識)、`祖樹星上最高的山叫做`(peaked,假地名 model 自信編)、`他打開冰箱,拿出`(flat,可能性多)
+- **① 基礎** — 打字進去 → 看 model 一個一個吐 token + 每個 token 當下 top-10 機率分佈。中文 preset 3 個有完整教學弧:`床前明月光`(peaked,model 記得 → top-1 99%+)、`祖樹星上最高的山叫做`(peaked,**你瞎掰**的星球 model 照樣自信編 → **peaked ≠ 真實**)、`他打開冰箱,拿出`(flat,model 不知接啥)。3 個對比展示「confidence ≠ correctness」+「分佈形狀反映 model 把握度」
 - **② 產品層加工** — 加 system prompt + Qwen3 chat template,看「加工後」prompt 跟 raw 對比
 - **③ 推理** — thinking 開關。同題目,直答 vs 寫 think block 後再答(reasoning 對精度的影響)
 - **④ Agent** — multi-turn function calling,model 吐 `<tool_call>` token → client parse → **真的執行**(read/write 檔案、跑 bash)→ 結果塞回對話再吐字,直到 final
@@ -50,12 +50,13 @@ open http://localhost:9000/frontend/
 
 ## Try it
 
-### Tab ① 基礎 — 30 秒體驗
+### Tab ① 基礎 — 60 秒對比
 
 1. 切到 Tab ① (default active)
-2. preset 選「1. `1+1=`」+ 送出
-3. 預期:model 吐的第一個 token 是 `王`(top-1 機率 50%+),其它候選稀少 — model 把「1+1=」當字形 pattern,不是算數
-4. 點 token 看 bar chart;然後試 preset 2/3/4 對比 peaked vs flat 機率形狀
+2. preset 1「`床前明月光`」+ 送出 → 預期 model 接「,疑是地上霜」,top-1 99%+(model 對熟悉文本極高 confidence)
+3. preset 2「`祖樹星上最高的山叫做`」+ 送出 → 預期 model 自信編一個假地名,top-1 也很高 — **同樣 peaked,但這次是瞎掰** (peaked ≠ 真實 / confidence ≠ correctness)
+4. preset 3「`他打開冰箱,拿出`」+ 送出 → 預期 top-10 分散(水 / 雞蛋 / 剩飯 / 啤酒...flat),model 表達「不知接啥」
+5. 點任一 token 看 top-10 bar chart;3 個 preset 的「形狀對比」就是 Tab ① 全部教學
 
 ### Tab ④ Agent — 真執行 demo
 
