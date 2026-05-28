@@ -66,10 +66,9 @@
         <button class="tab whitespace-nowrap px-3 md:px-5 py-3 md:py-4 text-sm md:text-base text-muted border-b-2 border-transparent hover:text-ink transition-colors" data-tab="advanced">② 產品層加工</button>
         <button class="tab whitespace-nowrap px-3 md:px-5 py-3 md:py-4 text-sm md:text-base text-muted border-b-2 border-transparent hover:text-ink transition-colors" data-tab="reasoning">③ 推理</button>
         <button class="tab whitespace-nowrap px-3 md:px-5 py-3 md:py-4 text-sm md:text-base text-muted border-b-2 border-transparent hover:text-ink transition-colors" data-tab="agent">④ Agent</button>
-        <button class="tab whitespace-nowrap px-3 md:px-5 py-3 md:py-4 text-sm md:text-base text-faint border-b-2 border-transparent hover:text-ink transition-colors" data-tab="script" title="即將推出">⑤ 腳本</button>
-        <button class="tab whitespace-nowrap px-3 md:px-5 py-3 md:py-4 text-sm md:text-base text-faint border-b-2 border-transparent hover:text-ink transition-colors" data-tab="api" title="即將推出">⑥ API</button>
-        <button class="tab whitespace-nowrap px-3 md:px-5 py-3 md:py-4 text-sm md:text-base text-ink-soft border-b-2 border-transparent hover:text-ink transition-colors" data-tab="skill" title="預覽">⑦ Skill <span class="text-xs text-final ml-1">預覽</span></button>
-        <button class="tab whitespace-nowrap px-3 md:px-5 py-3 md:py-4 text-sm md:text-base text-faint border-b-2 border-transparent hover:text-ink transition-colors" data-tab="mcp" title="即將推出">⑧ MCP</button>
+        <button class="tab whitespace-nowrap px-3 md:px-5 py-3 md:py-4 text-sm md:text-base text-muted border-b-2 border-transparent hover:text-ink transition-colors" data-tab="commands">⑤ 指令/Script/API</button>
+        <button class="tab whitespace-nowrap px-3 md:px-5 py-3 md:py-4 text-sm md:text-base text-muted border-b-2 border-transparent hover:text-ink transition-colors" data-tab="skill" title="預覽">⑥ Skill<span class="text-[10px] text-faint ml-1 italic font-normal align-baseline">預覽</span></button>
+        <button class="tab opacity-50 whitespace-nowrap px-3 md:px-5 py-3 md:py-4 text-sm md:text-base text-muted border-b-2 border-transparent hover:text-ink transition-colors" data-tab="mcp" title="即將推出">⑦ MCP</button>
       </div>
     </div>
   </nav>
@@ -348,25 +347,152 @@ help me
   </main>
 
   <!-- ─────────────────────────────────────────────────────────────────
-       Tab 5/6/8:placeholder(即將推出)
+       Tab 5: Commands, Scripts & APIs(完整 article、非工程師對象)
        ───────────────────────────────────────────────────────────────── -->
-  <main class="tab-panel max-w-4xl mx-auto px-4 md:px-8 py-12 md:py-16" data-panel="script">
-    <div class="text-center space-y-3">
-      <h2 class="text-2xl font-semibold text-ink-soft">⑤ 腳本 — 即將推出</h2>
-      <p class="text-muted">本地 script 當工具層。Model 能呼叫 <code>read_file / write_file / exec_bash</code> 後能做什麼?</p>
-      <p class="text-faint text-sm">(Roadmap: P2 — 見 <code>docs/superpowers/specs/2026-05-28-llm-no-magic-tabs5-8-roadmap.md</code>)</p>
-    </div>
+  <main class="tab-panel max-w-3xl mx-auto px-4 md:px-8 py-8 md:py-12" data-panel="commands">
+    <article class="space-y-10 text-ink-soft leading-relaxed">
+      <header class="space-y-2">
+        <h2 class="text-2xl font-semibold text-ink">⑤ 指令、Script、API</h2>
+        <p class="text-muted">一章說完「你的電腦怎麼做事」。</p>
+        <p class="text-muted">電腦不是黑魔法。它只懂你怎麼下指令、怎麼把指令串起來、怎麼請別台電腦幫忙做你做不到的事。看懂這三層,後面的 Skill / MCP 自然就懂。</p>
+      </header>
+
+      <section class="space-y-3">
+        <h3 class="text-lg font-medium text-ink">§1. 指令 = 你跟電腦的對話介面</h3>
+        <p>電腦有兩種介面:</p>
+        <ul class="space-y-1 list-disc list-inside text-muted">
+          <li><strong class="text-ink-soft">圖形(GUI)</strong>:你按 icon、點選單、拖檔案</li>
+          <li><strong class="text-ink-soft">指令(CLI)</strong>:你打字告訴電腦做什麼</li>
+        </ul>
+        <p>CLI 你電腦裡早就有 — Mac 是 Terminal(在 Applications / Utilities)、Windows 是 PowerShell 或 cmd、Linux 是 shell。打開後是黑底白字、閃爍的游標等你打字。</p>
+        <p>電腦預設就懂一堆指令(作業系統 macOS / Linux / Windows 出廠內建):</p>
+        <pre class="bg-surface-2 rounded p-3 text-xs leading-relaxed font-mono overflow-auto"><span class="text-muted"># 預設指令(出廠就有)</span>
+ls                    <span class="text-muted"># 列出這個資料夾有什麼</span>
+cd Downloads          <span class="text-muted"># 換到 Downloads 資料夾</span>
+mkdir photos          <span class="text-muted"># 開一個叫 photos 的新資料夾</span>
+mv *.jpg photos/      <span class="text-muted"># 把所有 .jpg 搬到 photos/</span></pre>
+        <p>這些是「電腦的母語單字」。但內建的有限,要做特殊事(壓縮影片、抓網路資料、處理 PDF)就要 <em>裝擴充</em>:</p>
+        <pre class="bg-surface-2 rounded p-3 text-xs leading-relaxed font-mono overflow-auto"><span class="text-muted"># 裝擴充能力</span>
+brew install ffmpeg   <span class="text-muted"># macOS:裝影片處理工具</span>
+brew install yt-dlp   <span class="text-muted"># 裝 YouTube 下載工具</span>
+brew install jq       <span class="text-muted"># 裝 JSON 處理工具</span></pre>
+        <p>裝完後,電腦多懂幾個「單字」。<code class="bg-surface-2 px-1 rounded text-sm">ffmpeg</code> 就能用了。</p>
+        <aside class="border-l-0 bg-surface-2 rounded p-3 text-sm">
+          <strong class="text-ink">白話:</strong> 指令 = 電腦的詞彙。預設一份,可以擴充。
+        </aside>
+      </section>
+
+      <section class="space-y-3">
+        <h3 class="text-lg font-medium text-ink">§2. Script = 把指令結合起來</h3>
+        <p>單條指令做一件事。實際任務常常 <em>很多步</em>。</p>
+        <p>舉例「整理 <code class="bg-surface-2 px-1 rounded text-sm">~/Downloads</code>」:</p>
+        <ol class="space-y-1 list-decimal list-inside text-muted">
+          <li>列出所有檔案</li>
+          <li><strong class="text-ink-soft">判斷</strong> 每個檔案的副檔名</li>
+          <li>對 <code class="bg-surface-2 px-1 rounded text-sm">.pdf</code>:搬到 <code class="bg-surface-2 px-1 rounded text-sm">pdfs/</code></li>
+          <li>對 <code class="bg-surface-2 px-1 rounded text-sm">.png</code> / <code class="bg-surface-2 px-1 rounded text-sm">.jpg</code>:搬到 <code class="bg-surface-2 px-1 rounded text-sm">images/</code></li>
+          <li>對其他:搬到 <code class="bg-surface-2 px-1 rounded text-sm">misc/</code></li>
+        </ol>
+        <p>這需要兩件事:</p>
+        <ul class="space-y-1 list-disc list-inside text-muted">
+          <li><strong class="text-ink-soft">重複</strong>(每個檔案都跑一次)</li>
+          <li><strong class="text-ink-soft">判斷</strong>(看副檔名決定搬去哪)</li>
+        </ul>
+        <p>把多條指令 <em>打包成一個檔案</em>、加上 <em>判斷跟迴圈</em>,就叫 <strong>script</strong>。</p>
+        <pre class="bg-surface-2 rounded p-3 text-xs leading-relaxed font-mono overflow-auto"><span class="text-muted">#!/bin/bash
+# organize.sh — 整理 ~/Downloads</span>
+
+for file in ~/Downloads/*; do
+  case "${file##*.}" in
+    pdf)        mv "$file" ~/Downloads/pdfs/ ;;
+    png|jpg)    mv "$file" ~/Downloads/images/ ;;
+    *)          mv "$file" ~/Downloads/misc/ ;;
+  esac
+done</pre>
+        <ul class="space-y-1 list-disc list-inside text-muted text-sm">
+          <li><code class="bg-surface-2 px-1 rounded">for</code> = 重複(每個檔案執行一次)</li>
+          <li><code class="bg-surface-2 px-1 rounded">case</code> = 判斷(看副檔名決定)</li>
+          <li><code class="bg-surface-2 px-1 rounded">mv</code> = 內建指令</li>
+        </ul>
+        <p class="text-sm text-muted italic">語法細節看不懂沒關係 — 看出有「for(重複)+ case(判斷)」就達到本段目的:script = 一串指令 + 控制流。</p>
+        <p>「重複 + 判斷 + 順序」三件事合稱 <strong>控制流(control flow)</strong>。Script 強過單條指令的地方就在這。</p>
+        <p>存成 <code class="bg-surface-2 px-1 rounded text-sm">organize.sh</code>、跑 <code class="bg-surface-2 px-1 rounded text-sm">bash organize.sh</code> — 電腦自動整理 30 個檔案、你喝口水。</p>
+        <aside class="bg-surface-2 rounded p-3 text-sm space-y-1.5">
+          <p><strong class="text-ink">白話:</strong> Script = 一串指令加判斷跟迴圈,存成檔案、按一下就跑完。</p>
+          <p><strong class="text-ink">2026 實話:</strong> 你大概不會自己 Google bash 語法,實務上會請 AI 幫你寫。但你要看得懂這層 — 不然 AI 寫錯你不知道。</p>
+        </aside>
+      </section>
+
+      <section class="space-y-3">
+        <h3 class="text-lg font-medium text-ink">§3. API = 雇用另一台電腦</h3>
+        <p>問題:你的電腦不是無所不能。</p>
+        <p>比喻時間。真實世界裡你也不是無所不能 — 牙痛你不會自己拔牙,你找牙醫。為什麼?</p>
+        <ul class="space-y-1 list-disc list-inside text-muted">
+          <li>牙醫腦袋裡有不同 <strong class="text-ink-soft">知識</strong>(咬合、神經分布)</li>
+          <li>手上有不同 <strong class="text-ink-soft">技能</strong>(鑽頭、麻醉)</li>
+        </ul>
+        <p>電腦世界一樣。每台電腦都有不同知識 + 不同技能。例如:</p>
+        <table class="text-sm w-full border border-edge-soft my-2">
+          <thead>
+            <tr class="bg-surface-2 border-b border-edge-soft">
+              <th class="text-left p-2 font-medium">電腦</th>
+              <th class="text-left p-2 font-medium">腦袋裡裝什麼(知識)</th>
+              <th class="text-left p-2 font-medium">手上能做什麼(技能)</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-edge-soft">
+            <tr><td class="p-2">資料庫主機</td><td class="p-2">公司 10 年訂單資料</td><td class="p-2">極快查詢</td></tr>
+            <tr><td class="p-2">氣象主機</td><td class="p-2">連著感測網</td><td class="p-2">預報天氣</td></tr>
+            <tr><td class="p-2">支付主機(Stripe)</td><td class="p-2">金融法規、各國支付規格</td><td class="p-2">刷卡扣款</td></tr>
+            <tr><td class="p-2">AI 主機</td><td class="p-2">訓練好的大型模型</td><td class="p-2">文字生成、翻譯</td></tr>
+          </tbody>
+        </table>
+        <p>你的筆電做不到這些 — 資料太大、設備太特殊、要金融牌照、要超大運算。</p>
+        <p>那怎麼辦?跟真實世界一樣的答案:<strong>請別人</strong>。</p>
+        <p>電腦請別的電腦的方式叫 <strong>API</strong>(Application Programming Interface):</p>
+        <pre class="bg-surface-2 rounded p-3 text-xs leading-relaxed font-mono overflow-auto"><span class="text-muted"># 問天氣主機:台北現在天氣?</span>
+curl "https://api.weatherapi.com/v1/current.json?key=YOUR_KEY&amp;q=Taipei"
+
+<span class="text-muted"># 回:</span>
+{"current":{"temp_c": 28, "condition":{"text": "Sunny"}}}</pre>
+        <p><code class="bg-surface-2 px-1 rounded text-sm">curl</code> 是內建指令、發出網路請求。天氣主機收到、查它的感測網、回個 JSON 給你。</p>
+        <p>幾乎所有雲端服務(地圖、翻譯、搜尋、支付、寄信)都有 API 介面。它本來就是 <em>給程式呼叫用的</em> — 所以名字裡才有 "Programming"。</p>
+        <aside class="bg-surface-2 rounded p-3 text-sm">
+          <strong class="text-ink">白話:</strong> API = 你的電腦透過網路請別台電腦幫忙做事的標準格式。
+        </aside>
+      </section>
+
+      <section class="space-y-3">
+        <h3 class="text-lg font-medium text-ink">§4. 等等 — 那程式跟指令有什麼不同?</h3>
+        <aside class="rounded border border-final/30 bg-final-tint p-4 mt-2 space-y-3">
+          <div class="text-xs uppercase tracking-wider font-medium text-final">🤔 章末思考題</div>
+          <p class="text-ink">回頭看本章:</p>
+          <ul class="space-y-1 list-disc list-inside text-ink-soft text-sm">
+            <li>§1 講 <strong>指令</strong> — 一次做一件事(<code class="bg-surface px-1 rounded">ls</code>、<code class="bg-surface px-1 rounded">mv</code>、<code class="bg-surface px-1 rounded">curl</code>)</li>
+            <li>§2 講 <strong>script</strong> — 一串指令加控制流,存成檔案、按一下跑完</li>
+            <li>§3 講 <strong>API</strong> — 透過網路請別台電腦做事</li>
+          </ul>
+          <p class="text-ink">那 <strong>程式(program)</strong> 是什麼?它跟指令、script 又是什麼關係?</p>
+          <details>
+            <summary class="cursor-pointer text-sm text-final font-medium">提示(別偷看、先想)</summary>
+            <ul class="mt-2 text-sm text-ink-soft space-y-1 list-disc list-inside">
+              <li>你打開 Chrome、它就一直在跑、開了新分頁也一樣是 Chrome — 它有「狀態」、不是跑完就結束</li>
+              <li>你跑 <code class="bg-surface px-1 rounded">ls</code> 列完檔就結束、<code class="bg-surface px-1 rounded">organize.sh</code> 整完檔就結束 — 它們沒「狀態」</li>
+              <li>這兩種東西的差別在哪裡?都叫「軟體」嗎?</li>
+            </ul>
+          </details>
+          <p class="text-sm text-muted italic">留給你想。下一章 ⑥ Skill 會用到這個結論。</p>
+        </aside>
+      </section>
+    </article>
   </main>
-  <main class="tab-panel max-w-4xl mx-auto px-4 md:px-8 py-12 md:py-16" data-panel="api">
-    <div class="text-center space-y-3">
-      <h2 class="text-2xl font-semibold text-ink-soft">⑥ API — 即將推出</h2>
-      <p class="text-muted">當本地 script 搆不著時 — 呼叫外部 HTTP API。<em>本地能做用 script、做不到就找 service</em>。</p>
-      <p class="text-faint text-sm">(Roadmap: P3)</p>
-    </div>
-  </main>
+
+  <!-- ─────────────────────────────────────────────────────────────────
+       Tab 7:placeholder(即將推出)— MCP
+       ───────────────────────────────────────────────────────────────── -->
   <main class="tab-panel max-w-4xl mx-auto px-4 md:px-8 py-12 md:py-16" data-panel="mcp">
     <div class="text-center space-y-3">
-      <h2 class="text-2xl font-semibold text-ink-soft">⑧ MCP — 即將推出</h2>
+      <h2 class="text-2xl font-semibold text-ink-soft">⑦ MCP — 即將推出</h2>
       <p class="text-muted">連 API 都做不到的(GUI / cross-process)— Model Context Protocol。e.g. Playwright MCP 控瀏覽器。</p>
       <p class="text-faint text-sm">(Roadmap: P5)</p>
     </div>
@@ -433,6 +559,6 @@ help me
     </div>
   </main>
 
-  <script src="app.js?v=48"></script>
+  <script src="app.js?v=51"></script>
 </body>
 </html>

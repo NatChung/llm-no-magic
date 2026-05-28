@@ -66,10 +66,9 @@
         <button class="tab whitespace-nowrap px-3 md:px-5 py-3 md:py-4 text-sm md:text-base text-muted border-b-2 border-transparent hover:text-ink transition-colors" data-tab="advanced">② Product Layer</button>
         <button class="tab whitespace-nowrap px-3 md:px-5 py-3 md:py-4 text-sm md:text-base text-muted border-b-2 border-transparent hover:text-ink transition-colors" data-tab="reasoning">③ Reasoning</button>
         <button class="tab whitespace-nowrap px-3 md:px-5 py-3 md:py-4 text-sm md:text-base text-muted border-b-2 border-transparent hover:text-ink transition-colors" data-tab="agent">④ Agent</button>
-        <button class="tab whitespace-nowrap px-3 md:px-5 py-3 md:py-4 text-sm md:text-base text-faint border-b-2 border-transparent hover:text-ink transition-colors" data-tab="script" title="Coming soon">⑤ Script</button>
-        <button class="tab whitespace-nowrap px-3 md:px-5 py-3 md:py-4 text-sm md:text-base text-faint border-b-2 border-transparent hover:text-ink transition-colors" data-tab="api" title="Coming soon">⑥ API</button>
-        <button class="tab whitespace-nowrap px-3 md:px-5 py-3 md:py-4 text-sm md:text-base text-ink-soft border-b-2 border-transparent hover:text-ink transition-colors" data-tab="skill" title="Preview">⑦ Skill <span class="text-xs text-final ml-1">preview</span></button>
-        <button class="tab whitespace-nowrap px-3 md:px-5 py-3 md:py-4 text-sm md:text-base text-faint border-b-2 border-transparent hover:text-ink transition-colors" data-tab="mcp" title="Coming soon">⑧ MCP</button>
+        <button class="tab whitespace-nowrap px-3 md:px-5 py-3 md:py-4 text-sm md:text-base text-muted border-b-2 border-transparent hover:text-ink transition-colors" data-tab="commands">⑤ Commands, Scripts &amp; APIs</button>
+        <button class="tab whitespace-nowrap px-3 md:px-5 py-3 md:py-4 text-sm md:text-base text-muted border-b-2 border-transparent hover:text-ink transition-colors" data-tab="skill" title="Preview">⑥ Skill<span class="text-[10px] text-faint ml-1 italic font-normal align-baseline">preview</span></button>
+        <button class="tab opacity-50 whitespace-nowrap px-3 md:px-5 py-3 md:py-4 text-sm md:text-base text-muted border-b-2 border-transparent hover:text-ink transition-colors" data-tab="mcp" title="Coming soon">⑦ MCP</button>
       </div>
     </div>
   </nav>
@@ -348,25 +347,152 @@ help me
   </main>
 
   <!-- ─────────────────────────────────────────────────────────────────
-       Tab 5/6/8: placeholders (coming soon)
+       Tab 5: Commands, Scripts & APIs (full article, non-engineer audience)
        ───────────────────────────────────────────────────────────────── -->
-  <main class="tab-panel max-w-4xl mx-auto px-4 md:px-8 py-12 md:py-16" data-panel="script">
-    <div class="text-center space-y-3">
-      <h2 class="text-2xl font-semibold text-ink-soft">⑤ Script — Coming soon</h2>
-      <p class="text-muted">Local scripts as a tool layer. What can a model do when it can call <code>read_file / write_file / exec_bash</code> on your own machine?</p>
-      <p class="text-faint text-sm">(Roadmap: P2 — see <code>docs/superpowers/specs/2026-05-28-llm-no-magic-tabs5-8-roadmap.md</code>)</p>
-    </div>
+  <main class="tab-panel max-w-3xl mx-auto px-4 md:px-8 py-8 md:py-12" data-panel="commands">
+    <article class="space-y-10 text-ink-soft leading-relaxed">
+      <header class="space-y-2">
+        <h2 class="text-2xl font-semibold text-ink">⑤ Commands, Scripts &amp; APIs</h2>
+        <p class="text-muted">One chapter to cover "how your computer gets things done."</p>
+        <p class="text-muted">Computers aren't black magic. They only understand commands you type, scripts that bundle commands together, and APIs that let your computer ask other computers for what it can't do itself. Once you see these three layers, Skill / MCP follow naturally.</p>
+      </header>
+
+      <section class="space-y-3">
+        <h3 class="text-lg font-medium text-ink">§1. Commands = how you talk to a computer</h3>
+        <p>Computers offer two interfaces:</p>
+        <ul class="space-y-1 list-disc list-inside text-muted">
+          <li><strong class="text-ink-soft">Graphical (GUI)</strong>: click icons, pick menus, drag files</li>
+          <li><strong class="text-ink-soft">Commands (CLI)</strong>: type words telling the computer what to do</li>
+        </ul>
+        <p>You already have a CLI: macOS has Terminal (in Applications / Utilities), Windows has PowerShell or cmd, Linux has shell. Open one — black background, white text, blinking cursor waiting for you to type.</p>
+        <p>Computers ship with a bunch of built-in commands (built into macOS / Linux / Windows):</p>
+        <pre class="bg-surface-2 rounded p-3 text-xs leading-relaxed font-mono overflow-auto"><span class="text-muted"># Built-in commands (ship with the OS)</span>
+ls                    <span class="text-muted"># list what's in this folder</span>
+cd Downloads          <span class="text-muted"># change to Downloads folder</span>
+mkdir photos          <span class="text-muted"># make a new folder called photos</span>
+mv *.jpg photos/      <span class="text-muted"># move all .jpg files into photos/</span></pre>
+        <p>Think of these as "the computer's native vocabulary." Built-ins are limited though — for anything special (compressing video, scraping data, processing PDFs) you <em>install extensions</em>:</p>
+        <pre class="bg-surface-2 rounded p-3 text-xs leading-relaxed font-mono overflow-auto"><span class="text-muted"># Install new capabilities</span>
+brew install ffmpeg   <span class="text-muted"># macOS: video processing tools</span>
+brew install yt-dlp   <span class="text-muted"># YouTube downloader</span>
+brew install jq       <span class="text-muted"># JSON processing</span></pre>
+        <p>Now the computer knows a few more "words." <code class="bg-surface-2 px-1 rounded text-sm">ffmpeg</code> is callable.</p>
+        <aside class="bg-surface-2 rounded p-3 text-sm">
+          <strong class="text-ink">Plain English:</strong> Commands = the computer's vocabulary. Default set, extensible.
+        </aside>
+      </section>
+
+      <section class="space-y-3">
+        <h3 class="text-lg font-medium text-ink">§2. Scripts = bundling commands together</h3>
+        <p>A single command does one thing. Real tasks usually need <em>many steps</em>.</p>
+        <p>Example: "organize <code class="bg-surface-2 px-1 rounded text-sm">~/Downloads</code>":</p>
+        <ol class="space-y-1 list-decimal list-inside text-muted">
+          <li>list every file</li>
+          <li><strong class="text-ink-soft">decide</strong> based on the extension</li>
+          <li>for <code class="bg-surface-2 px-1 rounded text-sm">.pdf</code>: move to <code class="bg-surface-2 px-1 rounded text-sm">pdfs/</code></li>
+          <li>for <code class="bg-surface-2 px-1 rounded text-sm">.png</code> / <code class="bg-surface-2 px-1 rounded text-sm">.jpg</code>: move to <code class="bg-surface-2 px-1 rounded text-sm">images/</code></li>
+          <li>for anything else: move to <code class="bg-surface-2 px-1 rounded text-sm">misc/</code></li>
+        </ol>
+        <p>This needs two things:</p>
+        <ul class="space-y-1 list-disc list-inside text-muted">
+          <li><strong class="text-ink-soft">Repetition</strong> (do this once per file)</li>
+          <li><strong class="text-ink-soft">Decisions</strong> (different extension → different destination)</li>
+        </ul>
+        <p>Bundle multiple commands into a file, add <em>conditionals and loops</em>, and you've got a <strong>script</strong>.</p>
+        <pre class="bg-surface-2 rounded p-3 text-xs leading-relaxed font-mono overflow-auto"><span class="text-muted">#!/bin/bash
+# organize.sh — tidy ~/Downloads</span>
+
+for file in ~/Downloads/*; do
+  case "${file##*.}" in
+    pdf)        mv "$file" ~/Downloads/pdfs/ ;;
+    png|jpg)    mv "$file" ~/Downloads/images/ ;;
+    *)          mv "$file" ~/Downloads/misc/ ;;
+  esac
+done</pre>
+        <ul class="space-y-1 list-disc list-inside text-muted text-sm">
+          <li><code class="bg-surface-2 px-1 rounded">for</code> = repeat (run once per file)</li>
+          <li><code class="bg-surface-2 px-1 rounded">case</code> = decide (different action per extension)</li>
+          <li><code class="bg-surface-2 px-1 rounded">mv</code> = a built-in command</li>
+        </ul>
+        <p class="text-sm text-muted italic">Don't worry about syntax — the point is seeing <code>for</code> (repetition) + <code>case</code> (decision). That's a script: a chain of commands + control flow.</p>
+        <p>Repetition + decisions + sequence together are called <strong>control flow</strong>. That's the power scripts add over single commands.</p>
+        <p>Save as <code class="bg-surface-2 px-1 rounded text-sm">organize.sh</code>, run <code class="bg-surface-2 px-1 rounded text-sm">bash organize.sh</code> — the computer tidies 30 files while you sip water.</p>
+        <aside class="bg-surface-2 rounded p-3 text-sm space-y-1.5">
+          <p><strong class="text-ink">Plain English:</strong> Script = a chain of commands plus conditionals and loops, saved as a file, run with one click.</p>
+          <p><strong class="text-ink">2026 reality:</strong> You probably won't Google bash syntax yourself — you'll have AI write it for you. But you need to read this layer — otherwise you won't catch AI mistakes.</p>
+        </aside>
+      </section>
+
+      <section class="space-y-3">
+        <h3 class="text-lg font-medium text-ink">§3. APIs = hiring another computer</h3>
+        <p>Problem: your computer isn't omnipotent.</p>
+        <p>Analogy time. In real life, you aren't omnipotent either — you don't pull your own teeth when they ache, you find a dentist. Why?</p>
+        <ul class="space-y-1 list-disc list-inside text-muted">
+          <li>The dentist has different <strong class="text-ink-soft">knowledge</strong> in their head (bite, nerve maps)</li>
+          <li>Different <strong class="text-ink-soft">skills</strong> in their hands (drill, anaesthesia)</li>
+        </ul>
+        <p>Same in the computer world. Every computer has different knowledge + different skills. For example:</p>
+        <table class="text-sm w-full border border-edge-soft my-2">
+          <thead>
+            <tr class="bg-surface-2 border-b border-edge-soft">
+              <th class="text-left p-2 font-medium">Computer</th>
+              <th class="text-left p-2 font-medium">Knowledge in head</th>
+              <th class="text-left p-2 font-medium">Skills in hand</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-edge-soft">
+            <tr><td class="p-2">Database host</td><td class="p-2">10 years of company orders</td><td class="p-2">Lightning-fast queries</td></tr>
+            <tr><td class="p-2">Weather host</td><td class="p-2">A network of sensors</td><td class="p-2">Forecast weather</td></tr>
+            <tr><td class="p-2">Payments host (Stripe)</td><td class="p-2">Financial regulations, payment specs</td><td class="p-2">Charge credit cards</td></tr>
+            <tr><td class="p-2">AI host</td><td class="p-2">A trained large model</td><td class="p-2">Generate text, translate</td></tr>
+          </tbody>
+        </table>
+        <p>Your laptop can't do these — data too big, equipment too specialised, requires licences, requires massive compute.</p>
+        <p>So what to do? Same answer as real life: <strong>ask someone else</strong>.</p>
+        <p>The way one computer asks another is called an <strong>API</strong> (Application Programming Interface):</p>
+        <pre class="bg-surface-2 rounded p-3 text-xs leading-relaxed font-mono overflow-auto"><span class="text-muted"># Ask the weather host: what's the weather in Taipei?</span>
+curl "https://api.weatherapi.com/v1/current.json?key=YOUR_KEY&amp;q=Taipei"
+
+<span class="text-muted"># Response:</span>
+{"current":{"temp_c": 28, "condition":{"text": "Sunny"}}}</pre>
+        <p><code class="bg-surface-2 px-1 rounded text-sm">curl</code> is a built-in command that sends a network request. The weather host receives it, looks up its sensor network, returns JSON.</p>
+        <p>Almost every cloud service (maps, translation, search, payments, email) exposes an API. APIs were designed to be called by programs — hence "Programming" in the name.</p>
+        <aside class="bg-surface-2 rounded p-3 text-sm">
+          <strong class="text-ink">Plain English:</strong> API = the standard format for your computer to ask another computer (over the network) for help.
+        </aside>
+      </section>
+
+      <section class="space-y-3">
+        <h3 class="text-lg font-medium text-ink">§4. Wait — what's the difference between a program and a command?</h3>
+        <aside class="rounded border border-final/30 bg-final-tint p-4 mt-2 space-y-3">
+          <div class="text-xs uppercase tracking-wider font-medium text-final">🤔 End-of-chapter thought experiment</div>
+          <p class="text-ink">Recap:</p>
+          <ul class="space-y-1 list-disc list-inside text-ink-soft text-sm">
+            <li>§1 covered <strong>commands</strong> — one thing at a time (<code class="bg-surface px-1 rounded">ls</code>, <code class="bg-surface px-1 rounded">mv</code>, <code class="bg-surface px-1 rounded">curl</code>)</li>
+            <li>§2 covered <strong>scripts</strong> — a chain of commands plus control flow, saved as a file</li>
+            <li>§3 covered <strong>APIs</strong> — asking another computer over the network</li>
+          </ul>
+          <p class="text-ink">So what's a <strong>program</strong>? How does it relate to commands and scripts?</p>
+          <details>
+            <summary class="cursor-pointer text-sm text-final font-medium">Hint (don't peek — think first)</summary>
+            <ul class="mt-2 text-sm text-ink-soft space-y-1 list-disc list-inside">
+              <li>You open Chrome — it stays running, you open a new tab, it's still the same Chrome. It has "state," doesn't just run and stop.</li>
+              <li>You run <code class="bg-surface px-1 rounded">ls</code>, you get a list, done. You run <code class="bg-surface px-1 rounded">organize.sh</code>, files get tidied, done. No "state" left behind.</li>
+              <li>What separates these two kinds of thing? Are they both called "software"?</li>
+            </ul>
+          </details>
+          <p class="text-sm text-muted italic">Take a moment. The next chapter (⑥ Skill) will use the conclusion.</p>
+        </aside>
+      </section>
+    </article>
   </main>
-  <main class="tab-panel max-w-4xl mx-auto px-4 md:px-8 py-12 md:py-16" data-panel="api">
-    <div class="text-center space-y-3">
-      <h2 class="text-2xl font-semibold text-ink-soft">⑥ API — Coming soon</h2>
-      <p class="text-muted">When local scripts can't reach it — call an external HTTP API. <em>本地能做用 script、做不到就找 service</em>.</p>
-      <p class="text-faint text-sm">(Roadmap: P3)</p>
-    </div>
-  </main>
+
+  <!-- ─────────────────────────────────────────────────────────────────
+       Tab 7: placeholder — MCP (coming soon)
+       ───────────────────────────────────────────────────────────────── -->
   <main class="tab-panel max-w-4xl mx-auto px-4 md:px-8 py-12 md:py-16" data-panel="mcp">
     <div class="text-center space-y-3">
-      <h2 class="text-2xl font-semibold text-ink-soft">⑧ MCP — Coming soon</h2>
+      <h2 class="text-2xl font-semibold text-ink-soft">⑦ MCP — Coming soon</h2>
       <p class="text-muted">When even API can't do it (GUI / cross-process) — Model Context Protocol. e.g. Playwright MCP for browser control.</p>
       <p class="text-faint text-sm">(Roadmap: P5)</p>
     </div>
@@ -434,6 +560,6 @@ help me
     </div>
   </main>
 
-  <script src="app.js?v=48"></script>
+  <script src="app.js?v=51"></script>
 </body>
 </html>

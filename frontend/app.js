@@ -67,7 +67,8 @@ const TAB_TO_MODEL = {
   advanced:  "0.6B",
   reasoning: "0.6B",
   agent:     "4B",
-  skill:     "4B",  // ⑦ Skill preview — function calling needs 4B
+  // commands tab is pure static article (no model swap needed)
+  skill:     "4B",  // ⑥ Skill preview — function calling needs 4B
 };
 let currentLLMModel = null;
 
@@ -699,7 +700,10 @@ window.addEventListener("DOMContentLoaded", () => {
 
 // Initialize panels — basic/advanced/reasoning go through setupPanel;
 // agent uses setupAgent; skill uses setupSkill; placeholders (script/api/mcp) skip.
-const PLACEHOLDER_PANELS = new Set(["script", "api", "mcp"]);
+// Static-content tabs (no .prompt/.run interactivity → setupPanel skips them):
+// - commands: full article (⑤ Commands, Scripts & APIs)
+// - mcp: placeholder ("coming soon")
+const PLACEHOLDER_PANELS = new Set(["commands", "mcp"]);
 document.querySelectorAll(".tab-panel").forEach((panel) => {
   const id = panel.dataset.panel;
   if (PLACEHOLDER_PANELS.has(id)) return;
@@ -747,50 +751,48 @@ function setupSkill(panel) {
 
   function renderIndex(skills) {
     indexEl.innerHTML = "";
+    indexEl.className = "divide-y divide-edge-soft -mt-2";  // override outer space-y-2
     for (const s of skills) {
       const card = document.createElement("div");
-      card.className = "rounded-md border border-edge-soft bg-surface p-2.5 text-xs space-y-1";
-      const extras = (s.extras || []).join(", ") || "—";
+      card.className = "py-3 text-xs space-y-1";
+      const extras = (s.extras || []);
+      const scripts = (s.scripts || []);
       let html = `
-        <div class="font-medium text-ink-soft">${s.name}</div>
-        <div class="text-muted">${s.description}</div>
-        <div class="text-faint"><span class="uppercase tracking-wider">L3 docs:</span> <code>${extras}</code></div>
-        <div class="text-faint"><span class="uppercase tracking-wider">L3 scripts:</span></div>
+        <div class="font-medium text-ink-soft text-sm">${s.name}</div>
+        <div class="text-muted leading-relaxed">${s.description}</div>
+        <div class="text-faint text-[10px] font-mono">${s.dir}/</div>
       `;
-      if ((s.scripts || []).length === 0) {
-        html += `<div class="text-faint pl-2">—</div>`;
-      } else {
-        for (const script of s.scripts) {
-          const key = `${s.name}/${script}`;
-          const code = _scriptSources[key] || "(source not loaded)";
-          html += `
-            <details class="pl-2">
-              <summary class="cursor-pointer text-tool font-mono">📄 ${script}</summary>
-              <pre class="text-[10px] mt-1 p-2 bg-surface-2 rounded border border-edge-soft whitespace-pre-wrap overflow-auto max-h-60 text-ink-soft">${escape(code)}</pre>
-              <p class="text-[10px] text-faint mt-0.5">(human-only view — model 看不到 source,只看 stdout)</p>
-            </details>
-          `;
+      if (extras.length || scripts.length) {
+        html += `<div class="pt-1 space-y-1">`;
+        if (extras.length) {
+          const ext = extras.map(e => `<code class="text-ink-soft">${e}</code>`).join(" · ");
+          html += `<div class="text-muted">docs:&nbsp; ${ext}</div>`;
         }
+        if (scripts.length) {
+          html += `<div class="text-muted">scripts:`;
+          for (const script of scripts) {
+            const code = _scriptSources[`${s.name}/${script}`] || "(source not loaded)";
+            html += `
+              <details class="mt-0.5 ml-12">
+                <summary class="cursor-pointer text-tool font-mono inline-block -ml-12">${script}</summary>
+                <pre class="text-[10px] mt-1 p-2 bg-surface-2 rounded whitespace-pre-wrap overflow-auto max-h-60 text-ink-soft">${escape(code)}</pre>
+                <p class="text-[10px] text-faint mt-0.5">human view — model 只看 stdout、不看 source</p>
+              </details>
+            `;
+          }
+          html += `</div>`;
+        }
+        html += `</div>`;
       }
-      html += `<div class="text-faint text-[10px]">${s.dir}/</div>`;
       card.innerHTML = html;
       indexEl.appendChild(card);
     }
   }
 
-  function renderMessageCard(m) {
-    const roleBg = {
-      system: "bg-surface-2",
-      user: "bg-final-tint",
-      assistant: "bg-result-tint",
-      tool: "bg-tool-tint",
-    }[m.role] || "bg-surface-2";
-    const roleColor = {
-      system: "text-muted",
-      user: "text-final",
-      assistant: "text-result",
-      tool: "text-tool",
-    }[m.role] || "text-muted";
+  function renderMessageRow(m) {
+    // De-nested, no card, no role bg — role as small label + indent.
+    // Keeps the established anchor colors (tool 紫 / result 綠) only on
+    // the actual tool_call line per the cross-tab visual vocabulary.
     let body = "";
     if (m.content) {
       body += `<pre class="text-xs whitespace-pre-wrap text-ink-soft leading-relaxed">${escape(m.content)}</pre>`;
@@ -803,9 +805,9 @@ function setupSkill(panel) {
     if (m.tool_call_id) {
       body += `<div class="text-[10px] text-faint mt-0.5">tool_call_id: ${escape(m.tool_call_id)}</div>`;
     }
-    return `<div class="rounded ${roleBg} p-2 border border-edge-soft">
-      <div class="text-[10px] uppercase tracking-wider font-semibold ${roleColor} mb-1">${m.role}</div>
-      ${body || '<span class="text-faint text-xs">(empty)</span>'}
+    return `<div class="py-2">
+      <div class="text-[10px] uppercase tracking-wider font-medium text-faint mb-1">${m.role}</div>
+      <div class="pl-3">${body || '<span class="text-faint text-xs">(empty)</span>'}</div>
     </div>`;
   }
 
@@ -877,16 +879,16 @@ function setupSkill(panel) {
             if (evt.turn > 0) appendToTurn(evt.turn, `<div class="text-xs text-muted">↻ tools now exposed: <span class="font-mono">${evt.tools.join(", ")}</span></div>`);
           } else if (evt.type === "sent") {
             currentTurn = evt.turn;
-            const cards = evt.messages.map(renderMessageCard).join("");
+            const rows = evt.messages.map(renderMessageRow).join("");
             const rawJson = JSON.stringify(evt.messages, null, 2);
             appendToTurn(evt.turn, `
-              <details class="rounded bg-surface-2 border border-edge-soft">
+              <details class="border border-edge-soft rounded">
                 <summary class="cursor-pointer text-xs text-muted px-2 py-1 font-medium">📤 Sent to model (${evt.messages.length} messages, tools=[${evt.tools.join(", ")}])</summary>
-                <div class="p-2 space-y-1.5">
-                  ${cards}
-                  <details class="rounded border border-edge-soft">
-                    <summary class="cursor-pointer text-[10px] px-2 py-1 text-faint">raw JSON</summary>
-                    <pre class="text-[10px] p-2 whitespace-pre-wrap max-h-80 overflow-auto text-ink-soft">${escape(rawJson)}</pre>
+                <div class="px-2 divide-y divide-edge-soft">
+                  ${rows}
+                  <details class="py-1.5">
+                    <summary class="cursor-pointer text-[10px] text-faint">raw JSON</summary>
+                    <pre class="text-[10px] mt-1 p-2 bg-surface-2 rounded whitespace-pre-wrap max-h-80 overflow-auto text-ink-soft">${escape(rawJson)}</pre>
                   </details>
                 </div>
               </details>
@@ -907,18 +909,18 @@ function setupSkill(panel) {
             const reply = choice.message || {};
             const finish = choice.finish_reason;
             const usage = evt.response.usage || {};
-            const replyCard = renderMessageCard(reply);
-            const metaLine = `<div class="text-[10px] text-faint">finish_reason: <code>${finish || "—"}</code> · usage: prompt=${usage.prompt_tokens ?? "?"}, completion=${usage.completion_tokens ?? "?"}, total=${usage.total_tokens ?? "?"}</div>`;
+            const replyRow = renderMessageRow(reply);
+            const metaLine = `<div class="text-[10px] text-faint py-1.5">finish_reason: <code>${finish || "—"}</code> · usage: prompt=${usage.prompt_tokens ?? "?"}, completion=${usage.completion_tokens ?? "?"}, total=${usage.total_tokens ?? "?"}</div>`;
             const rawJson = JSON.stringify(evt.response, null, 2);
             appendToTurn(evt.turn, `
-              <details class="rounded bg-surface-2 border border-edge-soft">
+              <details class="border border-edge-soft rounded">
                 <summary class="cursor-pointer text-xs text-muted px-2 py-1 font-medium">📥 Received from model</summary>
-                <div class="p-2 space-y-1.5">
-                  ${replyCard}
+                <div class="px-2 divide-y divide-edge-soft">
+                  ${replyRow}
                   ${metaLine}
-                  <details class="rounded border border-edge-soft">
-                    <summary class="cursor-pointer text-[10px] px-2 py-1 text-faint">raw JSON (含 id / object / system_fingerprint 等 metadata)</summary>
-                    <pre class="text-[10px] p-2 whitespace-pre-wrap max-h-80 overflow-auto text-ink-soft">${escape(rawJson)}</pre>
+                  <details class="py-1.5">
+                    <summary class="cursor-pointer text-[10px] text-faint">raw JSON (含 id / object / system_fingerprint 等 metadata)</summary>
+                    <pre class="text-[10px] mt-1 p-2 bg-surface-2 rounded whitespace-pre-wrap max-h-80 overflow-auto text-ink-soft">${escape(rawJson)}</pre>
                   </details>
                 </div>
               </details>
