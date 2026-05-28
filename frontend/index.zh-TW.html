@@ -66,6 +66,10 @@
         <button class="tab whitespace-nowrap px-3 md:px-5 py-3 md:py-4 text-sm md:text-base text-muted border-b-2 border-transparent hover:text-ink transition-colors" data-tab="advanced">② 產品層加工</button>
         <button class="tab whitespace-nowrap px-3 md:px-5 py-3 md:py-4 text-sm md:text-base text-muted border-b-2 border-transparent hover:text-ink transition-colors" data-tab="reasoning">③ 推理</button>
         <button class="tab whitespace-nowrap px-3 md:px-5 py-3 md:py-4 text-sm md:text-base text-muted border-b-2 border-transparent hover:text-ink transition-colors" data-tab="agent">④ Agent</button>
+        <button class="tab whitespace-nowrap px-3 md:px-5 py-3 md:py-4 text-sm md:text-base text-faint border-b-2 border-transparent hover:text-ink transition-colors" data-tab="script" title="即將推出">⑤ 腳本</button>
+        <button class="tab whitespace-nowrap px-3 md:px-5 py-3 md:py-4 text-sm md:text-base text-faint border-b-2 border-transparent hover:text-ink transition-colors" data-tab="api" title="即將推出">⑥ API</button>
+        <button class="tab whitespace-nowrap px-3 md:px-5 py-3 md:py-4 text-sm md:text-base text-ink-soft border-b-2 border-transparent hover:text-ink transition-colors" data-tab="skill" title="預覽">⑦ Skill <span class="text-xs text-final ml-1">預覽</span></button>
+        <button class="tab whitespace-nowrap px-3 md:px-5 py-3 md:py-4 text-sm md:text-base text-faint border-b-2 border-transparent hover:text-ink transition-colors" data-tab="mcp" title="即將推出">⑧ MCP</button>
       </div>
     </div>
   </nav>
@@ -145,6 +149,59 @@ help me
           <p>告訴 model「<strong>這段是 system、這段是 user</strong>」。展開下面「實際送進 model」preview 就看得到 marker 怎麼包成。</p>
         </div>
       </details>
+      <details class="info-tag">
+        <summary class="cursor-pointer text-xs text-final hover:underline list-none [&::-webkit-details-marker]:hidden select-none inline-block py-0.5">(?) 那 <code>&lt;|im_start|&gt;</code> 到底是什麼?</summary>
+        <div class="mt-1.5 p-3 rounded-md bg-final-tint text-sm text-ink-soft max-w-2xl leading-relaxed space-y-3">
+          <div>
+            <p class="font-semibold mb-1">它們是什麼 — 不是字串,是單一 token</p>
+            <p>看起來像 12 個字元、model 眼裡是 <strong>1 個 token</strong>(Qwen3 vocab id 151644)。tokenizer 認識它、不會拆成 <code>&lt;</code>/<code>|</code>/<code>i</code>/<code>m</code>/...</p>
+            <pre class="text-xs bg-surface-2 rounded p-2 whitespace-pre-wrap break-all mt-1">"&lt;|im_start|&gt;"  ← 你看到的(12 字元)
+[151644]        ← model 看到的(1 個 token id)</pre>
+            <p class="mt-1">跟 <code class="bg-surface-2 px-1 rounded text-xs">一</code> / <code class="bg-surface-2 px-1 rounded text-xs">年</code> / <code class="bg-surface-2 px-1 rounded text-xs">月</code> 這些一般 token 並列、是 model 詞表內第 151644 號。</p>
+          </div>
+
+          <div>
+            <p class="font-semibold mb-1">為什麼要這個 token</p>
+            <p>Model 本質只會「接續 token 序列」— 給它一段文字、它預測下一個 token。</p>
+            <p class="mt-1">問題:給 model <code class="bg-surface-2 px-1 rounded text-xs">一年有幾個月?</code> 這串文字、它怎麼知道是要 <strong>回答</strong>、還是 <strong>接續</strong>(像「一年有幾個月? 答案是...」這樣 essay 風)?</p>
+            <p class="mt-1"><code class="bg-surface-2 px-1 rounded text-xs">&lt;|im_start|&gt;</code> / <code class="bg-surface-2 px-1 rounded text-xs">&lt;|im_end|&gt;</code> 是<strong>角色邊界 marker</strong>:</p>
+            <pre class="text-xs bg-surface-2 rounded p-2 whitespace-pre-wrap break-all mt-1">&lt;|im_start|&gt;user        ← 「以下是 user 講的話」
+一年有幾個月?
+&lt;|im_end|&gt;              ← 「user 講完了」
+
+&lt;|im_start|&gt;assistant   ← 「以下換你(assistant)講」</pre>
+            <p class="mt-1">訓練時 model 看過幾億份這種格式的對話、學會「<em>看到 <code class="bg-surface-2 px-1 rounded text-xs">&lt;|im_start|&gt;assistant\n</code> 後面我該生 reply、生到 <code class="bg-surface-2 px-1 rounded text-xs">&lt;|im_end|&gt;</code> 為止</em>」。</p>
+          </div>
+
+          <div>
+            <p class="font-semibold mb-1">你那段 prompt 完整解讀</p>
+            <pre class="text-xs bg-surface-2 rounded p-2 whitespace-pre-wrap break-all">&lt;|im_start|&gt;user
+一年有幾個月?&lt;|im_end|&gt;
+&lt;|im_start|&gt;assistant
+&lt;think&gt;
+
+&lt;/think&gt;</pre>
+            <table class="text-xs w-full mt-2 border border-edge-soft">
+              <thead>
+                <tr class="bg-surface-2 border-b border-edge-soft">
+                  <th class="text-left p-1.5 font-medium">字面</th>
+                  <th class="text-left p-1.5 font-medium">model 解讀</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-edge-soft">
+                <tr><td class="p-1.5 font-mono"><code>&lt;|im_start|&gt;user\n</code></td><td class="p-1.5">「user 開始說話」</td></tr>
+                <tr><td class="p-1.5 font-mono">一年有幾個月?</td><td class="p-1.5">user 的問題內容</td></tr>
+                <tr><td class="p-1.5 font-mono"><code>&lt;|im_end|&gt;</code></td><td class="p-1.5">「user 說完」</td></tr>
+                <tr><td class="p-1.5 font-mono"><code>&lt;|im_start|&gt;assistant\n</code></td><td class="p-1.5">「換 assistant 講」</td></tr>
+                <tr><td class="p-1.5 font-mono"><code>&lt;think&gt;\n\n&lt;/think&gt;</code></td><td class="p-1.5">Qwen3 reasoning marker — 見 Tab ③</td></tr>
+                <tr><td class="p-1.5 font-mono text-faint">(prompt 到此結束)</td><td class="p-1.5">model 從這裡開始生 reply</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <p class="text-faint text-xs">No magic — 只是 model 訓練時學會的約定。</p>
+        </div>
+      </details>
 
       <details class="preview-details pt-2">
         <summary class="cursor-pointer text-sm text-muted hover:text-ink-soft">實際送進 model 的 final prompt(預覽)</summary>
@@ -200,10 +257,16 @@ help me
         <button class="stop inline-flex items-center px-4 py-2 rounded-md border border-edge text-ink-soft text-sm hover:bg-surface-2 disabled:text-faint disabled:hover:bg-transparent transition-colors" disabled>停</button>
       </div>
     </section>
-    <section class="output-area mt-8 lg:mt-0 space-y-2">
-      <h2 class="text-xs uppercase tracking-wider text-muted font-medium">Model 吐的字</h2>
-      <div class="generated-text rounded-md bg-surface-2 border border-edge-soft p-4 min-h-[6rem] font-mono text-sm md:text-base leading-relaxed break-all"></div>
-    </section>
+    <div class="mt-8 lg:mt-0 space-y-6">
+      <section class="thinking-area space-y-2 hidden">
+        <h2 class="text-xs uppercase tracking-wider text-muted font-medium">📜 完整回覆 (model 實際吐的 stream、含 <code>&lt;think&gt;</code>...<code>&lt;/think&gt;</code>)</h2>
+        <div class="thinking-content rounded-md bg-surface-2 border border-edge-soft border-dashed p-4 min-h-[6rem] font-mono text-sm leading-relaxed break-all text-ink-soft"></div>
+      </section>
+      <section class="output-area space-y-2">
+        <h2 class="text-xs uppercase tracking-wider text-muted font-medium">🎯 最終回答 (user 真正看到的、<code>&lt;/think&gt;</code> 後的部分)</h2>
+        <div class="generated-text rounded-md bg-surface-2 border border-edge-soft p-4 min-h-[6rem] font-mono text-sm md:text-base leading-relaxed break-all"></div>
+      </section>
+    </div>
     <section class="probs-area mt-6 lg:mt-0 space-y-2">
       <h2 class="text-xs uppercase tracking-wider text-muted font-medium">Token 候選 · top 10</h2>
       <div class="probs rounded-md bg-surface border border-edge-soft p-3 min-h-[6rem]"></div>
@@ -213,7 +276,7 @@ help me
   <!-- ─────────────────────────────────────────────────────────────────
        Tab 4: Agent — 真執行 tools via :8082 backend
        ───────────────────────────────────────────────────────────────── -->
-  <main class="tab-panel max-w-4xl mx-auto px-4 md:px-8 py-6 md:py-10" data-panel="agent">
+  <main class="tab-panel max-w-6xl mx-auto px-4 md:px-8 py-6 md:py-10" data-panel="agent">
     <section class="prompt-area space-y-3">
       <label for="system-prompt-agent" class="block text-sm font-medium text-ink-soft">System Prompt(預填,可改)</label>
       <details class="info-tag">
@@ -284,6 +347,92 @@ help me
     </section>
   </main>
 
-  <script src="app.js?v=32"></script>
+  <!-- ─────────────────────────────────────────────────────────────────
+       Tab 5/6/8:placeholder(即將推出)
+       ───────────────────────────────────────────────────────────────── -->
+  <main class="tab-panel max-w-4xl mx-auto px-4 md:px-8 py-12 md:py-16" data-panel="script">
+    <div class="text-center space-y-3">
+      <h2 class="text-2xl font-semibold text-ink-soft">⑤ 腳本 — 即將推出</h2>
+      <p class="text-muted">本地 script 當工具層。Model 能呼叫 <code>read_file / write_file / exec_bash</code> 後能做什麼?</p>
+      <p class="text-faint text-sm">(Roadmap: P2 — 見 <code>docs/superpowers/specs/2026-05-28-llm-no-magic-tabs5-8-roadmap.md</code>)</p>
+    </div>
+  </main>
+  <main class="tab-panel max-w-4xl mx-auto px-4 md:px-8 py-12 md:py-16" data-panel="api">
+    <div class="text-center space-y-3">
+      <h2 class="text-2xl font-semibold text-ink-soft">⑥ API — 即將推出</h2>
+      <p class="text-muted">當本地 script 搆不著時 — 呼叫外部 HTTP API。<em>本地能做用 script、做不到就找 service</em>。</p>
+      <p class="text-faint text-sm">(Roadmap: P3)</p>
+    </div>
+  </main>
+  <main class="tab-panel max-w-4xl mx-auto px-4 md:px-8 py-12 md:py-16" data-panel="mcp">
+    <div class="text-center space-y-3">
+      <h2 class="text-2xl font-semibold text-ink-soft">⑧ MCP — 即將推出</h2>
+      <p class="text-muted">連 API 都做不到的(GUI / cross-process)— Model Context Protocol。e.g. Playwright MCP 控瀏覽器。</p>
+      <p class="text-faint text-sm">(Roadmap: P5)</p>
+    </div>
+  </main>
+
+  <!-- ─────────────────────────────────────────────────────────────────
+       Tab 7: Skill(預覽)— SKILL.md body + bundled tools 漸進式載入
+       ───────────────────────────────────────────────────────────────── -->
+  <main class="tab-panel max-w-6xl mx-auto px-4 md:px-8 py-6 md:py-10" data-panel="skill">
+    <div class="mb-6 p-4 rounded-lg bg-final-tint border border-final/20">
+      <h2 class="text-base font-semibold text-final mb-1">⑦ Skill — 預覽(P1 spike artifact)</h2>
+      <p class="text-sm text-ink-soft leading-relaxed">
+        對齊 Claude Code 的<strong>三層漸進式揭露</strong>:
+        <strong>L1</strong> metadata(永遠在 system prompt、~100 tokens/skill)·
+        <strong>L2</strong> SKILL.md body(用 <code>load_skill</code> 按需載入、&lt;5k tokens)·
+        <strong>L3</strong> 參考檔 + bundled scripts(按需讀;script <em>程式碼</em>永遠不進 context)。
+      </p>
+    </div>
+
+    <div class="lg:grid lg:grid-cols-[1fr_2fr] lg:gap-6">
+      <!-- 左:控制 + skill 索引 -->
+      <section class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-ink-soft mb-1.5">預設 query</label>
+          <select class="skill-preset w-full rounded-md border border-edge bg-surface px-3 py-2 text-sm focus:outline-none focus:border-final focus:ring-1 focus:ring-final">
+            <option value="">(選一個 preset 或自己打)</option>
+            <option value="幫我整理 ~/Downloads 的檔案,分類一下">1. 整理檔案 → 應該載入 organize_files skill</option>
+            <option value="台北今天天氣怎樣?">2. 台北天氣 → 應該載入 check_weather skill</option>
+            <option value="1 加 1 等於多少?">3. 1+1 → 沒 skill 命中,model 直接答</option>
+          </select>
+        </div>
+
+        <div>
+          <label for="prompt-skill" class="block text-sm font-medium text-ink-soft mb-1.5">Query</label>
+          <textarea class="skill-prompt w-full rounded-md border border-edge bg-surface px-3 py-2 text-sm font-mono focus:outline-none focus:border-final focus:ring-1 focus:ring-final" id="prompt-skill" rows="3" placeholder="問點什麼..."></textarea>
+        </div>
+
+        <div class="flex gap-2">
+          <button class="skill-run inline-flex items-center px-4 py-2 rounded-md bg-ink text-surface text-sm font-medium hover:bg-ink-soft disabled:bg-faint transition-colors">送出</button>
+          <button class="skill-stop inline-flex items-center px-4 py-2 rounded-md border border-edge text-ink-soft text-sm hover:bg-surface-2 disabled:text-faint disabled:hover:bg-transparent transition-colors" disabled>停止</button>
+        </div>
+
+        <div class="pt-2">
+          <h3 class="text-xs uppercase tracking-wider text-muted font-medium mb-2">Skill 索引</h3>
+          <div class="skill-index space-y-2"></div>
+        </div>
+
+        <div>
+          <h3 class="text-xs uppercase tracking-wider text-muted font-medium mb-2">目前 expose 的 tools</h3>
+          <div class="skill-tools rounded-md bg-surface-2 border border-edge-soft p-3 text-xs font-mono text-ink-soft">(尚未啟動)</div>
+        </div>
+      </section>
+
+      <!-- 右:turn-by-turn -->
+      <section class="mt-8 lg:mt-0 space-y-3">
+        <h3 class="text-xs uppercase tracking-wider text-muted font-medium">Agent trace</h3>
+        <div class="skill-turns space-y-3"></div>
+
+        <div class="skill-final-area hidden mt-6 rounded-lg bg-final-tint p-5 space-y-2">
+          <h3 class="text-sm font-semibold text-final uppercase tracking-wider">最終回覆</h3>
+          <div class="skill-final text-base leading-relaxed text-ink"></div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <script src="app.js?v=48"></script>
 </body>
 </html>

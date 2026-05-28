@@ -67,6 +67,7 @@ const TAB_TO_MODEL = {
   advanced:  "0.6B",
   reasoning: "0.6B",
   agent:     "4B",
+  skill:     "4B",  // ⑦ Skill preview — function calling needs 4B
 };
 let currentLLMModel = null;
 
@@ -128,14 +129,15 @@ function renderProbs(probsEl, topLogprobs) {
   probsEl.innerHTML = "";
   const top = topLogprobs.slice(0, 10);
   const items = top.map(({token, logprob}) => ({token, prob: Math.exp(logprob)}));
-  const max = Math.max(...items.map((i) => i.prob), 1e-9);
   for (const {token, prob} of items) {
     const row = document.createElement("div"); row.className = "bar-row";
     const lbl = document.createElement("span"); lbl.className = "bar-label";
     lbl.textContent = JSON.stringify(token).slice(1, -1);
     const track = document.createElement("div"); track.className = "bar-track";
     const fill = document.createElement("div"); fill.className = "bar-fill";
-    fill.style.width = `${(prob / max) * 100}%`;
+    // bar width = absolute probability (27% prob → 27% bar). previously
+    // normalised by max-in-top-10 which made top-1 always look 100%.
+    fill.style.width = `${prob * 100}%`;
     track.appendChild(fill);
     const pct = document.createElement("span"); pct.className = "bar-pct";
     pct.textContent = `${(prob * 100).toFixed(1)}%`;
@@ -175,10 +177,15 @@ function setupPanel(panel) {
   const probsEl   = panel.querySelector(".probs");
   const systemEl  = panel.querySelector(".system-prompt");           // 只有 advanced panel 有
   const previewEl = panel.querySelector(".final-prompt-preview");    // 只有 advanced / reasoning panel 有
+  const thinkingArea = panel.querySelector(".thinking-area");        // 只有 reasoning panel 有
+  const thinkingContentEl = panel.querySelector(".thinking-content");
   const panelType = panel.dataset.panel;  // 'basic' | 'advanced' | 'reasoning'
 
   let tokenSteps = [];
   let abortCtl = null;
+  // phase state for reasoning mode: "pre_think" → "in_think" → "in_answer"
+  // tokens route to thinking-content while "in_think", else to generated-text
+  let phase = "pre_think";
 
   function buildFinalPrompt() {
     if (panelType === "basic") return promptEl.value;
@@ -202,13 +209,16 @@ function setupPanel(panel) {
   }
 
   // Reasoning mode 需要更多 token 給 model 想 + 答
-  const nPredict = panelType === "reasoning" ? 300 : 80;
+  // reasoning: Qwen3 thinking can be 600-1500 tokens before </think>; was 300 too small
+  // (with 300 the model never closed </think> on the apple problem,
+  //  phase stuck in "in_think", final answer area stayed empty)
+  const nPredict = panelType === "reasoning" ? 1500 : 80;
 
   function refreshPreview() {
     if (previewEl) previewEl.textContent = buildFinalPrompt();
   }
 
-  function appendClickableToken(stepIdx, token) {
+  function appendClickableToken(stepIdx, token, target) {
     const span = document.createElement("span");
     span.className = "tok";
     span.dataset.step = String(stepIdx);
@@ -220,11 +230,16 @@ function setupPanel(panel) {
       renderProbs(probsEl, s.top_logprobs);
       highlightStep(stepIdx);
     });
-    textEl.appendChild(span);
+    (target || textEl).appendChild(span);
   }
 
   function highlightStep(idx) {
-    textEl.querySelectorAll(".tok").forEach((s) => {
+    // tokens may live in either textEl or thinkingContentEl
+    const allToks = [
+      ...textEl.querySelectorAll(".tok"),
+      ...(thinkingContentEl ? thinkingContentEl.querySelectorAll(".tok") : []),
+    ];
+    allToks.forEach((s) => {
       s.classList.toggle("selected", parseInt(s.dataset.step) === idx);
     });
   }
@@ -234,6 +249,14 @@ function setupPanel(panel) {
     runBtn.disabled = true; stopBtn.disabled = false;
     textEl.textContent = ""; probsEl.innerHTML = "";
     tokenSteps = [];
+
+    // detect thinking mode (reasoning panel only)
+    const isThinkingMode = panelType === "reasoning" &&
+      panel.querySelector('input[name="mode-reasoning"]:checked')?.value === "thinking";
+    // direct mode: no <think> emitted, all tokens are final answer → start in "in_answer"
+    phase = isThinkingMode ? "pre_think" : "in_answer";
+    if (thinkingContentEl) thinkingContentEl.textContent = "";
+    if (thinkingArea) thinkingArea.classList.toggle("hidden", !isThinkingMode);
 
     const finalPrompt = buildFinalPrompt();
 
@@ -291,7 +314,30 @@ function setupPanel(panel) {
             const step = data.completion_probabilities[0];
             const stepIdx = tokenSteps.length;
             tokenSteps.push({token: step.token, top_logprobs: step.top_logprobs});
-            appendClickableToken(stepIdx, step.token);
+
+            // LEFT (complete-response, thinking-content) — gets every token in
+            // thinking mode (always-clickable, models the real stream).
+            // RIGHT (final-answer, textEl) — gets only post-</think> tokens
+            // (i.e. what the user actually sees).
+            // <think> / </think> are single Qwen3 tokens; marker goes to LEFT only.
+            const trim = step.token.replace(/[\s\n]/g, "");
+
+            // LEFT: in thinking mode, every token goes here
+            if (isThinkingMode) {
+              appendClickableToken(stepIdx, step.token, thinkingContentEl);
+            }
+
+            // Phase transitions on markers (thinking mode only — direct mode
+            // starts at "in_answer" and stays there)
+            if (isThinkingMode && trim === "<think>") {
+              phase = "in_think";
+            } else if (isThinkingMode && trim === "</think>") {
+              phase = "in_answer";
+            } else if (phase === "in_answer") {
+              // RIGHT: tokens that are part of the final answer (mirrors
+              // LEFT post-</think>, OR in direct mode = the only output)
+              appendClickableToken(stepIdx, step.token, textEl);
+            }
             if (stepIdx === 0) {
               renderProbs(probsEl, step.top_logprobs);
               highlightStep(0);
@@ -651,8 +697,288 @@ window.addEventListener("DOMContentLoaded", () => {
   }
 });
 
-// Initialize panels — basic/advanced/reasoning go through setupPanel; agent uses setupAgent
+// Initialize panels — basic/advanced/reasoning go through setupPanel;
+// agent uses setupAgent; skill uses setupSkill; placeholders (script/api/mcp) skip.
+const PLACEHOLDER_PANELS = new Set(["script", "api", "mcp"]);
 document.querySelectorAll(".tab-panel").forEach((panel) => {
-  if (panel.dataset.panel === "agent") setupAgent(panel);
-  else                                  setupPanel(panel);
+  const id = panel.dataset.panel;
+  if (PLACEHOLDER_PANELS.has(id)) return;
+  if (id === "agent") setupAgent(panel);
+  else if (id === "skill") setupSkill(panel);
+  else setupPanel(panel);
 });
+
+
+// ── Tab 7: Skill preview ─────────────────────────────────────────────
+const SKILL_BACKEND_URL = "http://localhost:8082/skill-agent";
+
+function setupSkill(panel) {
+  const preset = panel.querySelector(".skill-preset");
+  const promptEl = panel.querySelector(".skill-prompt");
+  const runBtn = panel.querySelector(".skill-run");
+  const stopBtn = panel.querySelector(".skill-stop");
+  const indexEl = panel.querySelector(".skill-index");
+  const toolsEl = panel.querySelector(".skill-tools");
+  const turnsEl = panel.querySelector(".skill-turns");
+  const finalArea = panel.querySelector(".skill-final-area");
+  const finalEl = panel.querySelector(".skill-final");
+  const _isZh2 = LANG.toLowerCase().startsWith("zh");
+
+  // Tab ⑦ always runs with skills. To demo "no skills" contrast, reader
+  // switches to Tab ④ Agent (raw function-calling agent, no skill layer).
+  const mode = "proper";
+  let abortCtl = null;
+
+  preset.addEventListener("change", () => {
+    if (preset.value) promptEl.value = preset.value;
+  });
+
+  const _isZh = LANG.toLowerCase().startsWith("zh");
+
+  function reset() {
+    indexEl.innerHTML = "";
+    toolsEl.textContent = _isZh ? "(尚未啟動)" : "(not yet started)";
+    turnsEl.innerHTML = "";
+    finalArea.classList.add("hidden");
+    finalEl.textContent = "";
+  }
+
+  let _scriptSources = {};
+
+  function renderIndex(skills) {
+    indexEl.innerHTML = "";
+    for (const s of skills) {
+      const card = document.createElement("div");
+      card.className = "rounded-md border border-edge-soft bg-surface p-2.5 text-xs space-y-1";
+      const extras = (s.extras || []).join(", ") || "—";
+      let html = `
+        <div class="font-medium text-ink-soft">${s.name}</div>
+        <div class="text-muted">${s.description}</div>
+        <div class="text-faint"><span class="uppercase tracking-wider">L3 docs:</span> <code>${extras}</code></div>
+        <div class="text-faint"><span class="uppercase tracking-wider">L3 scripts:</span></div>
+      `;
+      if ((s.scripts || []).length === 0) {
+        html += `<div class="text-faint pl-2">—</div>`;
+      } else {
+        for (const script of s.scripts) {
+          const key = `${s.name}/${script}`;
+          const code = _scriptSources[key] || "(source not loaded)";
+          html += `
+            <details class="pl-2">
+              <summary class="cursor-pointer text-tool font-mono">📄 ${script}</summary>
+              <pre class="text-[10px] mt-1 p-2 bg-surface-2 rounded border border-edge-soft whitespace-pre-wrap overflow-auto max-h-60 text-ink-soft">${escape(code)}</pre>
+              <p class="text-[10px] text-faint mt-0.5">(human-only view — model 看不到 source,只看 stdout)</p>
+            </details>
+          `;
+        }
+      }
+      html += `<div class="text-faint text-[10px]">${s.dir}/</div>`;
+      card.innerHTML = html;
+      indexEl.appendChild(card);
+    }
+  }
+
+  function renderMessageCard(m) {
+    const roleBg = {
+      system: "bg-surface-2",
+      user: "bg-final-tint",
+      assistant: "bg-result-tint",
+      tool: "bg-tool-tint",
+    }[m.role] || "bg-surface-2";
+    const roleColor = {
+      system: "text-muted",
+      user: "text-final",
+      assistant: "text-result",
+      tool: "text-tool",
+    }[m.role] || "text-muted";
+    let body = "";
+    if (m.content) {
+      body += `<pre class="text-xs whitespace-pre-wrap text-ink-soft leading-relaxed">${escape(m.content)}</pre>`;
+    }
+    if (m.tool_calls && m.tool_calls.length) {
+      for (const tc of m.tool_calls) {
+        body += `<div class="text-xs font-mono text-tool mt-1">↑ ${tc.function.name}(${escape(tc.function.arguments)})</div>`;
+      }
+    }
+    if (m.tool_call_id) {
+      body += `<div class="text-[10px] text-faint mt-0.5">tool_call_id: ${escape(m.tool_call_id)}</div>`;
+    }
+    return `<div class="rounded ${roleBg} p-2 border border-edge-soft">
+      <div class="text-[10px] uppercase tracking-wider font-semibold ${roleColor} mb-1">${m.role}</div>
+      ${body || '<span class="text-faint text-xs">(empty)</span>'}
+    </div>`;
+  }
+
+  function renderTools(tools) {
+    toolsEl.innerHTML = tools.map((t) => `<code class="inline-block bg-surface px-1.5 py-0.5 rounded border border-edge-soft mr-1">${t}</code>`).join("");
+  }
+
+  function ensureTurnHeader(turnNum) {
+    let wrap = turnsEl.querySelector(`[data-turn="${turnNum}"]`);
+    if (wrap) return wrap.querySelector(".turn-body");
+    wrap = document.createElement("div");
+    wrap.className = "rounded-md border border-edge-soft overflow-hidden";
+    wrap.dataset.turn = turnNum;
+    wrap.innerHTML = `
+      <div class="px-3 py-1.5 bg-surface-2 text-xs uppercase tracking-wider text-muted font-medium">Turn ${turnNum}</div>
+      <div class="turn-body p-3 space-y-2 text-sm"></div>
+    `;
+    turnsEl.appendChild(wrap);
+    return wrap.querySelector(".turn-body");
+  }
+
+  function appendToTurn(turnNum, html) {
+    const body = ensureTurnHeader(turnNum);
+    const div = document.createElement("div");
+    div.innerHTML = html;
+    body.appendChild(div);
+  }
+
+  function escape(s) {
+    return String(s).replace(/[&<>]/g, (c) => ({"&": "&amp;", "<": "&lt;", ">": "&gt;"})[c]);
+  }
+
+  async function run() {
+    if (!promptEl.value.trim()) return;
+    reset();
+
+    runBtn.disabled = true;
+    stopBtn.disabled = false;
+    abortCtl = new AbortController();
+
+    let currentTurn = 0;
+    try {
+      const resp = await fetch(SKILL_BACKEND_URL, {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({mode, user: promptEl.value}),
+        signal: abortCtl.signal,
+      });
+      if (!resp.ok) throw new Error(`backend HTTP ${resp.status}`);
+
+      const reader = resp.body.getReader();
+      const decoder = new TextDecoder();
+      let buf = "";
+      while (true) {
+        const {done, value} = await reader.read();
+        if (done) break;
+        buf += decoder.decode(value, {stream: true});
+        const lines = buf.split("\n\n");
+        buf = lines.pop();
+        for (const block of lines) {
+          if (!block.startsWith("data: ")) continue;
+          const evt = JSON.parse(block.slice(6));
+
+          if (evt.type === "index") {
+            _scriptSources = evt.script_sources || {};
+            renderIndex(evt.skills);
+          } else if (evt.type === "tools_exposed") {
+            renderTools(evt.tools);
+            if (evt.turn > 0) appendToTurn(evt.turn, `<div class="text-xs text-muted">↻ tools now exposed: <span class="font-mono">${evt.tools.join(", ")}</span></div>`);
+          } else if (evt.type === "sent") {
+            currentTurn = evt.turn;
+            const cards = evt.messages.map(renderMessageCard).join("");
+            const rawJson = JSON.stringify(evt.messages, null, 2);
+            appendToTurn(evt.turn, `
+              <details class="rounded bg-surface-2 border border-edge-soft">
+                <summary class="cursor-pointer text-xs text-muted px-2 py-1 font-medium">📤 Sent to model (${evt.messages.length} messages, tools=[${evt.tools.join(", ")}])</summary>
+                <div class="p-2 space-y-1.5">
+                  ${cards}
+                  <details class="rounded border border-edge-soft">
+                    <summary class="cursor-pointer text-[10px] px-2 py-1 text-faint">raw JSON</summary>
+                    <pre class="text-[10px] p-2 whitespace-pre-wrap max-h-80 overflow-auto text-ink-soft">${escape(rawJson)}</pre>
+                  </details>
+                </div>
+              </details>
+            `);
+            // loading indicator while waiting for llama (the slow part)
+            appendToTurn(evt.turn, `
+              <div data-loading-turn="${evt.turn}" class="flex items-center gap-2 text-xs text-muted pl-1">
+                <span class="inline-block w-1.5 h-1.5 rounded-full bg-final animate-pulse"></span>
+                <span>${_isZh2 ? "model 思考中…" : "model thinking…"}</span>
+              </div>
+            `);
+          } else if (evt.type === "received") {
+            currentTurn = evt.turn;
+            // remove the per-turn loading indicator
+            const loadingEl = panel.querySelector(`[data-loading-turn="${evt.turn}"]`);
+            if (loadingEl) loadingEl.remove();
+            const choice = (evt.response.choices || [{}])[0];
+            const reply = choice.message || {};
+            const finish = choice.finish_reason;
+            const usage = evt.response.usage || {};
+            const replyCard = renderMessageCard(reply);
+            const metaLine = `<div class="text-[10px] text-faint">finish_reason: <code>${finish || "—"}</code> · usage: prompt=${usage.prompt_tokens ?? "?"}, completion=${usage.completion_tokens ?? "?"}, total=${usage.total_tokens ?? "?"}</div>`;
+            const rawJson = JSON.stringify(evt.response, null, 2);
+            appendToTurn(evt.turn, `
+              <details class="rounded bg-surface-2 border border-edge-soft">
+                <summary class="cursor-pointer text-xs text-muted px-2 py-1 font-medium">📥 Received from model</summary>
+                <div class="p-2 space-y-1.5">
+                  ${replyCard}
+                  ${metaLine}
+                  <details class="rounded border border-edge-soft">
+                    <summary class="cursor-pointer text-[10px] px-2 py-1 text-faint">raw JSON (含 id / object / system_fingerprint 等 metadata)</summary>
+                    <pre class="text-[10px] p-2 whitespace-pre-wrap max-h-80 overflow-auto text-ink-soft">${escape(rawJson)}</pre>
+                  </details>
+                </div>
+              </details>
+            `);
+          } else if (evt.type === "turn") {
+            currentTurn = evt.turn;
+            if (evt.content) {
+              appendToTurn(evt.turn, `<div><span class="text-xs uppercase tracking-wider text-muted">Assistant:</span> <span class="text-ink whitespace-pre-wrap">${escape(evt.content)}</span></div>`);
+            }
+            for (const tc of (evt.tool_calls || [])) {
+              const isLoad = tc.name === "load_skill";
+              const cls = isLoad ? "text-final" : "text-tool";
+              appendToTurn(evt.turn, `<div class="font-mono text-xs"><span class="${cls}">↑ ${tc.name}</span>(<span class="text-ink-soft">${escape(tc.args)}</span>)</div>`);
+            }
+          } else if (evt.type === "skill_loaded") {
+            appendToTurn(currentTurn, `
+              <details class="rounded bg-final-tint p-2 border border-final/20">
+                <summary class="cursor-pointer text-xs text-final font-medium">📄 L2 SKILL.md body loaded: <code>${evt.name}</code> (${evt.body.length} chars)</summary>
+                <pre class="mt-2 text-xs whitespace-pre-wrap text-ink-soft">${escape(evt.body)}</pre>
+              </details>
+            `);
+          } else if (evt.type === "l3_loaded") {
+            const kindLabel = evt.kind === "script_output"
+              ? `🛠 L3 script executed: <code>${evt.skill}/${evt.filename}</code>${evt.args ? ` <span class="text-faint">args: ${escape(evt.args)}</span>` : ""} <span class="text-faint">(code not in context)</span>`
+              : `📑 L3 reference loaded: <code>${evt.skill}/${evt.filename}</code> (${evt.content.length} chars)`;
+            appendToTurn(currentTurn, `
+              <details class="rounded bg-result-tint p-2 border border-result/20">
+                <summary class="cursor-pointer text-xs text-result font-medium">${kindLabel}</summary>
+                <pre class="mt-2 text-xs whitespace-pre-wrap text-ink-soft">${escape(evt.content)}</pre>
+              </details>
+            `);
+          } else if (evt.type === "tool_result") {
+            const errCls = evt.error ? "text-tool" : "text-result";
+            appendToTurn(currentTurn, `<div class="font-mono text-xs"><span class="${errCls}">↓ ${evt.name}</span> → <span class="text-ink-soft whitespace-pre-wrap">${escape(evt.result)}</span></div>`);
+          } else if (evt.type === "final") {
+            finalArea.classList.remove("hidden");
+            finalEl.textContent = evt.content;
+          } else if (evt.type === "error") {
+            appendToTurn(currentTurn || 1, `<div class="text-tool text-xs">ERROR: ${escape(evt.message)}</div>`);
+          }
+        }
+      }
+    } catch (err) {
+      if (err.name !== "AbortError") {
+        console.error(err);
+        appendToTurn(currentTurn || 1, `<div class="text-tool text-xs">FETCH ERROR: ${escape(err.message)}</div>`);
+      }
+    } finally {
+      runBtn.disabled = false;
+      stopBtn.disabled = true;
+      abortCtl = null;
+    }
+  }
+
+  runBtn.addEventListener("click", run);
+  stopBtn.addEventListener("click", () => abortCtl?.abort());
+  promptEl.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+      e.preventDefault();
+      run();
+    }
+  });
+}

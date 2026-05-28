@@ -66,6 +66,10 @@
         <button class="tab whitespace-nowrap px-3 md:px-5 py-3 md:py-4 text-sm md:text-base text-muted border-b-2 border-transparent hover:text-ink transition-colors" data-tab="advanced">② Product Layer</button>
         <button class="tab whitespace-nowrap px-3 md:px-5 py-3 md:py-4 text-sm md:text-base text-muted border-b-2 border-transparent hover:text-ink transition-colors" data-tab="reasoning">③ Reasoning</button>
         <button class="tab whitespace-nowrap px-3 md:px-5 py-3 md:py-4 text-sm md:text-base text-muted border-b-2 border-transparent hover:text-ink transition-colors" data-tab="agent">④ Agent</button>
+        <button class="tab whitespace-nowrap px-3 md:px-5 py-3 md:py-4 text-sm md:text-base text-faint border-b-2 border-transparent hover:text-ink transition-colors" data-tab="script" title="Coming soon">⑤ Script</button>
+        <button class="tab whitespace-nowrap px-3 md:px-5 py-3 md:py-4 text-sm md:text-base text-faint border-b-2 border-transparent hover:text-ink transition-colors" data-tab="api" title="Coming soon">⑥ API</button>
+        <button class="tab whitespace-nowrap px-3 md:px-5 py-3 md:py-4 text-sm md:text-base text-ink-soft border-b-2 border-transparent hover:text-ink transition-colors" data-tab="skill" title="Preview">⑦ Skill <span class="text-xs text-final ml-1">preview</span></button>
+        <button class="tab whitespace-nowrap px-3 md:px-5 py-3 md:py-4 text-sm md:text-base text-faint border-b-2 border-transparent hover:text-ink transition-colors" data-tab="mcp" title="Coming soon">⑧ MCP</button>
       </div>
     </div>
   </nav>
@@ -145,6 +149,59 @@ help me
           <p>This tells the model "<strong>this part is system, this part is user</strong>". Expand the "Final prompt actually sent to the model" preview below to see exactly how the markers wrap it.</p>
         </div>
       </details>
+      <details class="info-tag">
+        <summary class="cursor-pointer text-xs text-final hover:underline list-none [&::-webkit-details-marker]:hidden select-none inline-block py-0.5">(?) But what IS <code>&lt;|im_start|&gt;</code> exactly?</summary>
+        <div class="mt-1.5 p-3 rounded-md bg-final-tint text-sm text-ink-soft max-w-2xl leading-relaxed space-y-3">
+          <div>
+            <p class="font-semibold mb-1">It's not a string — it's a single token.</p>
+            <p>Looks like 12 characters, but to the model it's <strong>1 token</strong> (Qwen3 vocab id 151644). The tokenizer recognises it atomically — won't split into <code>&lt;</code>/<code>|</code>/<code>i</code>/<code>m</code>/...</p>
+            <pre class="text-xs bg-surface-2 rounded p-2 whitespace-pre-wrap break-all mt-1">"&lt;|im_start|&gt;"  ← what you see (12 chars)
+[151644]        ← what the model sees (1 token id)</pre>
+            <p class="mt-1">Lives in the same vocab list as <code class="bg-surface-2 px-1 rounded text-xs">一</code> / <code class="bg-surface-2 px-1 rounded text-xs">年</code> / <code class="bg-surface-2 px-1 rounded text-xs">月</code> — entry #151644.</p>
+          </div>
+
+          <div>
+            <p class="font-semibold mb-1">Why does this token exist?</p>
+            <p>The model essentially only does "continue the token sequence" — give it text, it predicts the next token.</p>
+            <p class="mt-1">Problem: feed it <code class="bg-surface-2 px-1 rounded text-xs">一年有幾個月?</code> — how does it know to <strong>answer</strong>, vs <strong>essay-continue</strong> (like "一年有幾個月? 答案是...")?</p>
+            <p class="mt-1"><code class="bg-surface-2 px-1 rounded text-xs">&lt;|im_start|&gt;</code> / <code class="bg-surface-2 px-1 rounded text-xs">&lt;|im_end|&gt;</code> are <strong>role-boundary markers</strong>:</p>
+            <pre class="text-xs bg-surface-2 rounded p-2 whitespace-pre-wrap break-all mt-1">&lt;|im_start|&gt;user        ← "user starts speaking"
+一年有幾個月?
+&lt;|im_end|&gt;              ← "user is done"
+
+&lt;|im_start|&gt;assistant   ← "now you (assistant) speak"</pre>
+            <p class="mt-1">During training, the model saw billions of conversations in this format and learned: <em>"after <code class="bg-surface-2 px-1 rounded text-xs">&lt;|im_start|&gt;assistant\n</code>, generate a reply, stop at <code class="bg-surface-2 px-1 rounded text-xs">&lt;|im_end|&gt;</code>"</em>.</p>
+          </div>
+
+          <div>
+            <p class="font-semibold mb-1">Reading the prompt line-by-line</p>
+            <pre class="text-xs bg-surface-2 rounded p-2 whitespace-pre-wrap break-all">&lt;|im_start|&gt;user
+一年有幾個月?&lt;|im_end|&gt;
+&lt;|im_start|&gt;assistant
+&lt;think&gt;
+
+&lt;/think&gt;</pre>
+            <table class="text-xs w-full mt-2 border border-edge-soft">
+              <thead>
+                <tr class="bg-surface-2 border-b border-edge-soft">
+                  <th class="text-left p-1.5 font-medium">Literal</th>
+                  <th class="text-left p-1.5 font-medium">Model's reading</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-edge-soft">
+                <tr><td class="p-1.5 font-mono"><code>&lt;|im_start|&gt;user\n</code></td><td class="p-1.5">"user starts speaking"</td></tr>
+                <tr><td class="p-1.5 font-mono">一年有幾個月?</td><td class="p-1.5">user's question content</td></tr>
+                <tr><td class="p-1.5 font-mono"><code>&lt;|im_end|&gt;</code></td><td class="p-1.5">"user is done"</td></tr>
+                <tr><td class="p-1.5 font-mono"><code>&lt;|im_start|&gt;assistant\n</code></td><td class="p-1.5">"now assistant speaks"</td></tr>
+                <tr><td class="p-1.5 font-mono"><code>&lt;think&gt;\n\n&lt;/think&gt;</code></td><td class="p-1.5">Qwen3 reasoning marker — see Tab ③</td></tr>
+                <tr><td class="p-1.5 font-mono text-faint">(prompt ends)</td><td class="p-1.5">model starts generating reply from here</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <p class="text-faint text-xs">No magic — just a convention the model was trained to follow.</p>
+        </div>
+      </details>
 
       <details class="preview-details pt-2">
         <summary class="cursor-pointer text-sm text-muted hover:text-ink-soft">Final prompt actually sent to the model (preview)</summary>
@@ -200,10 +257,16 @@ help me
         <button class="stop inline-flex items-center px-4 py-2 rounded-md border border-edge text-ink-soft text-sm hover:bg-surface-2 disabled:text-faint disabled:hover:bg-transparent transition-colors" disabled>Stop</button>
       </div>
     </section>
-    <section class="output-area mt-8 lg:mt-0 space-y-2">
-      <h2 class="text-xs uppercase tracking-wider text-muted font-medium">What the model emits</h2>
-      <div class="generated-text rounded-md bg-surface-2 border border-edge-soft p-4 min-h-[6rem] font-mono text-sm md:text-base leading-relaxed break-all"></div>
-    </section>
+    <div class="mt-8 lg:mt-0 space-y-6">
+      <section class="thinking-area space-y-2 hidden">
+        <h2 class="text-xs uppercase tracking-wider text-muted font-medium">📜 Complete model output (the actual stream — includes <code>&lt;think&gt;</code>...<code>&lt;/think&gt;</code>)</h2>
+        <div class="thinking-content rounded-md bg-surface-2 border border-edge-soft border-dashed p-4 min-h-[6rem] font-mono text-sm leading-relaxed break-all text-ink-soft"></div>
+      </section>
+      <section class="output-area space-y-2">
+        <h2 class="text-xs uppercase tracking-wider text-muted font-medium">🎯 Final answer (what the user actually sees, post-<code>&lt;/think&gt;</code> only)</h2>
+        <div class="generated-text rounded-md bg-surface-2 border border-edge-soft p-4 min-h-[6rem] font-mono text-sm md:text-base leading-relaxed break-all"></div>
+      </section>
+    </div>
     <section class="probs-area mt-6 lg:mt-0 space-y-2">
       <h2 class="text-xs uppercase tracking-wider text-muted font-medium">Token candidates · top 10</h2>
       <div class="probs rounded-md bg-surface border border-edge-soft p-3 min-h-[6rem]"></div>
@@ -213,7 +276,7 @@ help me
   <!-- ─────────────────────────────────────────────────────────────────
        Tab 4: Agent — actually executes tools via :8082 backend
        ───────────────────────────────────────────────────────────────── -->
-  <main class="tab-panel max-w-4xl mx-auto px-4 md:px-8 py-6 md:py-10" data-panel="agent">
+  <main class="tab-panel max-w-6xl mx-auto px-4 md:px-8 py-6 md:py-10" data-panel="agent">
     <section class="prompt-area space-y-3">
       <label for="system-prompt-agent" class="block text-sm font-medium text-ink-soft">System Prompt (prefilled, editable)</label>
       <details class="info-tag">
@@ -284,6 +347,93 @@ help me
     </section>
   </main>
 
-  <script src="app.js?v=32"></script>
+  <!-- ─────────────────────────────────────────────────────────────────
+       Tab 5/6/8: placeholders (coming soon)
+       ───────────────────────────────────────────────────────────────── -->
+  <main class="tab-panel max-w-4xl mx-auto px-4 md:px-8 py-12 md:py-16" data-panel="script">
+    <div class="text-center space-y-3">
+      <h2 class="text-2xl font-semibold text-ink-soft">⑤ Script — Coming soon</h2>
+      <p class="text-muted">Local scripts as a tool layer. What can a model do when it can call <code>read_file / write_file / exec_bash</code> on your own machine?</p>
+      <p class="text-faint text-sm">(Roadmap: P2 — see <code>docs/superpowers/specs/2026-05-28-llm-no-magic-tabs5-8-roadmap.md</code>)</p>
+    </div>
+  </main>
+  <main class="tab-panel max-w-4xl mx-auto px-4 md:px-8 py-12 md:py-16" data-panel="api">
+    <div class="text-center space-y-3">
+      <h2 class="text-2xl font-semibold text-ink-soft">⑥ API — Coming soon</h2>
+      <p class="text-muted">When local scripts can't reach it — call an external HTTP API. <em>本地能做用 script、做不到就找 service</em>.</p>
+      <p class="text-faint text-sm">(Roadmap: P3)</p>
+    </div>
+  </main>
+  <main class="tab-panel max-w-4xl mx-auto px-4 md:px-8 py-12 md:py-16" data-panel="mcp">
+    <div class="text-center space-y-3">
+      <h2 class="text-2xl font-semibold text-ink-soft">⑧ MCP — Coming soon</h2>
+      <p class="text-muted">When even API can't do it (GUI / cross-process) — Model Context Protocol. e.g. Playwright MCP for browser control.</p>
+      <p class="text-faint text-sm">(Roadmap: P5)</p>
+    </div>
+  </main>
+
+  <!-- ─────────────────────────────────────────────────────────────────
+       Tab 7: Skill (preview) — lazy-loaded skill body + bundled tools
+       ───────────────────────────────────────────────────────────────── -->
+  <main class="tab-panel max-w-6xl mx-auto px-4 md:px-8 py-6 md:py-10" data-panel="skill">
+    <div class="mb-6 p-4 rounded-lg bg-final-tint border border-final/20">
+      <h2 class="text-base font-semibold text-final mb-1">⑦ Skill — Preview (P1 spike artifact)</h2>
+      <p class="text-sm text-ink-soft leading-relaxed">
+        Faithful to Claude Code's <strong>3-layer progressive disclosure</strong>:
+        <strong>L1</strong> metadata (always in system prompt, ~100 tokens/skill) ·
+        <strong>L2</strong> SKILL.md body (load on demand via <code>load_skill</code>, &lt;5k tokens) ·
+        <strong>L3</strong> reference docs + bundled scripts (read on demand; script <em>code</em> never enters context).
+        Toggle <strong>Naive</strong> ↔ <strong>Proper</strong> to see token-explosion vs lazy disclosure.
+      </p>
+    </div>
+
+    <div class="lg:grid lg:grid-cols-[1fr_2fr] lg:gap-6">
+      <!-- LEFT: controls + skill index -->
+      <section class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-ink-soft mb-1.5">Preset query</label>
+          <select class="skill-preset w-full rounded-md border border-edge bg-surface px-3 py-2 text-sm focus:outline-none focus:border-final focus:ring-1 focus:ring-final">
+            <option value="">(Pick a preset or type your own)</option>
+            <option value="幫我整理 ~/Downloads 的檔案,分類一下">1. 整理檔案 → should load organize_files skill</option>
+            <option value="台北今天天氣怎樣?">2. 台北天氣 → should load check_weather skill</option>
+            <option value="1 加 1 等於多少?">3. 1+1 → no skill matches, model answers directly</option>
+          </select>
+        </div>
+
+        <div>
+          <label for="prompt-skill" class="block text-sm font-medium text-ink-soft mb-1.5">Query</label>
+          <textarea class="skill-prompt w-full rounded-md border border-edge bg-surface px-3 py-2 text-sm font-mono focus:outline-none focus:border-final focus:ring-1 focus:ring-final" id="prompt-skill" rows="3" placeholder="Ask something..."></textarea>
+        </div>
+
+        <div class="flex gap-2">
+          <button class="skill-run inline-flex items-center px-4 py-2 rounded-md bg-ink text-surface text-sm font-medium hover:bg-ink-soft disabled:bg-faint transition-colors">Send</button>
+          <button class="skill-stop inline-flex items-center px-4 py-2 rounded-md border border-edge text-ink-soft text-sm hover:bg-surface-2 disabled:text-faint disabled:hover:bg-transparent transition-colors" disabled>Stop</button>
+        </div>
+
+        <div class="pt-2">
+          <h3 class="text-xs uppercase tracking-wider text-muted font-medium mb-2">Skill index</h3>
+          <div class="skill-index space-y-2"></div>
+        </div>
+
+        <div>
+          <h3 class="text-xs uppercase tracking-wider text-muted font-medium mb-2">Tools currently exposed</h3>
+          <div class="skill-tools rounded-md bg-surface-2 border border-edge-soft p-3 text-xs font-mono text-ink-soft">(not yet started)</div>
+        </div>
+      </section>
+
+      <!-- RIGHT: turn-by-turn output -->
+      <section class="mt-8 lg:mt-0 space-y-3">
+        <h3 class="text-xs uppercase tracking-wider text-muted font-medium">Agent trace</h3>
+        <div class="skill-turns space-y-3"></div>
+
+        <div class="skill-final-area hidden mt-6 rounded-lg bg-final-tint p-5 space-y-2">
+          <h3 class="text-sm font-semibold text-final uppercase tracking-wider">Final answer</h3>
+          <div class="skill-final text-base leading-relaxed text-ink"></div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <script src="app.js?v=48"></script>
 </body>
 </html>

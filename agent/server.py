@@ -23,6 +23,7 @@ from agent.agent import (
     MODEL_NAME,
     LLAMA_URL,
 )
+from agent.skill_agent import skill_agent_loop
 
 
 def sse(event: dict) -> bytes:
@@ -259,6 +260,8 @@ class AgentHandler(BaseHTTPRequestHandler):
     def do_POST(self) -> None:
         if self.path == "/agent":
             self._handle_agent()
+        elif self.path == "/skill-agent":
+            self._handle_skill_agent()
         elif self.path == "/preview":
             self._handle_preview()
         elif self.path == "/swap":
@@ -267,6 +270,32 @@ class AgentHandler(BaseHTTPRequestHandler):
             self.send_response(404)
             self._send_cors()
             self.end_headers()
+
+    def _handle_skill_agent(self) -> None:
+        """Tab ⑦ preview: skill simulator with naive/proper toggle."""
+        body = self._read_body()
+        if body is None:
+            return
+
+        self.send_response(200)
+        self.send_header("Content-Type", "text/event-stream")
+        self.send_header("Cache-Control", "no-cache")
+        self._send_cors()
+        self.end_headers()
+
+        mode = body.get("mode", "proper")  # "naive" or "proper"
+        user = body.get("user", "")
+
+        try:
+            for event in skill_agent_loop(user, mode):
+                self.wfile.write(sse(event))
+                self.wfile.flush()
+        except Exception as exc:
+            try:
+                self.wfile.write(sse({"type": "error", "message": f"{type(exc).__name__}: {exc}"}))
+                self.wfile.flush()
+            except Exception:
+                pass
 
     def _read_body(self) -> dict | None:
         """Read + parse JSON body. On error, send 400 + return None."""
