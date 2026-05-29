@@ -1,9 +1,14 @@
-"""Agent web backend — HTTP relay between Tab ④ frontend and llama-server.
+"""Agent web backend — single-port server (HTML + API + SSE).
 
-Architecture: stdlib http.server only (no FastAPI). POST /agent with body
-{system, user} → runs agent loop → streams per-turn SSE events back.
+Architecture: stdlib http.server only (no FastAPI). One process on :9000
+serves both:
+  - GET /, /index.html, /app.js, /styles.css ... → static files from frontend/
+  - POST /agent, /skill-agent, /swap, /preview → API handlers (SSE for /agent
+    and /skill-agent, JSON for /swap, plain proxy for /preview)
 
-
+This collapses what used to be two separate ports (frontend :9000 via
+http.server, backend :8082 via this file) into one. Reduces ports the
+classroom LAN demo has to expose from 3 → 2 (this + llama-server :8080).
 """
 import json
 import os
@@ -11,10 +16,15 @@ import socket
 import subprocess
 import threading
 import time
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from functools import partial
+from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
 
 import requests
 from typing import Iterable
+
+# Static files served from frontend/ (relative to this file's parent dir).
+STATIC_ROOT = Path(__file__).resolve().parent.parent / "frontend"
 from agent.agent import (
     TOOLS,                 # used by Task 4 (tool dispatch)
     dispatch_tool_call,    # used by Task 4
@@ -115,12 +125,21 @@ def handle_swap(wanted: str) -> dict:
         model_file = f"{MODEL_TAG[wanted]}.gguf"
         log_path = f"/tmp/llama-{wanted.lower()}.log"
         log_fh = open(log_path, "w")
+        # If backend is exposed on LAN (LISTEN_HOST set, e.g. 0.0.0.0 for
+        # classroom demo), pass the same host to llama-server so its :8080
+        # is reachable from students' browsers too.
+        listen_host = os.environ.get("LISTEN_HOST", "127.0.0.1")
+        launch_args = [
+            "llama-server",
+            "-m", os.path.expanduser(f"~/models/{model_file}"),
+            "--port", "8080",
+            "-ngl", "99",
+        ]
+        if listen_host != "127.0.0.1":
+            launch_args.extend(["--host", listen_host])
         try:
             subprocess.Popen(
-                ["llama-server",
-                 "-m", os.path.expanduser(f"~/models/{model_file}"),
-                 "--port", "8080",
-                 "-ngl", "99"],
+                launch_args,
                 stdout=log_fh,
                 stderr=subprocess.STDOUT,
                 start_new_session=True,
@@ -244,8 +263,42 @@ def agent_loop(system: str, user: str) -> Iterable[dict]:
     yield {"type": "error", "message": f"max_turns ({MAX_TURNS}) reached"}
 
 
-class AgentHandler(BaseHTTPRequestHandler):
-    """Single endpoint: POST /agent → SSE stream of turn events."""
+class AgentHandler(SimpleHTTPRequestHandler):
+    """One handler:
+      - GET → SimpleHTTPRequestHandler serves static files from STATIC_ROOT
+      - POST → /agent / /skill-agent / /swap / /preview API endpoints (below)
+      - OPTIONS → CORS preflight
+    """
+
+    def log_message(self, format, *args):
+        # Override default (writes to sys.stderr) to use print() which is
+        # reliably captured by nohup `2>&1` redirect and flushes line-by-line.
+        print(f"[{self.log_date_time_string()}] {self.address_string()} - {format % args}", flush=True)
+
+    def _redirect_legacy_frontend_prefix(self) -> bool:
+        """Pre-2026-05-29 the URL was http://host:9000/frontend/... (when
+        frontend was served by a separate http.server). After merging into
+        :9000 with static root at frontend/, canonical URL is /...
+        Browsers / iPhone Safari autofill from history → still hit /frontend/.
+        301 redirect so client learns the new URL.
+        """
+        if self.path.startswith("/frontend"):
+            new_path = self.path[len("/frontend"):] or "/"
+            self.send_response(301)
+            self.send_header("Location", new_path)
+            self.end_headers()
+            return True
+        return False
+
+    def do_GET(self) -> None:
+        if self._redirect_legacy_frontend_prefix():
+            return
+        super().do_GET()
+
+    def do_HEAD(self) -> None:
+        if self._redirect_legacy_frontend_prefix():
+            return
+        super().do_HEAD()
 
     def _send_cors(self) -> None:
         for k, v in CORS_HEADERS.items():
@@ -387,18 +440,25 @@ class AgentHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(json.dumps({"prompt": prompt_text}).encode("utf-8"))
 
-    def log_message(self, fmt: str, *args) -> None:
-        # Quieter than default (which logs every request to stderr)
-        pass
-
-
 def main() -> None:
-    """Run backend on 127.0.0.1:8082 (bind localhost only, not exposed on LAN)."""
+    """Run single-port server on $LISTEN_HOST:9000 (default 127.0.0.1 — safe).
+
+    Serves both static frontend files and API endpoints. For classroom
+    LAN demo, launch with `LISTEN_HOST=0.0.0.0` so students on the same
+    WiFi can hit http://<mac-lan-ip>:9000/ . The /swap orchestrator also
+    propagates LISTEN_HOST to llama-server's --host flag so llama-server
+    binds the same interface.
+    """
+    listen_host = os.environ.get("LISTEN_HOST", "127.0.0.1")
     # Startup sync: detect any model currently alive on :8080, sync GLOBAL_STATE
     GLOBAL_STATE["model"] = _detect_model()
-    print(f"Agent web backend on http://127.0.0.1:8082/agent")
+    print(f"llm-no-magic server on http://{listen_host}:9000/")
+    print(f"  serving static frontend from {STATIC_ROOT}")
     print(f"  detected current model on :8080 = {GLOBAL_STATE['model']}")
-    srv = ThreadingHTTPServer(("127.0.0.1", 8082), AgentHandler)
+    # SimpleHTTPRequestHandler needs `directory=` via partial (its __init__
+    # signature has directory as a kwarg after positional handler args).
+    handler = partial(AgentHandler, directory=str(STATIC_ROOT))
+    srv = ThreadingHTTPServer((listen_host, 9000), handler)
     srv.serve_forever()
 
 

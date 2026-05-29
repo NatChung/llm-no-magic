@@ -56,12 +56,18 @@ function t(key, vars = {}) {
   return s;
 }
 
-const LLAMA_URL = "http://localhost:8080/completion";
+// llama-server is a separate C++ process, fixed at :8080. Frontend HTML
+// + API are now the same Python server (default :9000 served by
+// agent/server.py), so API endpoints are same-origin relative paths.
+// _HOST stays for llama-server URL (host taken from page → LAN-friendly).
+const _HOST = window.location.hostname;
 
-const AGENT_BACKEND_URL = "http://localhost:8082/agent";
+const LLAMA_URL = `http://${_HOST}:8080/completion`;
+
+const AGENT_BACKEND_URL = "/agent";
 
 // ── /swap orchestrator(spec §5)──────────────────────────────────────
-const SWAP_URL = "http://localhost:8082/swap";
+const SWAP_URL = "/swap";
 const TAB_TO_MODEL = {
   basic:     "0.6B",
   advanced:  "0.6B",
@@ -417,7 +423,7 @@ function setupAgent(panel) {
 
   // 即時 preview「實際送到 model 的 prompt」— 跟 Tab 2/3 一致(chat template
   // 包好的 text);呼叫 backend /preview,由 llama.cpp /apply-template 算出。
-  const AGENT_PREVIEW_URL = "http://localhost:8082/preview";
+  const AGENT_PREVIEW_URL = "/preview";
   async function refreshPreview() {
     if (!previewEl) return;
     try {
@@ -714,7 +720,7 @@ document.querySelectorAll(".tab-panel").forEach((panel) => {
 
 
 // ── Tab 7: Skill preview ─────────────────────────────────────────────
-const SKILL_BACKEND_URL = "http://localhost:8082/skill-agent";
+const SKILL_BACKEND_URL = "/skill-agent";
 
 function setupSkill(panel) {
   const preset = panel.querySelector(".skill-preset");
