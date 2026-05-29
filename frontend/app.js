@@ -708,8 +708,9 @@ window.addEventListener("DOMContentLoaded", () => {
 // agent uses setupAgent; skill uses setupSkill; placeholders (script/api/mcp) skip.
 // Static-content tabs (no .prompt/.run interactivity → setupPanel skips them):
 // - commands: full article (⑤ Commands, Scripts & APIs)
-// - mcp: placeholder ("coming soon")
-const PLACEHOLDER_PANELS = new Set(["commands", "mcp"]);
+// - mcp: full article (⑦ MCP)
+// - recap: series-finale article (⑧ Put it all together)
+const PLACEHOLDER_PANELS = new Set(["commands", "mcp", "recap"]);
 document.querySelectorAll(".tab-panel").forEach((panel) => {
   const id = panel.dataset.panel;
   if (PLACEHOLDER_PANELS.has(id)) return;

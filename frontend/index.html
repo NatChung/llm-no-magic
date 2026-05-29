@@ -69,6 +69,7 @@
         <button class="tab whitespace-nowrap px-3 md:px-5 py-3 md:py-4 text-sm md:text-base text-muted border-b-2 border-transparent hover:text-ink transition-colors" data-tab="commands">⑤ Commands, Scripts &amp; APIs</button>
         <button class="tab whitespace-nowrap px-3 md:px-5 py-3 md:py-4 text-sm md:text-base text-muted border-b-2 border-transparent hover:text-ink transition-colors" data-tab="skill">⑥ Skill</button>
         <button class="tab whitespace-nowrap px-3 md:px-5 py-3 md:py-4 text-sm md:text-base text-muted border-b-2 border-transparent hover:text-ink transition-colors" data-tab="mcp">⑦ MCP</button>
+        <button class="tab whitespace-nowrap px-3 md:px-5 py-3 md:py-4 text-sm md:text-base text-muted border-b-2 border-transparent hover:text-ink transition-colors" data-tab="recap">⑧ Put it all together</button>
       </div>
     </div>
   </nav>
@@ -570,6 +571,130 @@ curl "https://api.weatherapi.com/v1/current.json?key=YOUR_KEY&amp;q=Taipei"
   </main>
 
   <!-- ─────────────────────────────────────────────────────────────────
+       Tab 8: Put it all together — Recap + Git repo (series finale)
+       ───────────────────────────────────────────────────────────────── -->
+  <main class="tab-panel max-w-6xl mx-auto px-4 md:px-8 py-8 md:py-12" data-panel="recap">
+    <article class="max-w-3xl mx-auto space-y-10 text-ink-soft leading-relaxed">
+      <header class="space-y-2">
+        <h2 class="text-2xl font-semibold text-ink">⑧ Put it all together</h2>
+        <p class="text-muted">Seven chapters done. Let's see what you've learned, then give it all a "home".</p>
+      </header>
+
+      <section class="space-y-3">
+        <h3 class="text-lg font-medium text-ink">§1. The 7 things you know now</h3>
+        <table class="text-sm w-full border border-edge-soft my-2">
+          <thead>
+            <tr class="bg-surface-2 border-b border-edge-soft">
+              <th class="text-left p-2 font-medium">Ch</th>
+              <th class="text-left p-2 font-medium">One-line takeaway</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-edge-soft">
+            <tr><td class="p-2 font-medium align-top">① Basics</td><td class="p-2">LLMs emit tokens one at a time, each with a probability — you can see it</td></tr>
+            <tr><td class="p-2 font-medium align-top">② Product Layer</td><td class="p-2"><code class="bg-surface-2 px-1 rounded text-xs">&lt;|im_start|&gt;</code> markers aren't magic — they're role conventions baked into training data</td></tr>
+            <tr><td class="p-2 font-medium align-top">③ Reasoning</td><td class="p-2">Thinking is one continuous token stream; <code class="bg-surface-2 px-1 rounded text-xs">&lt;think&gt;...&lt;/think&gt;</code> is a section marker, not a separate "thinking step"</td></tr>
+            <tr><td class="p-2 font-medium align-top">④ Agent</td><td class="p-2">Models really call tools (<code class="bg-surface-2 px-1 rounded text-xs">read_file</code> / <code class="bg-surface-2 px-1 rounded text-xs">write_file</code> / <code class="bg-surface-2 px-1 rounded text-xs">exec_bash</code>) — real execution, not theater</td></tr>
+            <tr><td class="p-2 font-medium align-top">⑤ Commands/Scripts/APIs</td><td class="p-2">Three layers of computer-doing-things: local / composed-local / hire-another-computer</td></tr>
+            <tr><td class="p-2 font-medium align-top">⑥ Skill</td><td class="p-2">Skills are lazy-loaded capability bundles (<code class="bg-surface-2 px-1 rounded text-xs">SKILL.md</code> + <code class="bg-surface-2 px-1 rounded text-xs">scripts/</code>), loaded on demand</td></tr>
+            <tr><td class="p-2 font-medium align-top">⑦ MCP</td><td class="p-2">When tools aren't fixed, AI asks the MCP server "what do you have?" at runtime (USB-C for AI)</td></tr>
+          </tbody>
+        </table>
+        <p>Together these form a mental model: <strong>what each layer is doing when AI works with you</strong>.</p>
+      </section>
+
+      <section class="space-y-3">
+        <h3 class="text-lg font-medium text-ink">§2. One thing still missing: where does all this live?</h3>
+        <p>Look back at what you've learned — each piece "lives somewhere":</p>
+        <ul class="space-y-1 list-disc list-inside text-muted">
+          <li>⑥'s <code class="bg-surface-2 px-1 rounded text-sm">SKILL.md</code> needs to be in some folder</li>
+          <li>⑥'s <code class="bg-surface-2 px-1 rounded text-sm">scripts/*.py</code> need to sit next to the SKILL.md</li>
+          <li>⑦'s MCP server config needs to live in some file</li>
+          <li>⑤'s script (the <code class="bg-surface-2 px-1 rounded text-sm">organize.sh</code> example) needs to live somewhere</li>
+          <li>Your AI conversations, output files, settings...</li>
+        </ul>
+        <p>Scattered across Desktop / Downloads? No — you'll lose them in two weeks.</p>
+        <p><strong>You need a home</strong>.</p>
+      </section>
+
+      <section class="space-y-3">
+        <h3 class="text-lg font-medium text-ink">§3. Git repo: a folder that remembers</h3>
+        <p>The simplest answer: <strong>a git repo</strong>.</p>
+        <p>Git repo = an ordinary folder + <strong>memory</strong>.</p>
+        <p>Analogy: you've used Google Docs, right? Google Docs has "<strong>Version history</strong>" (File → Version history) — it auto-saves snapshots and you can roll back to any past version.</p>
+        <p>Git repo applies the same concept to a whole folder:</p>
+        <ul class="space-y-1 list-disc list-inside text-muted">
+          <li>You save the "current state" (called a <strong>commit</strong>)</li>
+          <li>After changes, you can diff, you can roll back</li>
+          <li>Push the folder to the cloud (GitHub) so another computer can download it</li>
+        </ul>
+        <p><strong>Why does this matter for non-engineers?</strong></p>
+        <ul class="space-y-1 list-disc list-inside text-muted">
+          <li>AI edited a file wrong → you can reset to the previous commit</li>
+          <li>AI helped you build a useful SKILL.md → push it to GitHub, others can use it too</li>
+          <li>You built a project; six months later you want to see how → check git history</li>
+        </ul>
+        <p>Three key words:</p>
+        <ul class="space-y-1 list-disc list-inside text-muted">
+          <li><strong>repo</strong> = the folder that remembers</li>
+          <li><strong>commit</strong> = "save the current state as a snapshot"</li>
+          <li><strong>push</strong> = "sync the local copy up to GitHub"</li>
+        </ul>
+        <p>Syntax details don't matter (you can't learn them fast enough on your own); <strong>the point is below</strong>.</p>
+      </section>
+
+      <section class="space-y-3">
+        <h3 class="text-lg font-medium text-ink">§4. How to use it with AI — you don't type commands</h3>
+        <p>In practice, you talk to the AI and the AI runs git for you. Claude Code, for example, works inside a folder — open a repo and Claude Code treats it as the workspace, committing for you.</p>
+        <p>A simple trace:</p>
+        <pre class="bg-surface-2 rounded p-3 text-xs leading-relaxed font-mono overflow-auto">You → "Tidy up the old drafts in this repo and commit them"
+
+AI  → ls drafts/                   <span class="text-muted">(list current files)</span>
+    → mv drafts/old-*.md archive/  <span class="text-muted">(move to archive)</span>
+    → git add archive/ drafts/
+    → git commit -m "archive old drafts"
+    → "Done. Moved 5 old drafts to archive/, committed it. Push too?"
+
+You → "Push"
+AI  → git push
+    → "Pushed to GitHub."</pre>
+        <p>What you read is <strong>the AI's conversation</strong>, not git commands. You just need to follow what AI is doing and confirm it looks right.</p>
+        <p><strong>The upside:</strong></p>
+        <ul class="space-y-1 list-disc list-inside text-muted">
+          <li>You don't have to memorise git syntax</li>
+          <li>AI screws up (wrong commit, broken file) — you say "reset to the previous commit" and AI does it</li>
+          <li>The whole repo is the shared workbench between you and AI — SKILL.md, scripts, conversation logs all sit here</li>
+        </ul>
+      </section>
+
+      <section class="space-y-3">
+        <h3 class="text-lg font-medium text-ink">§5. So what can you do now?</h3>
+        <p>After 8 chapters, you can:</p>
+        <ul class="space-y-1.5 list-disc list-inside text-muted">
+          <li><strong class="text-ink-soft">Understand</strong> why AI responds the way it does (tokens + chat template convention)</li>
+          <li><strong class="text-ink-soft">Decide</strong> which layer (script / API / skill / MCP) fits a task</li>
+          <li><strong class="text-ink-soft">Follow</strong> what commands AI runs in your repo, what it commits</li>
+          <li><strong class="text-ink-soft">Build with AI</strong> a SKILL.md + script so AI automatically has that capability next time</li>
+        </ul>
+        <p class="text-base font-medium text-ink leading-relaxed mt-4">No magic — across 8 chapters you've seen it: every "magical" AI behaviour is tokens + convention + tool calls you can verify.</p>
+
+        <aside class="rounded border border-final/30 bg-final-tint p-4 mt-6 space-y-3">
+          <div class="text-xs uppercase tracking-wider font-medium text-final">🤔 An exit question</div>
+          <p class="text-ink"><strong>Where are you going next?</strong></p>
+          <details>
+            <summary class="cursor-pointer text-sm text-final font-medium">Hints (don't peek — think first)</summary>
+            <ul class="mt-2 text-sm text-ink-soft space-y-1 list-disc list-inside">
+              <li>What did you ask AI for this past week?</li>
+              <li>What do you let AI do now that you used to do yourself?</li>
+              <li>What's the next thing you want to learn to do "with AI"?</li>
+            </ul>
+          </details>
+          <p class="text-sm text-muted italic">Take this question with you. The next time you talk to an AI, you won't be the same.</p>
+        </aside>
+      </section>
+    </article>
+  </main>
+
+  <!-- ─────────────────────────────────────────────────────────────────
        Tab 7: Skill (preview) — lazy-loaded skill body + bundled tools
        ───────────────────────────────────────────────────────────────── -->
   <main class="tab-panel max-w-6xl mx-auto px-4 md:px-8 py-6 md:py-10" data-panel="skill">
@@ -631,6 +756,6 @@ curl "https://api.weatherapi.com/v1/current.json?key=YOUR_KEY&amp;q=Taipei"
     </div>
   </main>
 
-  <script src="app.js?v=53"></script>
+  <script src="app.js?v=54"></script>
 </body>
 </html>

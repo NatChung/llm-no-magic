@@ -69,6 +69,7 @@
         <button class="tab whitespace-nowrap px-3 md:px-5 py-3 md:py-4 text-sm md:text-base text-muted border-b-2 border-transparent hover:text-ink transition-colors" data-tab="commands">⑤ 指令/Script/API</button>
         <button class="tab whitespace-nowrap px-3 md:px-5 py-3 md:py-4 text-sm md:text-base text-muted border-b-2 border-transparent hover:text-ink transition-colors" data-tab="skill">⑥ Skill</button>
         <button class="tab whitespace-nowrap px-3 md:px-5 py-3 md:py-4 text-sm md:text-base text-muted border-b-2 border-transparent hover:text-ink transition-colors" data-tab="mcp">⑦ MCP</button>
+        <button class="tab whitespace-nowrap px-3 md:px-5 py-3 md:py-4 text-sm md:text-base text-muted border-b-2 border-transparent hover:text-ink transition-colors" data-tab="recap">⑧ 把這些湊起來</button>
       </div>
     </div>
   </nav>
@@ -570,6 +571,130 @@ curl "https://api.weatherapi.com/v1/current.json?key=YOUR_KEY&amp;q=Taipei"
   </main>
 
   <!-- ─────────────────────────────────────────────────────────────────
+       Tab 8:把這些湊起來 — Recap + Git repo 串連(系列終章)
+       ───────────────────────────────────────────────────────────────── -->
+  <main class="tab-panel max-w-6xl mx-auto px-4 md:px-8 py-8 md:py-12" data-panel="recap">
+    <article class="max-w-3xl mx-auto space-y-10 text-ink-soft leading-relaxed">
+      <header class="space-y-2">
+        <h2 class="text-2xl font-semibold text-ink">⑧ 把這些湊起來</h2>
+        <p class="text-muted">7 章走完了。我們看你學到什麼、然後給這些東西「一個家」。</p>
+      </header>
+
+      <section class="space-y-3">
+        <h3 class="text-lg font-medium text-ink">§1. 你現在懂的 7 件事</h3>
+        <table class="text-sm w-full border border-edge-soft my-2">
+          <thead>
+            <tr class="bg-surface-2 border-b border-edge-soft">
+              <th class="text-left p-2 font-medium">Ch</th>
+              <th class="text-left p-2 font-medium">一句 takeaway</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-edge-soft">
+            <tr><td class="p-2 font-medium align-top">① 基礎</td><td class="p-2">LLM 一個 token 一個 token 吐字、每個都有機率,看得見</td></tr>
+            <tr><td class="p-2 font-medium align-top">② 加工</td><td class="p-2"><code class="bg-surface-2 px-1 rounded text-xs">&lt;|im_start|&gt;</code> 這些 marker 不是 magic,是訓練資料裡的角色約定</td></tr>
+            <tr><td class="p-2 font-medium align-top">③ 推理</td><td class="p-2">thinking 是同一條 token 流,<code class="bg-surface-2 px-1 rounded text-xs">&lt;think&gt;...&lt;/think&gt;</code> 只是分段標記,沒有「分開的思考步驟」</td></tr>
+            <tr><td class="p-2 font-medium align-top">④ Agent</td><td class="p-2">model 真的會叫工具(<code class="bg-surface-2 px-1 rounded text-xs">read_file</code> / <code class="bg-surface-2 px-1 rounded text-xs">write_file</code> / <code class="bg-surface-2 px-1 rounded text-xs">exec_bash</code>)— 真實執行、不演</td></tr>
+            <tr><td class="p-2 font-medium align-top">⑤ 指令/Script/API</td><td class="p-2">電腦做事三層:本地能做 / 本地組合 / 雇用別台電腦</td></tr>
+            <tr><td class="p-2 font-medium align-top">⑥ Skill</td><td class="p-2">Skill = lazy-loaded 能力包(<code class="bg-surface-2 px-1 rounded text-xs">SKILL.md</code> + <code class="bg-surface-2 px-1 rounded text-xs">scripts/</code>),按需才載入</td></tr>
+            <tr><td class="p-2 font-medium align-top">⑦ MCP</td><td class="p-2">工具不固定時,AI 動態問 MCP server「你有什麼?」(USB-C for AI)</td></tr>
+          </tbody>
+        </table>
+        <p>每一章學到的東西、合起來是一個 mental model:<strong>AI 跟你協作的時候,各層在做什麼</strong>。</p>
+      </section>
+
+      <section class="space-y-3">
+        <h3 class="text-lg font-medium text-ink">§2. 還缺一塊:這些東西放哪?</h3>
+        <p>回頭看你學的東西,每一塊都「存在某個地方」:</p>
+        <ul class="space-y-1 list-disc list-inside text-muted">
+          <li>⑥ 的 <code class="bg-surface-2 px-1 rounded text-sm">SKILL.md</code> 要存在某個資料夾</li>
+          <li>⑥ 的 <code class="bg-surface-2 px-1 rounded text-sm">scripts/*.py</code> 要跟 SKILL.md 在一起</li>
+          <li>⑦ 的 MCP server 設定要某個檔案</li>
+          <li>⑤ 的 script(整理檔案那個 <code class="bg-surface-2 px-1 rounded text-sm">organize.sh</code>)要存在某處</li>
+          <li>你跟 AI 的對話紀錄、產出檔、設定...</li>
+        </ul>
+        <p>散在 Desktop / Downloads 各處?不行,過兩週就找不到了。</p>
+        <p><strong>需要一個「家」</strong>。</p>
+      </section>
+
+      <section class="space-y-3">
+        <h3 class="text-lg font-medium text-ink">§3. Git repo:帶記憶的資料夾</h3>
+        <p>最簡單的答案:<strong>一個 git repo</strong>。</p>
+        <p>Git repo = 一個普通的資料夾,加上「<strong>記憶</strong>」。</p>
+        <p>比喻:你用過 Google Doc 對吧?Google Doc 有「<strong>版本記錄</strong>」(File → Version history),每次自動存快照、可以回到任何一個過去版本。</p>
+        <p>Git repo 是這個概念套到「整個資料夾」:</p>
+        <ul class="space-y-1 list-disc list-inside text-muted">
+          <li>你存一份「現在的狀態」(叫 <strong>commit</strong>)</li>
+          <li>之後改了東西、可以對比、可以回去</li>
+          <li>把這個資料夾 push 到雲端(GitHub),別台電腦也能下載</li>
+        </ul>
+        <p><strong>為什麼非工程師也要懂這個?</strong></p>
+        <ul class="space-y-1 list-disc list-inside text-muted">
+          <li>AI 幫你改檔、改錯了 → 你能 reset 回上一個 commit</li>
+          <li>AI 幫你做了好用的 SKILL.md → push 到 GitHub、別人也能用</li>
+          <li>你做了一個專案、半年後想看當時怎麼做的 → 翻 git history</li>
+        </ul>
+        <p>3 個關鍵詞:</p>
+        <ul class="space-y-1 list-disc list-inside text-muted">
+          <li><strong>repo</strong> = 那個帶記憶的資料夾</li>
+          <li><strong>commit</strong> = 「現在這個狀態存一份」</li>
+          <li><strong>push</strong> = 「把本機這份 sync 到雲端 GitHub」</li>
+        </ul>
+        <p>語法細節不重要(自己 google 也來不及學),<strong>重點在下面</strong>。</p>
+      </section>
+
+      <section class="space-y-3">
+        <h3 class="text-lg font-medium text-ink">§4. 跟 AI 怎麼用 — 你不用手敲</h3>
+        <p>實務上、你跟 AI 對話、AI 自己會操 git。例如 Claude Code 直接以「資料夾」為主場 — 你打開一個 repo、Claude Code 就知道在裡面工作、自己會 commit。</p>
+        <p>簡單 trace:</p>
+        <pre class="bg-surface-2 rounded p-3 text-xs leading-relaxed font-mono overflow-auto">你 → 「幫我整理一下這個 repo 的舊草稿、然後 commit」
+
+AI → ls drafts/                  <span class="text-muted">(列出目前檔案)</span>
+   → mv drafts/old-*.md archive/ <span class="text-muted">(搬到 archive)</span>
+   → git add archive/ drafts/
+   → git commit -m "archive 舊草稿"
+   → 「整理完了。搬了 5 份舊稿到 archive/、commit 進去。要 push 嗎?」
+
+你 → 「push」
+AI → git push
+   → 「pushed 上 GitHub 了。」</pre>
+        <p>你看的是 <strong>AI 的對話 trace</strong>、不是 git command 本身。你只要看得懂 AI 在做什麼、確認 OK 就好。</p>
+        <p><strong>好處:</strong></p>
+        <ul class="space-y-1 list-disc list-inside text-muted">
+          <li>你不用記 git 語法</li>
+          <li>AI 出包(commit 錯、或改壞檔)— 你能說「reset 回上一個 commit」、AI 自己會做</li>
+          <li>整個 repo 是你跟 AI 共同的「工作桌」、上面所有 SKILL.md / scripts / 對話紀錄都在這</li>
+        </ul>
+      </section>
+
+      <section class="space-y-3">
+        <h3 class="text-lg font-medium text-ink">§5. 你現在能做什麼了?</h3>
+        <p>走完 8 章,你能:</p>
+        <ul class="space-y-1.5 list-disc list-inside text-muted">
+          <li><strong class="text-ink-soft">看懂</strong> AI 為什麼那樣回答(token + chat template 約定)</li>
+          <li><strong class="text-ink-soft">判斷</strong> 一個任務該叫 AI 用 script / API / skill / MCP 哪一層做</li>
+          <li><strong class="text-ink-soft">看懂</strong> AI 在你 repo 裡跑了什麼指令、commit 了什麼</li>
+          <li><strong class="text-ink-soft">跟 AI 一起 build</strong> 一個 SKILL.md + script,讓 AI 之後自動有這項能力</li>
+        </ul>
+        <p class="text-base font-medium text-ink leading-relaxed mt-4">沒有魔法 — 你看了 8 章就知道,所有「神奇」的 AI 行為,全是 token + 約定 + 你能驗證的工具呼叫。</p>
+
+        <aside class="rounded border border-final/30 bg-final-tint p-4 mt-6 space-y-3">
+          <div class="text-xs uppercase tracking-wider font-medium text-final">🤔 離場思考題</div>
+          <p class="text-ink"><strong>你要去哪裡?</strong></p>
+          <details>
+            <summary class="cursor-pointer text-sm text-final font-medium">提示(別偷看、先想)</summary>
+            <ul class="mt-2 text-sm text-ink-soft space-y-1 list-disc list-inside">
+              <li>你最近一週用 AI 幫你做了什麼事?</li>
+              <li>哪些事「過去你會自己做、現在不會」?</li>
+              <li>下一個你想學會的「跟 AI 一起做」的事 — 是什麼?</li>
+            </ul>
+          </details>
+          <p class="text-sm text-muted italic">帶這個問題離開。下次跟 AI 對話時,你會跟以前不一樣。</p>
+        </aside>
+      </section>
+    </article>
+  </main>
+
+  <!-- ─────────────────────────────────────────────────────────────────
        Tab 7: Skill(預覽)— SKILL.md body + bundled tools 漸進式載入
        ───────────────────────────────────────────────────────────────── -->
   <main class="tab-panel max-w-6xl mx-auto px-4 md:px-8 py-6 md:py-10" data-panel="skill">
@@ -630,6 +755,6 @@ curl "https://api.weatherapi.com/v1/current.json?key=YOUR_KEY&amp;q=Taipei"
     </div>
   </main>
 
-  <script src="app.js?v=53"></script>
+  <script src="app.js?v=54"></script>
 </body>
 </html>
