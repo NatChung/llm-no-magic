@@ -67,8 +67,8 @@
         <button class="tab whitespace-nowrap px-3 md:px-5 py-3 md:py-4 text-sm md:text-base text-muted border-b-2 border-transparent hover:text-ink transition-colors" data-tab="reasoning">③ 推理</button>
         <button class="tab whitespace-nowrap px-3 md:px-5 py-3 md:py-4 text-sm md:text-base text-muted border-b-2 border-transparent hover:text-ink transition-colors" data-tab="agent">④ Agent</button>
         <button class="tab whitespace-nowrap px-3 md:px-5 py-3 md:py-4 text-sm md:text-base text-muted border-b-2 border-transparent hover:text-ink transition-colors" data-tab="commands">⑤ 指令/Script/API</button>
-        <button class="tab whitespace-nowrap px-3 md:px-5 py-3 md:py-4 text-sm md:text-base text-muted border-b-2 border-transparent hover:text-ink transition-colors" data-tab="skill" title="預覽">⑥ Skill<span class="text-[10px] text-faint ml-1 italic font-normal align-baseline">預覽</span></button>
-        <button class="tab opacity-50 whitespace-nowrap px-3 md:px-5 py-3 md:py-4 text-sm md:text-base text-muted border-b-2 border-transparent hover:text-ink transition-colors" data-tab="mcp" title="即將推出">⑦ MCP</button>
+        <button class="tab whitespace-nowrap px-3 md:px-5 py-3 md:py-4 text-sm md:text-base text-muted border-b-2 border-transparent hover:text-ink transition-colors" data-tab="skill">⑥ Skill</button>
+        <button class="tab whitespace-nowrap px-3 md:px-5 py-3 md:py-4 text-sm md:text-base text-muted border-b-2 border-transparent hover:text-ink transition-colors" data-tab="mcp">⑦ MCP</button>
       </div>
     </div>
   </nav>
@@ -490,12 +490,83 @@ curl "https://api.weatherapi.com/v1/current.json?key=YOUR_KEY&amp;q=Taipei"
   <!-- ─────────────────────────────────────────────────────────────────
        Tab 7:placeholder(即將推出)— MCP
        ───────────────────────────────────────────────────────────────── -->
-  <main class="tab-panel max-w-6xl mx-auto px-4 md:px-8 py-12 md:py-16" data-panel="mcp">
-    <div class="max-w-3xl mx-auto text-center space-y-3">
-      <h2 class="text-2xl font-semibold text-ink-soft">⑦ MCP — 即將推出</h2>
-      <p class="text-muted">連 API 都做不到的(GUI / cross-process)— Model Context Protocol。e.g. Playwright MCP 控瀏覽器。</p>
-      <p class="text-faint text-sm">(Roadmap: P5)</p>
-    </div>
+  <main class="tab-panel max-w-6xl mx-auto px-4 md:px-8 py-8 md:py-12" data-panel="mcp">
+    <article class="max-w-3xl mx-auto space-y-10 text-ink-soft leading-relaxed">
+      <header class="space-y-2">
+        <h2 class="text-2xl font-semibold text-ink">⑦ MCP</h2>
+        <p class="text-muted">工具不固定的時候、AI 自己選工具。</p>
+      </header>
+
+      <section class="space-y-3">
+        <h3 class="text-lg font-medium text-ink">§1. 回顧:你還缺一塊</h3>
+        <p>到 ⑥ 章你會了:</p>
+        <ul class="space-y-1 list-disc list-inside text-muted">
+          <li><strong class="text-ink-soft">指令 / script / API</strong>(⑤) — 知道怎麼讓電腦做事</li>
+          <li><strong class="text-ink-soft">Skill</strong>(⑥) — 知道怎麼把上面包成可選的能力,AI 按需載入</li>
+        </ul>
+        <p>但這套有個前提:<strong>工具是固定的、事先決定好的</strong>。你寫好 <code class="bg-surface-2 px-1 rounded text-sm">weather.py</code> 在 skill 裡,AI 就只能用它查天氣。</p>
+        <p>問題來了:<strong>工具不固定怎麼辦?</strong></p>
+      </section>
+
+      <section class="space-y-3">
+        <h3 class="text-lg font-medium text-ink">§2. 主場景:操控網頁</h3>
+        <p>舉例「幫我從蝦皮抓某商品的價格」。</p>
+        <p>你寫 script?Amazon 結構跟蝦皮不同,腳本只能對一個網站。</p>
+        <p>寫 API?有些網站有公開 API、有些沒。寫不完。</p>
+        <p>更糟:網站隨時改版。你今天能 work 的 script,下週可能整個壞。</p>
+        <p><strong>那 AI 怎麼做?</strong></p>
+        <p>直接「<strong>看著辦</strong>」:讓 AI 看當前網頁長啥樣 → 自己決定點哪個按鈕、抓哪段文字。</p>
+        <p>但 AI 自己看不到網頁,要有人幫它「<strong>看 + 操作</strong>」。這就是 MCP 要解的問題。</p>
+      </section>
+
+      <section class="space-y-3">
+        <h3 class="text-lg font-medium text-ink">§3. MCP 是什麼</h3>
+        <p><strong>MCP</strong> = Model Context Protocol。Anthropic 2024 年 11 月公開、開放規格,所有人都能實作。</p>
+        <p>解決的問題:<strong>AI 跟工具的固定 binding 太死板</strong>。</p>
+        <p>比喻:<strong>USB-C for AI applications</strong>(Anthropic 自家用詞)。</p>
+        <table class="text-sm w-full border border-edge-soft my-2">
+          <thead>
+            <tr class="bg-surface-2 border-b border-edge-soft">
+              <th class="text-left p-2 font-medium">場景</th>
+              <th class="text-left p-2 font-medium">過去</th>
+              <th class="text-left p-2 font-medium">現在</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-edge-soft">
+            <tr><td class="p-2 font-medium">充電線</td><td class="p-2">各家專屬充電頭 / mini-USB / micro-USB / Lightning...</td><td class="p-2">USB-C 一條線、所有手機平板都能用</td></tr>
+            <tr><td class="p-2 font-medium">AI 接工具</td><td class="p-2">每家 AI 自己寫整合(Claude 一套、ChatGPT 一套)</td><td class="p-2">一個 MCP protocol、任何 AI 接任何工具</td></tr>
+          </tbody>
+        </table>
+        <p><strong>運作模式</strong>:client(AI 那邊)跟 server(工具那邊)透過 JSON-RPC 對話,client 動態問 server 有什麼工具、按需呼叫。完整 trace 見 §4。</p>
+        <p>關鍵點:<strong>工具不是事先寫死的、是執行時動態問出來</strong>。換 server 就換工具集、不用改 AI 那邊一行 code。</p>
+      </section>
+
+      <section class="space-y-3">
+        <h3 class="text-lg font-medium text-ink">§4. 實際 trace 範例</h3>
+        <p>用 Playwright MCP server(專門讓 AI 控瀏覽器的 server,Microsoft 開源)看一個簡單任務。</p>
+        <p>任務:「幫我截圖 example.com」。</p>
+        <pre class="bg-surface-2 rounded p-3 text-xs leading-relaxed font-mono overflow-auto">→ tools/list                            <span class="text-muted">← AI 啟動,問 server 你能做什麼?</span>
+← [browser_navigate, browser_click, browser_screenshot, ...]
+                                        <span class="text-muted">← server 回它能做的事</span>
+
+→ browser_navigate(url="example.com")   <span class="text-muted">← AI 挑「打開網頁」</span>
+← {success: true, title: "Example Domain"}
+                                        <span class="text-muted">← server 真的開了瀏覽器</span>
+
+→ browser_screenshot()                  <span class="text-muted">← AI 挑「截圖」</span>
+← {image: "data:image/png;base64,..."}  <span class="text-muted">← 回截圖 binary</span>
+
+→ "已截圖 example.com,結果如上"        <span class="text-muted">← AI 回完整對話</span></pre>
+        <p>幾個觀察:</p>
+        <ul class="space-y-1.5 list-disc list-inside text-muted">
+          <li>AI <strong class="text-ink-soft">完全不需要事先知道</strong> server 有什麼工具 — 啟動才問</li>
+          <li>工具清單可以<strong class="text-ink-soft">換 server 就換</strong> — 想控資料庫?換 DB MCP server,工具變成 <code class="bg-surface-2 px-1 rounded text-sm">db_query</code> / <code class="bg-surface-2 px-1 rounded text-sm">db_insert</code> 之類</li>
+          <li>AI 那邊的 code <strong class="text-ink-soft">不變</strong>,只是 talk 的對象換了</li>
+          <li><strong class="text-ink-soft">裝 MCP server 等於給它對應的權限</strong> — Playwright MCP 能控你瀏覽器、Filesystem MCP 能讀你檔案。用之前看清楚它能做什麼、信不信任(社群維護的 server 跟自家寫的 server 信任程度不一樣)</li>
+        </ul>
+        <p>這就是「<strong>一個 protocol、所有工具</strong>」的價值。</p>
+      </section>
+    </article>
   </main>
 
   <!-- ─────────────────────────────────────────────────────────────────

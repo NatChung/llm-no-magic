@@ -67,8 +67,8 @@
         <button class="tab whitespace-nowrap px-3 md:px-5 py-3 md:py-4 text-sm md:text-base text-muted border-b-2 border-transparent hover:text-ink transition-colors" data-tab="reasoning">③ Reasoning</button>
         <button class="tab whitespace-nowrap px-3 md:px-5 py-3 md:py-4 text-sm md:text-base text-muted border-b-2 border-transparent hover:text-ink transition-colors" data-tab="agent">④ Agent</button>
         <button class="tab whitespace-nowrap px-3 md:px-5 py-3 md:py-4 text-sm md:text-base text-muted border-b-2 border-transparent hover:text-ink transition-colors" data-tab="commands">⑤ Commands, Scripts &amp; APIs</button>
-        <button class="tab whitespace-nowrap px-3 md:px-5 py-3 md:py-4 text-sm md:text-base text-muted border-b-2 border-transparent hover:text-ink transition-colors" data-tab="skill" title="Preview">⑥ Skill<span class="text-[10px] text-faint ml-1 italic font-normal align-baseline">preview</span></button>
-        <button class="tab opacity-50 whitespace-nowrap px-3 md:px-5 py-3 md:py-4 text-sm md:text-base text-muted border-b-2 border-transparent hover:text-ink transition-colors" data-tab="mcp" title="Coming soon">⑦ MCP</button>
+        <button class="tab whitespace-nowrap px-3 md:px-5 py-3 md:py-4 text-sm md:text-base text-muted border-b-2 border-transparent hover:text-ink transition-colors" data-tab="skill">⑥ Skill</button>
+        <button class="tab whitespace-nowrap px-3 md:px-5 py-3 md:py-4 text-sm md:text-base text-muted border-b-2 border-transparent hover:text-ink transition-colors" data-tab="mcp">⑦ MCP</button>
       </div>
     </div>
   </nav>
@@ -490,12 +490,83 @@ curl "https://api.weatherapi.com/v1/current.json?key=YOUR_KEY&amp;q=Taipei"
   <!-- ─────────────────────────────────────────────────────────────────
        Tab 7: placeholder — MCP (coming soon)
        ───────────────────────────────────────────────────────────────── -->
-  <main class="tab-panel max-w-6xl mx-auto px-4 md:px-8 py-12 md:py-16" data-panel="mcp">
-    <div class="max-w-3xl mx-auto text-center space-y-3">
-      <h2 class="text-2xl font-semibold text-ink-soft">⑦ MCP — Coming soon</h2>
-      <p class="text-muted">When even API can't do it (GUI / cross-process) — Model Context Protocol. e.g. Playwright MCP for browser control.</p>
-      <p class="text-faint text-sm">(Roadmap: P5)</p>
-    </div>
+  <main class="tab-panel max-w-6xl mx-auto px-4 md:px-8 py-8 md:py-12" data-panel="mcp">
+    <article class="max-w-3xl mx-auto space-y-10 text-ink-soft leading-relaxed">
+      <header class="space-y-2">
+        <h2 class="text-2xl font-semibold text-ink">⑦ MCP</h2>
+        <p class="text-muted">When tools aren't fixed in advance, the AI picks them at runtime.</p>
+      </header>
+
+      <section class="space-y-3">
+        <h3 class="text-lg font-medium text-ink">§1. Recap — what's still missing</h3>
+        <p>By chapter ⑥ you know:</p>
+        <ul class="space-y-1 list-disc list-inside text-muted">
+          <li><strong class="text-ink-soft">Commands / scripts / APIs</strong> (⑤) — how to make a computer do things</li>
+          <li><strong class="text-ink-soft">Skills</strong> (⑥) — how to bundle the above into selectable capabilities the AI loads on demand</li>
+        </ul>
+        <p>Both assume one thing: <strong>tools are fixed, decided up front</strong>. You wrote <code class="bg-surface-2 px-1 rounded text-sm">weather.py</code> into a skill, so the AI can only check weather that way.</p>
+        <p>So what if tools <em>aren't</em> fixed?</p>
+      </section>
+
+      <section class="space-y-3">
+        <h3 class="text-lg font-medium text-ink">§2. Main scenario: controlling web pages</h3>
+        <p>Example: "grab the price of this product on eBay."</p>
+        <p>Write a script? Amazon's HTML structure is nothing like eBay's — a script works for one site only.</p>
+        <p>Use APIs? Some sites have one, many don't. You can't keep writing wrappers forever.</p>
+        <p>Worse: sites redesign regularly. The script that works today may break next week.</p>
+        <p><strong>So how does AI handle this?</strong></p>
+        <p>It just <strong>"looks at what's there"</strong>: read the current page, then decide which button to click or which text to grab.</p>
+        <p>But the AI can't see the page on its own — something has to <strong>look and act on its behalf</strong>. That's the problem MCP solves.</p>
+      </section>
+
+      <section class="space-y-3">
+        <h3 class="text-lg font-medium text-ink">§3. What MCP is</h3>
+        <p><strong>MCP</strong> = Model Context Protocol. Anthropic published it in November 2024 as an open spec — anyone can implement it.</p>
+        <p>What it solves: <strong>AI is too tightly bound to a fixed set of tools</strong>.</p>
+        <p>Analogy: <strong>USB-C for AI applications</strong> (Anthropic's own framing).</p>
+        <table class="text-sm w-full border border-edge-soft my-2">
+          <thead>
+            <tr class="bg-surface-2 border-b border-edge-soft">
+              <th class="text-left p-2 font-medium">Scene</th>
+              <th class="text-left p-2 font-medium">Before</th>
+              <th class="text-left p-2 font-medium">Now</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-edge-soft">
+            <tr><td class="p-2 font-medium">Charging cables</td><td class="p-2">Proprietary plugs / mini-USB / micro-USB / Lightning...</td><td class="p-2">One USB-C cable for every phone and tablet</td></tr>
+            <tr><td class="p-2 font-medium">AI ↔ tools</td><td class="p-2">Every AI app writes its own integrations (Claude one way, ChatGPT another)</td><td class="p-2">One MCP protocol — any AI connects to any tool</td></tr>
+          </tbody>
+        </table>
+        <p><strong>How it runs:</strong> a client (the AI side) and a server (the tool side) talk over JSON-RPC. The client asks the server what tools it offers, then calls them on demand. Full trace in §4.</p>
+        <p>The key point: <strong>tools aren't hard-coded — they're queried at runtime</strong>. Swap servers, get a new toolset, without changing a line of AI-side code.</p>
+      </section>
+
+      <section class="space-y-3">
+        <h3 class="text-lg font-medium text-ink">§4. A real trace</h3>
+        <p>Using Playwright MCP server (a Microsoft open-source server purpose-built to let AI drive a browser) for a simple task.</p>
+        <p>Task: "screenshot example.com for me."</p>
+        <pre class="bg-surface-2 rounded p-3 text-xs leading-relaxed font-mono overflow-auto">→ tools/list                            <span class="text-muted">← AI starts up, asks the server: what can you do?</span>
+← [browser_navigate, browser_click, browser_screenshot, ...]
+                                        <span class="text-muted">← server lists what it offers</span>
+
+→ browser_navigate(url="example.com")   <span class="text-muted">← AI picks "open page"</span>
+← {success: true, title: "Example Domain"}
+                                        <span class="text-muted">← server really opens the browser</span>
+
+→ browser_screenshot()                  <span class="text-muted">← AI picks "screenshot"</span>
+← {image: "data:image/png;base64,..."}  <span class="text-muted">← returns the screenshot bytes</span>
+
+→ "Screenshot of example.com is above" <span class="text-muted">← AI wraps up the reply</span></pre>
+        <p>Things to notice:</p>
+        <ul class="space-y-1.5 list-disc list-inside text-muted">
+          <li>The AI <strong class="text-ink-soft">doesn't know the tools up front</strong> — it asks at startup</li>
+          <li>The toolset <strong class="text-ink-soft">changes when you change servers</strong> — want database access? Switch to a DB MCP server, the tools become <code class="bg-surface-2 px-1 rounded text-sm">db_query</code> / <code class="bg-surface-2 px-1 rounded text-sm">db_insert</code></li>
+          <li>The AI-side code <strong class="text-ink-soft">doesn't change</strong> — only the partner changes</li>
+          <li><strong class="text-ink-soft">Installing an MCP server is granting it the matching permission</strong> — Playwright MCP can drive your browser, Filesystem MCP can read your files. Read what each server does and decide whether you trust it (community-maintained servers carry different trust than ones you wrote yourself)</li>
+        </ul>
+        <p>That's the payoff of "<strong>one protocol, every tool</strong>".</p>
+      </section>
+    </article>
   </main>
 
   <!-- ─────────────────────────────────────────────────────────────────
