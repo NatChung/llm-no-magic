@@ -36,15 +36,23 @@ hf download Qwen/Qwen3-4B-GGUF   Qwen3-4B-Q4_K_M.gguf   --local-dir ~/models
 git clone https://github.com/NatChung/llm-no-magic.git
 cd llm-no-magic
 
-# 4. Start the backend (it auto-launches + auto-swaps llama-server on :8080)
-nohup python3 -m agent.server > /tmp/agent-server.log 2>&1 &
+# 4. Start the server (serves HTML + API on :9000, auto-launches llama-server on :8080)
+nohup python3 -u -m agent.server > /tmp/agent-server.log 2>&1 &
 
-# 5. Serve the static frontend + open browser
-python3 -m http.server 9000 &
-open http://localhost:9000/frontend/
+# 5. Open browser
+open http://localhost:9000/
 ```
 
-When you switch tabs, the backend auto-swaps models (Tabs 1-3 → 0.6B, Tab ④ → 4B). The first switch shows a "Loading X..." banner for ~3-5 seconds.
+When you switch tabs, the server auto-swaps models (Tabs 1-3 → 0.6B, Tabs ④/⑥ → 4B; Tabs ⑤/⑦ are static articles). The first switch shows a "Loading X..." banner for ~3-5 seconds.
+
+**Classroom LAN demo** (students on the same WiFi join your Mac):
+
+```bash
+LISTEN_HOST=0.0.0.0 nohup python3 -u -m agent.server > /tmp/agent-server.log 2>&1 &
+# Students open http://<your-mac-LAN-ip>:9000/  (e.g. 192.168.x.x:9000/)
+# llama-server is auto-launched with --host 0.0.0.0 too
+# Note: only one model on the GPU at a time — multiple students switching tabs may compete
+```
 
 **Dependencies**: `llama.cpp` (brew), `huggingface_hub` (`pip install -U "huggingface_hub[cli]"`), Python 3.10+, `requests` (`pip install requests`). No npm, no build step.
 
@@ -87,24 +95,26 @@ Three Tab ④ presets:
 ## How it works
 
 ```
-Browser (frontend)
-    ↓ POST /agent (SSE)        ↓ POST /swap (triggered by tab switch)
-Backend :8082 (agent/server.py)
-    ↓ POST /v1/chat/completions (non-stream + logprobs + tools)
+Browser
+    ↓ GET / (HTML)    ↓ POST /agent /skill-agent /swap /preview (SSE/JSON)
+Server :9000 (agent/server.py — static + API in one process)
+    ↓ POST /v1/chat/completions  (non-stream + logprobs + tools)
 llama-server :8080 (Qwen3 model — auto-swap by /swap)
 ```
 
 **Core points**:
 - Tabs 1-3: frontend talks directly to llama `/completion` (stream + n_probs). Tabs 2-3 assemble chat template tags themselves.
-- Tab ④: frontend talks to backend `/agent` (SSE) → backend runs a multi-turn agent loop, each turn uses the OpenAI chat completions API + tools schema, real-executes tools, results go back into messages, until the model stops emitting tool_call.
-- Tab switch: `ensureModel(wanted)` POSTs `/swap?model=X` → backend's `SWAP_LOCK` serializes calls → `pkill llama-server` + wait for port to free + `subprocess.Popen` to start the new model + poll `/v1/models` until ready (~3-5s).
+- Tab ④ Agent: frontend → `/agent` (SSE) → server runs multi-turn agent loop, OpenAI chat completions API + tools schema, real-executes tools, results back into messages, until model stops emitting tool_call.
+- Tab ⑥ Skill: frontend → `/skill-agent` (SSE) → server runs 3-layer progressive disclosure simulator (lazy-loads SKILL.md body + bundled scripts/).
+- Tabs ⑤/⑦: static article only, no model interaction.
+- Tab switch: `ensureModel(wanted)` POSTs `/swap?model=X` → server's `SWAP_LOCK` serializes calls → `pkill llama-server` + wait for port to free + `subprocess.Popen` to start the new model + poll `/v1/models` until ready (~3-5s).
 
 ---
 
 ## Code tour
 
-- `frontend/index.html` + `app.js` + `styles.css` — Tailwind Play CDN (zero build), 4-tab UI
-- `agent/server.py` — HTTP backend using stdlib `http.server` (no FastAPI), agent loop + `/swap` orchestrator + `/preview` (`/apply-template` proxy)
+- `frontend/index.html` + `app.js` + `styles.css` — Tailwind Play CDN (zero build), 7-tab UI
+- `agent/server.py` — single-port stdlib http.server (no FastAPI): static frontend files + API endpoints (agent loop, skill simulator, `/swap` orchestrator, `/preview` apply-template proxy). `LISTEN_HOST=0.0.0.0` opt-in for LAN demo.
 - `agent/agent.py` — CLI fallback REPL + 4 tools (`get_time` / `read_file` / `write_file` / `exec_bash`) + `dispatch_tool_call` + `AgentLoop`
 - `agent/tests/` — 43 tests (mocked subprocess + requests + socket; run with `pytest agent/tests -q`)
 - `agent/SETUP.md` — port layout / Fri morning check / fallback ops notes

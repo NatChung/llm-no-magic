@@ -36,15 +36,23 @@ hf download Qwen/Qwen3-4B-GGUF   Qwen3-4B-Q4_K_M.gguf   --local-dir ~/models
 git clone https://github.com/NatChung/llm-no-magic.git
 cd llm-no-magic
 
-# 4. 起 backend(會 auto-launch + auto-swap llama-server on :8080)
-nohup python3 -m agent.server > /tmp/agent-server.log 2>&1 &
+# 4. 起 server(同時吐 HTML + API on :9000,auto-launch llama-server on :8080)
+nohup python3 -u -m agent.server > /tmp/agent-server.log 2>&1 &
 
-# 5. 起 static frontend + 開 browser
-python3 -m http.server 9000 &
-open http://localhost:9000/frontend/
+# 5. 開 browser
+open http://localhost:9000/
 ```
 
-切 tab 時 backend 自動 swap model(Tab 1-3 → 0.6B、Tab ④ → 4B)。第一次切會看「載入 X 中…」banner 等 3-5 秒。
+切 tab 時 server 自動 swap model(Tab 1-3 → 0.6B、Tab ④/⑥ → 4B,Tab ⑤/⑦ 是純 article 不切)。第一次切會看「載入 X 中…」banner 等 3-5 秒。
+
+**課堂 LAN demo**(同 WiFi 學員可連你 Mac):
+
+```bash
+LISTEN_HOST=0.0.0.0 nohup python3 -u -m agent.server > /tmp/agent-server.log 2>&1 &
+# 學員開 http://<你 Mac 的 LAN IP>:9000/(例 192.168.x.x:9000/)
+# llama-server 也會自動帶 --host 0.0.0.0 launch
+# 注意:GPU 一次只一個 model、多學員同時切不同 tab 會互踢
+```
 
 **Dependencies**:`llama.cpp`(brew)、`huggingface_hub`(`pip install -U "huggingface_hub[cli]"`)、Python 3.10+、`requests`(`pip install requests`)。沒 npm / build step。
 
@@ -87,24 +95,26 @@ open http://localhost:9000/frontend/
 ## How it works
 
 ```
-Browser (frontend)
-    ↓ POST /agent (SSE)        ↓ POST /swap (tab 切換 trigger)
-Backend :8082 (agent/server.py)
-    ↓ POST /v1/chat/completions (non-stream + logprobs + tools)
+Browser
+    ↓ GET / (HTML)    ↓ POST /agent /skill-agent /swap /preview (SSE/JSON)
+Server :9000 (agent/server.py — 同個 process 吐靜態 + API)
+    ↓ POST /v1/chat/completions  (non-stream + logprobs + tools)
 llama-server :8080 (Qwen3 model — auto-swap by /swap)
 ```
 
 **核心**:
 - Tab 1-3 frontend 直接打 llama `/completion`(stream + n_probs)— Tab 2-3 自己拼 chat template tag
-- Tab ④ frontend 打 backend `/agent`(SSE)→ backend 跑 multi-turn agent loop,每 turn 用 OpenAI chat completions API + tools schema,real execute tool 結果塞回 messages,直到 model 不再 tool_call
-- Tab 切換時 `ensureModel(wanted)` POST `/swap?model=X` → backend `SWAP_LOCK` 守單 flight → `pkill llama-server` + 等 port free + `subprocess.Popen` 起新 model + poll /v1/models 直到 ready(~3-5s)
+- Tab ④ Agent:frontend → `/agent`(SSE)→ server 跑 multi-turn agent loop、OpenAI chat completions API + tools schema、real execute tool、結果塞回 messages、直到 model 不再 tool_call
+- Tab ⑥ Skill:frontend → `/skill-agent`(SSE)→ server 跑 3-layer progressive disclosure simulator(lazy 載 SKILL.md body + bundled scripts/)
+- Tab ⑤/⑦:純 article、不跟 model 互動
+- Tab 切換時 `ensureModel(wanted)` POST `/swap?model=X` → server `SWAP_LOCK` 守單 flight → `pkill llama-server` + 等 port free + `subprocess.Popen` 起新 model + poll /v1/models 直到 ready(~3-5s)
 
 ---
 
 ## Code tour
 
-- `frontend/index.html` + `app.js` + `styles.css` — Tailwind Play CDN(零 build),4 tab UI
-- `agent/server.py` — HTTP backend stdlib `http.server`(no FastAPI),agent loop + `/swap` orchestrator + `/preview`(/apply-template proxy)
+- `frontend/index.html` + `app.js` + `styles.css` — Tailwind Play CDN(零 build),7 tab UI
+- `agent/server.py` — 單 port stdlib http.server(no FastAPI):同時 serve 靜態 frontend + API endpoints(agent loop、skill simulator、`/swap` orchestrator、`/preview` apply-template proxy)。`LISTEN_HOST=0.0.0.0` opt-in 給 LAN demo。
 - `agent/agent.py` — CLI fallback REPL + 4 tools(`get_time` / `read_file` / `write_file` / `exec_bash`)+ `dispatch_tool_call` + `AgentLoop`
 - `agent/tests/` — 43 tests(mocked subprocess + requests + socket;`pytest agent/tests -q`)
 - `agent/SETUP.md` — port / Fri AM check / fallback 操作備忘

@@ -2,21 +2,32 @@
 
 > 繁體中文版: [SETUP.zh-TW.md](./SETUP.zh-TW.md)
 
-Verified 2026-05-27 PM. **Single-port auto-swap setup** — one model (0.6B or 4B) runs on `:8080`, and the backend swaps it via `/swap`. `:8081` has been retired (see the LLM auto-swap spec / plan in `docs/superpowers/{specs,plans}/2026-05-27-llm-auto-swap.md`).
+Verified 2026-05-29. **Two-port setup** — one Python server on `:9000` serves HTML + API + SSE; `llama-server` on `:8080` runs the model (0.6B or 4B, swapped by `/swap`). Backend `:8082` from earlier architectures has been merged into `:9000`.
 
 | Port | Purpose | When it runs |
 |------|---------|--------------|
-| **:8080** | llama-server (0.6B or 4B, controlled by backend `/swap`) | auto-managed |
-| **:8082** | backend orchestrator + agent loop | always |
-| **:9000** | static frontend (no-cache server) | always |
+| **:8080** | llama-server (0.6B or 4B, controlled by `/swap`) | auto-managed |
+| **:9000** | unified server (static HTML + API endpoints) | always |
 
-- **Launch backend (orchestrator)**: `cd ~/projects/llm-no-magic && nohup python3 -m agent.server > /tmp/agent-server.log 2>&1 &`
-- **Launch static**: `python3 /tmp/no_cache_server.py ~/projects/llm-no-magic &`
-- **No need to launch llama manually.** On startup, the backend's `_detect_model()` probes `:8080`; if nothing is there, the first tab click in the frontend triggers `/swap`, which launches it.
+- **Launch server**: `cd ~/projects/llm-no-magic && nohup python3 -u -m agent.server > /tmp/agent-server.log 2>&1 &`
+- **No need to launch llama manually.** On startup, `_detect_model()` probes `:8080`; if nothing is there, the first tab click triggers `/swap`, which launches it (with `--host $LISTEN_HOST` propagated).
 - **Model source** (if the GGUF is missing): `hf download Qwen/Qwen3-4B-GGUF Qwen3-4B-Q4_K_M.gguf --local-dir ~/models` (same syntax for the 0.6B, just swap the name).
-- **Endpoints**: backend `/agent` / `/preview` / `/swap` all hit `http://localhost:8082/...`. The direct llama endpoint is `http://localhost:8080/v1/chat/completions` (only the CLI `agent.py` talks to it directly).
-- **Function calling**: relies on the 4B (the 0.6B is unstable). Switching to Tab ④ in the frontend triggers a swap to 4B.
+- **Endpoints**: `/`, `/index.zh-TW.html`, `/app.js`, `/styles.css` (static) + `/agent`, `/skill-agent`, `/swap`, `/preview` (API) — all on `:9000`. Legacy `/frontend/*` URLs 301-redirect to `/*`. The direct llama endpoint is `http://localhost:8080/v1/chat/completions` (only the CLI `agent.py` talks to it directly).
+- **Function calling**: relies on the 4B (the 0.6B is unstable). Switching to Tab ④/⑥ in the frontend triggers a swap to 4B.
 - **GPU footprint**: ~3GB max — only one model is on the GPU at a time. During a swap, the old process is killed and the new one launches in ~5s.
+
+## Classroom LAN demo
+
+Students on the same WiFi can join your Mac without each running their own stack:
+
+```bash
+LISTEN_HOST=0.0.0.0 nohup python3 -u -m agent.server > /tmp/agent-server.log 2>&1 &
+# Students open http://<your-mac-LAN-ip>:9000/  (find IP via `ipconfig getifaddr en0`)
+# llama-server is auto-launched with --host 0.0.0.0 (propagated from LISTEN_HOST)
+# First connection: macOS firewall may prompt to allow Python / llama-server inbound — accept
+```
+
+Caveat: GPU only holds one model at a time. If multiple students switch tabs to different models simultaneously, they will compete (swap-banner thrash). For trainer-led demo this isn't an issue.
 
 ## History (reference only)
 
@@ -56,49 +67,47 @@ Log: `/tmp/smoke-3runs.log`
 
 `say "你好,我是你的電腦"` — command ran successfully (exit 0). **Human verification needed**: the macOS default Mandarin voices (Ting-Ting / Mei-Jia) tend to sound robotic. For the Phase 0 demo, prefer `say -v Mei-Jia "..."` for the best available quality.
 
-## Web backend (:8082) — used by Tab ④ Agent
+## Unified server (:9000) — serves HTML + API in one process
 
 **Launch command** (from repo root):
 ```bash
 cd ~/projects/llm-no-magic
-nohup python3 -m agent.server > /tmp/agent-server.log 2>&1 &
+nohup python3 -u -m agent.server > /tmp/agent-server.log 2>&1 &
 ```
 
-**cwd must be the repo root** — the relative paths in presets 2 and 3 (`prompts.md`, `course/`) are resolved from the repo root. Don't launch it from `agent/`.
+**cwd must be the repo root** — the relative paths in Tab ④ Agent presets 2/3 (`prompts.md`, `course/`) are resolved from the repo root. Don't launch from `agent/`.
 
 **Verify:**
 ```bash
-curl -s http://localhost:8082/agent -I -X OPTIONS | grep -q "204" && echo "8082 ✓ backend"
+curl -s http://localhost:9000/ | grep -q "LLM, no magic" && echo "9000 ✓ HTML"
+curl -s -X OPTIONS http://localhost:9000/agent | grep -q "204" || curl -s -o /dev/null -w "%{http_code}" http://localhost:9000/agent
 ```
 
 **Port summary:**
 
 | Port | Service | When it runs |
 |------|---------|--------------|
-| :9000 | static frontend (no-cache server) | always (LLM session + Agent session) |
-| :8080 | llama-server (0.6B or 4B, swappable) | always (controlled by backend `/swap`) |
-| :8082 | agent web backend (server.py) | Agent session on Fri (Tab ④ frontend talks to this) |
+| :9000 | unified server: HTML + API endpoints (server.py) | always |
+| :8080 | llama-server (0.6B or 4B, swappable) | always (controlled by `/swap`) |
 
-**Fri AM needs both servers up** (8080 + 8082 + 9000). Full Tab ④ flow: browser → `:9000` frontend → `:8082` backend → `:8080` llama-server (0.6B by default, `/swap` to 4B).
+Full Tab ④ flow: browser → `:9000` HTML/JS → fetch `/agent` (same origin) → `:8080` llama-server (0.6B by default, `/swap` to 4B).
 
 ## Fri AM 30-second pre-class check
 
 ```bash
-# 1. All three servers up? (:8081 is retired; we use :8080 single-port now)
-curl -s http://localhost:9000/ > /dev/null && echo "9000 ✓ static"
+# 1. Both ports up?
+curl -s http://localhost:9000/ | grep -q "LLM, no magic" && echo "9000 ✓ server (HTML+API)"
 curl -s http://localhost:8080/v1/models | grep -qE "Qwen3-0\.6B|Qwen3-4B" && echo "8080 ✓ llama"
-curl -s http://localhost:8082/agent -I -X OPTIONS 2>&1 | grep -q "204" && echo "8082 ✓ backend"
 
 # 2. Start whichever is missing
-# (static)  python3 /tmp/no_cache_server.py ~/projects/llm-no-magic &
-# (backend) cd ~/projects/llm-no-magic && nohup python3 -m agent.server > /tmp/agent-server.log 2>&1 &
-# (llama)   No need to start manually. The backend detects whether :8080 is alive on startup;
-#           if not, it waits for a tab click in the frontend to auto-swap one in.
+# (server) cd ~/projects/llm-no-magic && nohup python3 -u -m agent.server > /tmp/agent-server.log 2>&1 &
+# (llama)  No need to start manually. server.py detects whether :8080 is alive on startup;
+#          if not, it waits for a tab click in the frontend to auto-swap one in.
 ```
 
 ## Fri AM fallback if things break
 
 If the backend or Tab ④ misbehaves in class:
-- **Fall back to CLI `agent.py`**: first confirm 4B is on `:8080` (`curl -s http://localhost:8080/v1/models | grep -q "Qwen3-4B"`); if not, swap first: `curl -X POST http://localhost:8082/swap -H "Content-Type: application/json" -d '{"model":"4B"}'`. Then run `python3 -m agent.agent`.
+- **Fall back to CLI `agent.py`**: first confirm 4B is on `:8080` (`curl -s http://localhost:8080/v1/models | grep -q "Qwen3-4B"`); if not, swap first: `curl -X POST http://localhost:9000/swap -H "Content-Type: application/json" -d '{"model":"4B"}'`. Then run `python3 -m agent.agent`.
 - **Manually swap to 0.6B** (if the backend is down but the frontend can still demo): `pkill -f llama-server` && `nohup llama-server -m ~/models/Qwen3-0.6B-Q4_K_M.gguf --port 8080 -ngl 99 > /tmp/llama-0.6b.log 2>&1 &`
 - **Manually swap to 4B**: same as above but swap the model file to `Qwen3-4B-Q4_K_M.gguf`.
