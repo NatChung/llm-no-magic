@@ -370,3 +370,99 @@
     gate.querySelector(".hook-revisit").innerHTML = html;
   });
 })();
+
+/* hooks.js — part 4: Tab ⑧ §0 flip-table */
+(function () {
+  "use strict";
+  if (!window.Hooks) { console.error("[hooks] part-4 loaded before HookStore — check single-file source order (Key decision 6)"); return; }
+  var Store = window.Hooks;
+  var L = window.Hooks._L;
+
+  function esc(s) {
+    return (s || "").replace(/[&<>"]/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c];
+    });
+  }
+
+  // Hook A `after` is an enum (radio) — render through a label map, not raw.
+  // (Mirrors the three radios in Task 5's renderRevisitA; redeclared here because
+  //  those maps live in the Task 3 controller IIFE, not on window.Hooks.)
+  var A_AFTER_LABEL = {
+    "still-just-paste": L("Still just paste & ask", "還是直接貼客訴信叫它回"),
+    "paste-sop-type-rules-check": L("Paste SOP + rules into the chat box, then check the promise lines", "連退款 SOP + 紅線一起打進聊天框,再核承諾句"),
+    "rather-write-self": L("Get it, but would rather write this one myself", "會了,但這題我寧可自己寫"),
+  };
+
+  function render() {
+    var mount = document.querySelector("[data-hook-recap]");
+    if (!mount) return;
+    var a = Store.getHook("hookA");
+    var b = Store.getHook("hookB");
+    var hasAny = (a && a.before) || (b && b.before);
+
+    if (!hasAny) {
+      mount.innerHTML = L(
+        '<div class="rounded border border-edge bg-surface-2 p-4 text-sm text-ink-soft">You didn\'t fill in Hook A / Hook B. Go back to <strong>Tab ①</strong> / <strong>Tab ④</strong>, fill the opening questions, then come back to see your own flip.</div>',
+        '<div class="rounded border border-edge bg-surface-2 p-4 text-sm text-ink-soft">你沒填 Hook A / Hook B。回去 <strong>Tab ①</strong> / <strong>Tab ④</strong> 第一次看時的 hook 頁填一下、再回來看自己的翻轉。</div>'
+      );
+      return;
+    }
+
+    var dash = "—";
+    // Hook A: before free-text, recommended anchor after ①②③, the learner's own after-choice
+    var aText  = (a && a.before && a.before.text) ? esc(a.before.text) : dash;
+    var aAfter = (a && a.after && a.after.answer) ? (A_AFTER_LABEL[a.after.answer] || esc(a.after.answer)) : dash;
+    // Hook B: before free-text, the learner's own after free-text
+    var bText  = (b && b.before && b.before.text) ? esc(b.before.text) : dash;
+    var bAfter = (b && b.after && b.after.text) ? esc(b.after.text) : dash;
+    // fixed "what good looks like" anchors (from spec §0) — same for everyone
+    var aAnchor = L("feed the refund SOP into the chat box + set red lines + check the promise lines", "聊天框餵 SOP + 交代紅線 + 核承諾句");
+    var bAnchor = L("Agent + read_file + Skill template to read my own files", "Agent + read_file + Skill 範本讀我的檔");
+
+    function row(label, val) {
+      return '<tr class="border-b border-edge"><td class="py-1 pr-3 text-muted whitespace-nowrap align-top">' + label + '</td><td class="py-1">' + val + '</td></tr>';
+    }
+
+    mount.innerHTML = L(
+      // EN
+      '<h3 class="text-lg font-semibold text-ink">§0. Speaking vs. doing — you can pick the tool now</h3>'
+      + '<table class="w-full text-sm border-collapse"><tbody>'
+      +   row('Speaking tools (①②③)', 'ChatGPT / Gemini — feed the right context (SOP/rules) into the chat box, set red lines, check the key claims. Line: context you can paste in full.')
+      +   row('Doing tools (④⑤⑥⑦)', 'Claude Code / Codex — read your files, run commands, multi-step. Line: context too big / must auto-read files.')
+      + '</tbody></table>'
+      + '<p class="text-sm text-muted">You were asked "how would you do it?" at Tab ① and Tab ④ — watch your judgement move:</p>'
+      + '<table class="w-full text-sm border-collapse"><tbody>'
+      +   row('Before Hook A', aText)
+      +   row('After ①②③ <span class="text-faint">(what good looks like)</span>', '<em>' + aAnchor + '</em>')
+      +   row('Half-time Hook B', bText)
+      +   row('After ④⑤⑥⑦ <span class="text-faint">(what good looks like)</span>', '<em>' + bAnchor + '</em>')
+      +   row('Your own after-call (A)', aAfter)
+      + '</tbody></table>'
+      + '<p class="text-sm">If Hook A you went from "just paste it and bet it\'s right" to "feed the SOP + set red lines, know which line to check" — that isn\'t fear of GPT, it\'s <strong>knowing how to use it</strong>: same tool, 60 → 90. Hook B is the same arc: from "feels like magic" to "I can wire that up". Not 8 jargon terms, but knowing which tool a task wants, how to use it well, and what it does under the hood.</p>',
+      // zh-TW
+      '<h3 class="text-lg font-semibold text-ink">§0. 說話 vs 動手 — 你現在會選工具了</h3>'
+      + '<table class="w-full text-sm border-collapse"><tbody>'
+      +   row('說話工具(①②③)', 'ChatGPT / Gemini — 聊天框裡餵對 context(SOP/法規)+ 交代紅線 + 核重點。分界:context 你貼得完。')
+      +   row('動手工具(④⑤⑥⑦)', 'Claude Code / Codex — 讀你的檔 / 跑指令 / 多步。分界:context 太大 / 要自動讀檔。')
+      + '</tbody></table>'
+      + '<p class="text-sm text-muted">你在 Tab ① 跟 Tab ④ 各被問了一次「你會怎麼做?」——看你的判斷怎麼變:</p>'
+      + '<table class="w-full text-sm border-collapse"><tbody>'
+      +   row('Hook A 課前', aText)
+      +   row('看完 ①②③ <span class="text-faint">(該長這樣)</span>', '<em>' + aAnchor + '</em>')
+      +   row('Hook B 中場', bText)
+      +   row('看完 ④⑤⑥⑦ <span class="text-faint">(該長這樣)</span>', '<em>' + bAnchor + '</em>')
+      +   row('你自己的課後選擇(A)', aAfter)
+      + '</tbody></table>'
+      + '<p class="text-sm">如果你 Hook A 課前是「直接貼上去叫它回、賭它對」、課後變成「餵公司 SOP + 交代紅線、知道核哪句」——那不是你變得不敢用 GPT,是你<strong>會用了</strong>:同一個工具 60 分到 90 分。Hook B 同理:從「覺得像魔法」到「我會搭」。不是學了 8 個術語,是知道一個任務該交給哪類工具、怎麼把它用到位、還有它背後到底做了什麼。</p>'
+    );
+  }
+
+  // re-render whenever recap tab becomes active (data may have changed since load)
+  function init() {
+    render();
+    var recapBtn = document.querySelector('.tab[data-tab="recap"]');
+    if (recapBtn) recapBtn.addEventListener("click", render);
+  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
+  else init();
+})();
