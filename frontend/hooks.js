@@ -296,3 +296,77 @@
   window.Hooks._L = L;
   window.Hooks._collectBefore = collectBefore;
 })();
+
+/* hooks.js — part 3: Hook B revisit renderer */
+(function () {
+  "use strict";
+  if (!window.Hooks || !window.Hooks._registerRevisit) { console.error("[hooks] part-3 loaded before controller — check single-file source order (Key decision 6)"); return; }
+  var Store = window.Hooks;
+  var L = window.Hooks._L;
+
+  function esc(s) {
+    return (s || "").replace(/[&<>"]/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c];
+    });
+  }
+
+  var B_Q1 = {
+    "yes-know-how": L("Yes, I roughly know how", "會,我大概知道怎麼弄"),
+    "know-direction-cant-do": L("I know the direction but can't do it", "知道方向但不會做"),
+    "dont-know-where-to-start": L("No idea where to start", "不知道怎麼開始"),
+  };
+  var B_Q2 = {
+    "know": L("I know", "知道"),
+    "roughly": L("Roughly", "大概"),
+    "feels-like-magic": L("Feels like magic", "覺得有點像魔法"),
+  };
+
+  window.Hooks._registerRevisit("B", function (gate) {
+    var before = (Store.getHook("hookB") || {}).before || {};
+    var q1 = B_Q1[before.q1] || L("(not answered)", "(未作答)");
+    var q2 = B_Q2[before.q2] || L("(not answered)", "(未作答)");
+    var yourText = before.text ? esc(before.text) : L("(left blank)", "(未填)");
+
+    var html = L(
+      // EN
+      '<header class="space-y-2"><h2 class="text-xl font-semibold text-ink">Looking back at the half-time question</h2></header>'
+      + '<div class="rounded-md bg-surface-2 border border-edge-soft p-3 text-sm space-y-1">'
+      +   '<div>You first picked — Q1: <strong>' + q1 + '</strong>; Q2: <strong>' + q2 + '</strong></div>'
+      +   '<div>You wrote: <em>' + yourText + '</em></div>'
+      + '</div>'
+      + '<p>What you just saw in ④ ⑤ ⑥ ⑦ (no magic):</p>'
+      + '<ul class="space-y-2 list-disc list-inside">'
+      +   '<li><strong>④ Agent:</strong> the model calls a <code class="bg-surface-2 px-1 rounded text-xs">read_file</code> tool to <em>actually</em> read files — real execution, not a simulation.</li>'
+      +   '<li><strong>⑤ Script / API:</strong> batching 50 files can be a bash script, repeated API calls, or a packaged local tool.</li>'
+      +   '<li><strong>⑥ Skill:</strong> a "meeting-summary template" becomes a SKILL.md → AI applies it to any future summary job.</li>'
+      +   '<li><strong>⑦ MCP:</strong> wrap the summary tool as an MCP server → Claude / Cursor / any client can use it.</li>'
+      + '</ul>'
+      + '<div class="rounded-md bg-surface-2 border border-edge-soft p-3 text-sm font-mono whitespace-pre-wrap">Agent (④) → read_file reads 50 files\n   ↓ apply the Skill (⑥) meeting-summary template\n   ↓ the verification habit from chunk A (spot-check samples)\n   ↓ wrap as an MCP server (⑦) any client can reuse</div>'
+      + '<div class="space-y-1">'
+      +   '<label class="font-medium text-ink block" for="B-after-text">If you had to do this task now, how would you do it?</label>'
+      +   '<textarea id="B-after-text" class="hook-after-text w-full rounded-md border border-edge bg-surface px-3 py-2 text-sm font-mono" rows="3"></textarea>'
+      + '</div>'
+      + '<div class="flex gap-3 items-center"><button class="hook-after-done inline-flex items-center px-4 py-2 rounded-md bg-ink text-surface text-sm font-medium hover:bg-ink-soft transition-colors">Go to Tab ⑧ →</button><button class="hook-reset text-xs text-muted hover:text-ink-soft hover:underline">Redo from scratch</button></div>',
+      // zh-TW
+      '<header class="space-y-2"><h2 class="text-xl font-semibold text-ink">回顧中場那題</h2></header>'
+      + '<div class="rounded-md bg-surface-2 border border-edge-soft p-3 text-sm space-y-1">'
+      +   '<div>你一開始選了 — Q1:<strong>' + q1 + '</strong>;Q2:<strong>' + q2 + '</strong></div>'
+      +   '<div>你那時寫:<em>' + yourText + '</em></div>'
+      + '</div>'
+      + '<p>你剛剛在 ④ ⑤ ⑥ ⑦ 看到的(沒有魔法):</p>'
+      + '<ul class="space-y-2 list-disc list-inside">'
+      +   '<li><strong>④ Agent:</strong>AI 叫 <code class="bg-surface-2 px-1 rounded text-xs">read_file</code> tool「真的」去讀檔 — 不是模擬,是真執行。</li>'
+      +   '<li><strong>⑤ Script / API:</strong>50 份的批次可以是 bash script、API 多次 call、或包成本地工具。</li>'
+      +   '<li><strong>⑥ Skill:</strong>「會議摘要範本」變 SKILL.md → AI 之後遇到任何摘要工作都會套。</li>'
+      +   '<li><strong>⑦ MCP:</strong>把摘要工具做成 MCP server → Claude / Cursor 任何 client 都能直接用。</li>'
+      + '</ul>'
+      + '<div class="rounded-md bg-surface-2 border border-edge-soft p-3 text-sm font-mono whitespace-pre-wrap">Agent(④) → read_file 讀 50 份檔\n   ↓ 套 Skill(⑥)的會議摘要範本\n   ↓ chunk A 教的驗證流程(挑樣本 spot-check)\n   ↓ 包成 MCP server(⑦)下次任何 client 都能用</div>'
+      + '<div class="space-y-1">'
+      +   '<label class="font-medium text-ink block" for="B-after-text">現在再讓你做這個任務、你會怎麼做?</label>'
+      +   '<textarea id="B-after-text" class="hook-after-text w-full rounded-md border border-edge bg-surface px-3 py-2 text-sm font-mono" rows="3"></textarea>'
+      + '</div>'
+      + '<div class="flex gap-3 items-center"><button class="hook-after-done inline-flex items-center px-4 py-2 rounded-md bg-ink text-surface text-sm font-medium hover:bg-ink-soft transition-colors">進 Tab ⑧,看整課收尾 →</button><button class="hook-reset text-xs text-muted hover:text-ink-soft hover:underline">重新作答</button></div>'
+    );
+    gate.querySelector(".hook-revisit").innerHTML = html;
+  });
+})();
