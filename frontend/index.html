@@ -320,6 +320,41 @@ help me
        Tab 4: Agent — actually executes tools via :8082 backend
        ───────────────────────────────────────────────────────────────── -->
   <main class="tab-panel max-w-6xl mx-auto px-4 md:px-8 py-6 md:py-10" data-panel="agent">
+<div class="hook-gate max-w-3xl mx-auto" data-hook="B">
+  <div class="hook-before space-y-5 text-ink-soft leading-relaxed">
+    <header class="space-y-2">
+      <h2 class="text-xl font-semibold text-ink">Half-time — a different tool, a different task</h2>
+      <p>The "answer from our company's real policy" kind of job from Hook A needs to touch your company's files — ChatGPT can't reach them. Here's a task that genuinely has to act on your computer:</p>
+      <blockquote class="border-l-2 border-edge pl-3 text-ink">You have 50 customer-meeting transcripts in a folder on your computer. You want AI to read all of them and pull out the most common complaints.</blockquote>
+      <p>You heard Claude Code / Codex can read files on your machine directly.</p>
+    </header>
+
+    <fieldset class="space-y-2">
+      <legend class="font-medium text-ink">Q1. Would you hand this "read my 50 local files" job to Claude Code / Codex?</legend>
+      <label class="block"><input type="radio" name="B-q1" value="yes-know-how"> Yes, I roughly know how</label>
+      <label class="block"><input type="radio" name="B-q1" value="know-direction-cant-do"> I know the direction but can't do it</label>
+      <label class="block"><input type="radio" name="B-q1" value="dont-know-where-to-start"> No idea where to start</label>
+    </fieldset>
+
+    <fieldset class="space-y-2">
+      <legend class="font-medium text-ink">Q2. Do you know how it <em>actually</em> reads your files?</legend>
+      <label class="block"><input type="radio" name="B-q2" value="know"> I know</label>
+      <label class="block"><input type="radio" name="B-q2" value="roughly"> Roughly</label>
+      <label class="block"><input type="radio" name="B-q2" value="feels-like-magic"> Feels a bit like magic</label>
+    </fieldset>
+
+    <div class="space-y-1">
+      <label class="font-medium text-ink block" for="B-text">Q3. (optional) If you had to do it, what would you use?</label>
+      <textarea id="B-text" class="hook-text w-full rounded-md border border-edge bg-surface px-3 py-2 text-sm font-mono" rows="3"></textarea>
+    </div>
+
+    <button class="hook-done inline-flex items-center px-4 py-2 rounded-md bg-ink text-surface text-sm font-medium hover:bg-ink-soft transition-colors">I'm done → go to Tab ④</button>
+  </div>
+
+  <div class="hook-revisit space-y-5 text-ink-soft leading-relaxed" hidden></div>
+</div>
+<div class="hook-content">
+<div class="text-right max-w-2xl"><button class="hook-revisit-btn text-xs text-final hover:underline">↻ Revisit the half-time question</button></div>
     <section class="prompt-area space-y-3">
       <label for="system-prompt-agent" class="block text-sm font-medium text-ink-soft">System Prompt (prefilled, editable)</label>
       <details class="info-tag">
@@ -388,6 +423,7 @@ help me
       </div>
       <div class="final-content text-base md:text-lg leading-relaxed text-ink"></div>
     </section>
+</div><!-- /.hook-content -->
   </main>
 
   <!-- ─────────────────────────────────────────────────────────────────
