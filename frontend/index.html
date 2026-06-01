@@ -78,6 +78,47 @@
        Tab 1: Basics — prompt + token + probability
        ───────────────────────────────────────────────────────────────── -->
   <main class="tab-panel active max-w-6xl mx-auto px-4 md:px-8 py-6 md:py-10" data-panel="basic">
+<div class="hook-gate max-w-3xl mx-auto" data-hook="A">
+  <div class="hook-before space-y-5 text-ink-soft leading-relaxed">
+    <header class="space-y-2">
+      <h2 class="text-xl font-semibold text-ink">Before we start — how do you normally use ChatGPT / Gemini?</h2>
+      <p>A customer emails an angry complaint: the product is defective, they demand a refund. You think: just paste their email into ChatGPT, have it write a sincere-apology-but-no-promised-compensation reply, glance at it and send.</p>
+    </header>
+
+    <fieldset class="space-y-2">
+      <legend class="font-medium text-ink">Q1. Would you send its draft straight to the customer?</legend>
+      <label class="block"><input type="radio" name="A-q1" value="yes-convenient"> Yes, handy</label>
+      <label class="block"><input type="radio" name="A-q1" value="yes-but-recheck"> Yes, but I'd re-read it</label>
+      <label class="block"><input type="radio" name="A-q1" value="no"> No</label>
+      <label class="block"><input type="radio" name="A-q1" value="unsure"> Not sure</label>
+    </fieldset>
+
+    <fieldset class="space-y-2">
+      <legend class="font-medium text-ink">Q2. Do you trust what it writes (that it won't promise a refund / compensation on its own)?</legend>
+      <label class="block"><input type="radio" name="A-q2" value="trust"> Trust it</label>
+      <label class="block"><input type="radio" name="A-q2" value="half-trust"> Half-trust</label>
+      <label class="block"><input type="radio" name="A-q2" value="distrust"> Don't trust</label>
+    </fieldset>
+
+    <fieldset class="space-y-2">
+      <legend class="font-medium text-ink">Q3. What would you type into the chat box first, to make it answer accurately? (multi-select)</legend>
+      <label class="block"><input type="checkbox" name="A-q3" value="nothing-just-paste"> Nothing — just paste the complaint and ask</label>
+      <label class="block"><input type="checkbox" name="A-q3" value="paste-sop"> Paste in our refund policy / support SOP too</label>
+      <label class="block"><input type="checkbox" name="A-q3" value="type-rules"> Spell out tone & rules (e.g. don't promise an amount)</label>
+      <label class="block"><input type="checkbox" name="A-q3" value="never-thought"> Never thought about what to type first</label>
+    </fieldset>
+
+    <div class="space-y-1">
+      <label class="font-medium text-ink block" for="A-text">Q4. (optional) How would you actually ask it today?</label>
+      <textarea id="A-text" class="hook-text w-full rounded-md border border-edge bg-surface px-3 py-2 text-sm font-mono" rows="3"></textarea>
+    </div>
+
+    <button class="hook-done inline-flex items-center px-4 py-2 rounded-md bg-ink text-surface text-sm font-medium hover:bg-ink-soft transition-colors">I'm done → go to Tab ①</button>
+  </div>
+
+  <div class="hook-revisit space-y-5 text-ink-soft leading-relaxed" hidden></div>
+</div>
+<div class="hook-content">
     <section class="prompt-area lg:col-span-2 space-y-3">
       <label for="prompt-basic" class="block text-sm font-medium text-ink-soft">Prompt</label>
       <div class="preset-row">
@@ -102,6 +143,7 @@
       <h2 class="text-xs uppercase tracking-wider text-muted font-medium">Token candidates · top 10 (click any token on the left to switch)</h2>
       <div class="probs rounded-md bg-surface border border-edge-soft p-3 min-h-[6rem]"></div>
     </section>
+</div><!-- /.hook-content -->
   </main>
 
   <!-- ─────────────────────────────────────────────────────────────────
@@ -757,5 +799,6 @@ AI  → git push
   </main>
 
   <script src="app.js?v=54"></script>
+<script src="hooks.js?v=54"></script>
 </body>
 </html>

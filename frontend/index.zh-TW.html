@@ -78,6 +78,47 @@
        Tab 1: 基礎 — prompt + token + 機率
        ───────────────────────────────────────────────────────────────── -->
   <main class="tab-panel active max-w-6xl mx-auto px-4 md:px-8 py-6 md:py-10" data-panel="basic">
+<div class="hook-gate max-w-3xl mx-auto" data-hook="A">
+  <div class="hook-before space-y-5 text-ink-soft leading-relaxed">
+    <header class="space-y-2">
+      <h2 class="text-xl font-semibold text-ink">開始之前 — 想一下你平常怎麼用 ChatGPT / Gemini</h2>
+      <p>客戶寄 email 來抱怨：產品有瑕疵、要求退款，語氣有點火。你想：把客戶來信貼給 ChatGPT、叫它寫一封誠懇道歉但不亂承諾賠償的回信，我看一下就寄出。</p>
+    </header>
+
+    <fieldset class="space-y-2">
+      <legend class="font-medium text-ink">Q1. 你會直接把它寫的回信寄給客戶嗎？</legend>
+      <label class="block"><input type="radio" name="A-q1" value="yes-convenient"> 會，很方便</label>
+      <label class="block"><input type="radio" name="A-q1" value="yes-but-recheck"> 會但會再看過</label>
+      <label class="block"><input type="radio" name="A-q1" value="no"> 不會</label>
+      <label class="block"><input type="radio" name="A-q1" value="unsure"> 不確定</label>
+    </fieldset>
+
+    <fieldset class="space-y-2">
+      <legend class="font-medium text-ink">Q2. 你信它寫的內容（不會自己亂承諾退款/賠償）嗎？</legend>
+      <label class="block"><input type="radio" name="A-q2" value="trust"> 信</label>
+      <label class="block"><input type="radio" name="A-q2" value="half-trust"> 半信</label>
+      <label class="block"><input type="radio" name="A-q2" value="distrust"> 不信</label>
+    </fieldset>
+
+    <fieldset class="space-y-2">
+      <legend class="font-medium text-ink">Q3. 你會在聊天框裡「先打什麼」來讓它回得準？（複選）</legend>
+      <label class="block"><input type="checkbox" name="A-q3" value="nothing-just-paste"> 什麼都不打，直接貼客訴信叫它回</label>
+      <label class="block"><input type="checkbox" name="A-q3" value="paste-sop"> 連我們的退款政策 / 客服 SOP 一起貼進去</label>
+      <label class="block"><input type="checkbox" name="A-q3" value="type-rules"> 交代語氣、不准承諾金額等規則</label>
+      <label class="block"><input type="checkbox" name="A-q3" value="never-thought"> 沒想過要先打什麼</label>
+    </fieldset>
+
+    <div class="space-y-1">
+      <label class="font-medium text-ink block" for="A-text">Q4.（可選）你目前實際上會怎麼叫它寫？</label>
+      <textarea id="A-text" class="hook-text w-full rounded-md border border-edge bg-surface px-3 py-2 text-sm font-mono" rows="3"></textarea>
+    </div>
+
+    <button class="hook-done inline-flex items-center px-4 py-2 rounded-md bg-ink text-surface text-sm font-medium hover:bg-ink-soft transition-colors">我看完了 → 進 Tab ①</button>
+  </div>
+
+  <div class="hook-revisit space-y-5 text-ink-soft leading-relaxed" hidden></div>
+</div>
+<div class="hook-content">
     <section class="prompt-area lg:col-span-2 space-y-3">
       <label for="prompt-basic" class="block text-sm font-medium text-ink-soft">Prompt</label>
       <div class="preset-row">
@@ -102,6 +143,7 @@
       <h2 class="text-xs uppercase tracking-wider text-muted font-medium">Token 候選 · top 10(點左邊任一 token 切換)</h2>
       <div class="probs rounded-md bg-surface border border-edge-soft p-3 min-h-[6rem]"></div>
     </section>
+</div><!-- /.hook-content -->
   </main>
 
   <!-- ─────────────────────────────────────────────────────────────────
@@ -756,5 +798,6 @@ AI → git push
   </main>
 
   <script src="app.js?v=54"></script>
+<script src="hooks.js?v=54"></script>
 </body>
 </html>
