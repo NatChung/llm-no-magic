@@ -110,26 +110,3 @@ body.swapping .stop {
   pointer-events: none;
   opacity: 0.5;
 }
-
-/* Before/After hooks */
-.hook-gate[hidden],
-.hook-content[hidden],
-.hook-before[hidden],
-.hook-revisit[hidden] { display: none !important; }
-
-/* Make the wrapper transparent to the desktop grid (styles.css ~13-27 grid-places
-   .prompt-area/.output-area/.probs-area as DIRECT children of the panel). With
-   display:contents the wrapper's children are promoted back to grid items, so the
-   existing `[data-panel="basic"] > .prompt-area` rules keep matching. */
-.hook-content { display: contents; }
-.hook-content[hidden] { display: none !important; }  /* override the line above when hidden */
-
-.hook-gate { padding: 1.5rem 0 2.5rem; }
-.hook-before fieldset { border: 0; padding: 0; margin: 0; }
-.hook-revisit-btn { cursor: pointer; }
-
-/* the revisit-button bar is also a direct grid child once .hook-content is
-   display:contents — span it full width so it doesn't steal a grid cell. */
-@media (min-width: 1024px) {
-  .tab-panel.active[data-panel="basic"] > .hook-content > .hook-revisit-bar { grid-column: 1 / -1; }
-}
