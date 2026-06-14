@@ -30,7 +30,7 @@ Ask each question in order:
 - Debrief: top-1 probability 99%+ — the model has "memorized" this line; completion is not a database lookup, it's probability
 
 ### Segment 2 — The made-up planet (peaked ≠ true)
-- Set-up: "`祖樹星` is a planet I made up. Guess: will the model say 'I don't know', or will it invent a mountain name?" (Collect learner predictions first!)
+- Set-up: "This time we send `祖樹星上最高的山叫做` — `祖樹星` is a planet I made up. Guess: will the model say 'I don't know', or will it invent a mountain name?" (Collect learner predictions first!)
 - Run: `python3 teaching/demos/demo_tab1.py --segment 2 --lang en`
 - Debrief: high confidence output anyway → peaked only means "it finds this continuation natural" — not that it's true
 

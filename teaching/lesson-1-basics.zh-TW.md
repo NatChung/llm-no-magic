@@ -28,7 +28,7 @@
 - debrief:top-1 99%+ — model「背過」這句;接龍不是查資料,是機率
 
 ### 段落 2 — 瞎掰的星球(peaked ≠ 真實)
-- 預告:「祖樹星是瞎掰的星球。你猜:model 會說『不知道』,還是編一個山名?」(先收學員預測!)
+- 預告:「這次送 `祖樹星上最高的山叫做` — 祖樹星是瞎掰的星球。你猜:model 會說『不知道』,還是編一個山名?」(先收學員預測!)
 - 跑:`python3 teaching/demos/demo_tab1.py --segment 2 --lang zh-TW`
 - debrief:照樣高 confidence 編出來 → peaked 只代表「它覺得順」,不代表真
 
