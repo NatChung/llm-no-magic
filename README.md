@@ -58,6 +58,19 @@ LISTEN_HOST=0.0.0.0 nohup python3 -u -m agent.server > /tmp/agent-server.log 2>&
 
 ---
 
+## 🤖 AI-guided mode (Claude Code / Codex)
+
+Don't want to explore alone? Open this repo with an AI coding agent. It reads
+[AGENTS.md](./AGENTS.md), asks whether you're the teacher or a student, then:
+
+- runs `python3 init.py` to check your environment (llama.cpp, models, playwright) and guides any installs
+- runs the course from [teaching/](./teaching/): asks for your prediction → plays a Playwright demo on screen → debriefs
+- you just answer, watch, and occasionally drive
+
+Student usage: clone, open Claude Code in the repo folder, say "hi".
+
+---
+
 ## Try it
 
 ### Tab ① Basics — 60-second comparison
