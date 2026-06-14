@@ -46,7 +46,7 @@ def check_llama() -> Check:
 
 
 def check_hf() -> Check:
-    p = shutil.which("hf")
+    p = shutil.which("hf") or shutil.which("huggingface-cli")
     return Check("hf CLI", p is not None, p or "",
                  'pip install -U "huggingface_hub[cli]"',
                  auto_fix=[[sys.executable, "-m", "pip", "install", "-U", "huggingface_hub[cli]"]])
@@ -126,7 +126,7 @@ def check_port_8080() -> Check:
 
 def run_checks() -> list[Check]:
     return [check_python(), check_llama(), check_hf(),
-            check_model("0.6B"), check_model("4B"),
+            *[check_model(size) for size in MODEL_FILES],
             check_requests(), check_playwright(),
             check_port_9000(), check_port_8080()]
 
@@ -141,7 +141,7 @@ def apply_fixes(checks: list[Check]) -> None:
             if r.returncode != 0:
                 print("   pip 失敗?若訊息是 externally-managed(PEP 668),先建 venv:\n"
                       "   python3 -m venv .venv && source .venv/bin/activate,然後重跑 init.py --fix")
-                break
+                return
 
 
 def summarize(checks: list[Check]) -> tuple[str, int]:

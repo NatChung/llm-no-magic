@@ -80,3 +80,30 @@ def test_main_prints_one_line_per_check_and_summary(monkeypatch, capsys):
     assert code == 1
     assert "✓ a" in out and "✗ b" in out and "fix: install b" in out
     assert out.strip().endswith("MISSING: b")
+
+
+def test_port_8080_free(monkeypatch):
+    monkeypatch.setattr(init, "_http_get", lambda url, timeout=1.0: (None, b""))
+    assert init.check_port_8080().ok
+
+
+def test_port_8080_foreign_process(monkeypatch):
+    monkeypatch.setattr(init, "_http_get", lambda url, timeout=1.0: (503, b""))
+    monkeypatch.setattr(init, "_lsof", lambda port: "node 999 :8080")
+    c = init.check_port_8080()
+    assert not c.ok
+    assert "node 999" in c.fix
+
+
+def test_fix_mode_reruns_checks_twice(monkeypatch):
+    calls = {"n": 0}
+
+    def fake_run_checks():
+        calls["n"] += 1
+        return [init.Check("x", True)]
+
+    monkeypatch.setattr(init, "run_checks", fake_run_checks)
+    monkeypatch.setattr(init, "apply_fixes", lambda checks: None)
+    code = init.main(["--fix"])
+    assert code == 0
+    assert calls["n"] == 2  # once before fixes, once after
