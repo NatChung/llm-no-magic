@@ -61,7 +61,7 @@ def switch_tab(page, state, tab_id: str):
         if state["dialog"]:
             die(f"model swap 失敗: {state['dialog']} — 看 AGENTS.md Troubleshooting(port 8080)")
         die(f"切到 tab {tab_id} 逾時 — server / llama-server 狀態請用 init.py 檢查")
-    page.wait_for_selector("body:not(.swapping)")
+    page.wait_for_selector("body:not(.swapping)", timeout=SWAP_TIMEOUT_MS)
     return page.locator(f'main[data-panel="{tab_id}"]')
 
 
@@ -69,7 +69,7 @@ def pick_preset(panel, value: str):
     panel.locator(".preset-select").select_option(value)
 
 
-def run_and_wait(page, panel):
+def run_and_wait(panel):
     """按送出、等生成結束(.run 回到 enabled)。"""
     panel.locator(".run").click()
     # .run disabled 是 click handler 同步設定,不會 race;空 prompt 時 app.js 不送 → 這行逾時
@@ -83,12 +83,13 @@ def pause(page, args, ms: int):
         page.wait_for_timeout(ms)
 
 
-def click_token(page, panel, args, idx: int = 1):
-    """點第 idx 個 token、等機率 bar chart 出現,回傳 top-1 機率字串。"""
+def click_token(page, panel, args, nth: int = 0):
+    """點第 nth 個 token(0-indexed,對齊 Playwright .nth());等機率 bar chart 出現,回傳 top-1 機率字串。"""
     toks = panel.locator(".generated-text .tok")
-    if toks.count() == 0:
+    n = toks.count()
+    if n == 0:
         die("沒有生成任何 token — prompt 是否為空?")
-    toks.nth(min(idx, toks.count() - 1)).click()
+    toks.nth(min(nth, n - 1)).click()
     panel.locator(".probs .bar-row").first.wait_for(timeout=5_000)
     pause(page, args, 1500)
     return panel.locator(".probs .bar-pct").first.inner_text()
@@ -111,5 +112,5 @@ def run_segments(page, panel, args, n_segments: int, fn):
             raise
         except Exception as e:
             first = str(e).splitlines()[0] if str(e) else ""
-            die(f"段落 {k} 失敗 — {type(e).__name__}: {first}"
+            die(f"段落 {k} 失敗 — {type(e).__name__}: {first} "
                 f"(selector 沒找到或逾時;先 python3 init.py 檢查,再重跑同段落)")

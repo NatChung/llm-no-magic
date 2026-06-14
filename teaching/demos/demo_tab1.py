@@ -23,9 +23,9 @@ def run_segment(page, panel, args, k: int):
     c.pick_preset(panel, prompt)
     c.pause(page, args, 800)
     c.log(f"[{k}.2] 送出,看 token 一個一個蹦")
-    c.run_and_wait(page, panel)
+    c.run_and_wait(panel)
     c.log(f"[{k}.3] 點 token 開 top-10 機率圖")
-    top1 = c.click_token(page, panel, args, idx=1)
+    top1 = c.click_token(page, panel, args, nth=1)
     c.log(f"[{k}.4] top-1 機率 = {top1} — 生成文字:「{panel.locator('.generated-text').inner_text()[:60]}」")
 
 
