@@ -35,7 +35,7 @@ use the `.zh-TW` files and reply in 繁體中文).
 
 1. Run `python3 init.py`. If the last line is not `READY*`, walk the user through the
    printed `fix:` lines (`python3 init.py --fix` handles the pip ones). Teaching ALSO
-   requires playwright — if the summary has `WARN teaching: playwright missing`,
+   requires playwright — if the summary line contains `WARN teaching:`,
    install it before continuing (`pip install playwright && playwright install chromium`).
 2. Make sure the server is up (init.py's Port 9000 line reports it as running — or start
    it with the command above), then have the student open http://localhost:9000/ (zh-TW:
