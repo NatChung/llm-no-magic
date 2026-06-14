@@ -42,7 +42,7 @@
       },
     };
   </script>
-  <link rel="stylesheet" href="styles.css?v=55">
+  <link rel="stylesheet" href="styles.css?v=56">
 </head>
 <body class="min-h-screen bg-surface text-ink antialiased">
   <div id="swap-banner" class="hidden fixed top-16 left-1/2 -translate-x-1/2 rounded-md bg-final-tint px-4 py-2 text-sm text-final shadow-md z-50">
@@ -89,54 +89,12 @@
         <p class="font-medium text-ink">這堂課要回答的問題:</p>
         <p>你已經在用 AI 了。但<em>哪個</em>任務該用<em>哪個</em>工具——還有它為什麼有時會一臉自信地亂編?上完你會知道什麼時候該用<strong>說話工具</strong>(ChatGPT / Gemini)、什麼時候該用<strong>動手工具</strong>(Claude Code / Codex),以及它們背後到底在做什麼。</p>
       </div>
-      <p>課程中有兩個時刻(Tab ① 跟 Tab ④ 之前)會問你一個真實工作場景的問題,等你懂了原理,再讓你看自己的判斷怎麼變。<strong>沒有魔法 — 只有 token、約定,跟你能驗證的工具呼叫。</strong></p>
+      <p>用 Claude Code / Codex 打開這個 repo,AI 會自己讀說明、帶你跑這堂課:開場跟中場會先問你真實工作場景的問題,等你懂了原理,再讓你看自己的判斷怎麼變。<strong>沒有魔法 — 只有 token、約定,跟你能驗證的工具呼叫。</strong></p>
       <p class="text-sm text-muted">準備好了?點上面的 <strong>① 基礎</strong> 開始。</p>
     </article>
   </main>
 
   <main class="tab-panel max-w-6xl mx-auto px-4 md:px-8 py-6 md:py-10" data-panel="basic">
-<div class="hook-gate max-w-3xl mx-auto" data-hook="A">
-  <div class="hook-before space-y-5 text-ink-soft leading-relaxed">
-    <header class="space-y-2">
-      <h2 class="text-xl font-semibold text-ink">開始之前 — 想一下你平常怎麼用 ChatGPT / Gemini</h2>
-      <p>客戶寄 email 來抱怨：產品有瑕疵、要求退款，語氣有點火。你想：把客戶來信貼給 ChatGPT、叫它寫一封誠懇道歉但不亂承諾賠償的回信，我看一下就寄出。</p>
-    </header>
-
-    <fieldset class="space-y-2">
-      <legend class="font-medium text-ink">Q1. 你會直接把它寫的回信寄給客戶嗎？</legend>
-      <label class="block"><input type="radio" name="A-q1" value="yes-convenient"> 會，很方便</label>
-      <label class="block"><input type="radio" name="A-q1" value="yes-but-recheck"> 會但會再看過</label>
-      <label class="block"><input type="radio" name="A-q1" value="no"> 不會</label>
-      <label class="block"><input type="radio" name="A-q1" value="unsure"> 不確定</label>
-    </fieldset>
-
-    <fieldset class="space-y-2">
-      <legend class="font-medium text-ink">Q2. 你信它寫的內容（不會自己亂承諾退款/賠償）嗎？</legend>
-      <label class="block"><input type="radio" name="A-q2" value="trust"> 信</label>
-      <label class="block"><input type="radio" name="A-q2" value="half-trust"> 半信</label>
-      <label class="block"><input type="radio" name="A-q2" value="distrust"> 不信</label>
-    </fieldset>
-
-    <fieldset class="space-y-2">
-      <legend class="font-medium text-ink">Q3. 你會在聊天框裡「先打什麼」來讓它回得準？（複選）</legend>
-      <label class="block"><input type="checkbox" name="A-q3" value="nothing-just-paste"> 什麼都不打，直接貼客訴信叫它回</label>
-      <label class="block"><input type="checkbox" name="A-q3" value="paste-sop"> 連我們的退款政策 / 客服 SOP 一起貼進去</label>
-      <label class="block"><input type="checkbox" name="A-q3" value="type-rules"> 交代語氣、不准承諾金額等規則</label>
-      <label class="block"><input type="checkbox" name="A-q3" value="never-thought"> 沒想過要先打什麼</label>
-    </fieldset>
-
-    <div class="space-y-1">
-      <label class="font-medium text-ink block" for="A-text">Q4.（可選）你目前實際上會怎麼叫它寫？</label>
-      <textarea id="A-text" class="hook-text w-full rounded-md border border-edge bg-surface px-3 py-2 text-sm font-mono" rows="3"></textarea>
-    </div>
-
-    <button class="hook-done inline-flex items-center px-4 py-2 rounded-md bg-ink text-surface text-sm font-medium hover:bg-ink-soft transition-colors">我看完了 → 進 Tab ①</button>
-  </div>
-
-  <div class="hook-revisit space-y-5 text-ink-soft leading-relaxed" hidden></div>
-</div>
-<div class="hook-content">
-<div class="hook-revisit-bar text-right max-w-2xl"><button class="hook-revisit-btn text-xs text-final hover:underline">↻ 再回顧開場那題</button></div>
     <section class="prompt-area lg:col-span-2 space-y-3">
       <label for="prompt-basic" class="block text-sm font-medium text-ink-soft">Prompt</label>
       <div class="preset-row">
@@ -161,7 +119,6 @@
       <h2 class="text-xs uppercase tracking-wider text-muted font-medium">Token 候選 · top 10(點左邊任一 token 切換)</h2>
       <div class="probs rounded-md bg-surface border border-edge-soft p-3 min-h-[6rem]"></div>
     </section>
-</div><!-- /.hook-content -->
   </main>
 
   <!-- ─────────────────────────────────────────────────────────────────
@@ -334,44 +291,9 @@ help me
   </main>
 
   <!-- ─────────────────────────────────────────────────────────────────
-       Tab 4: Agent — 真執行 tools via :8082 backend
+       Tab 4: Agent — 真執行 tools(server :9000 /agent)
        ───────────────────────────────────────────────────────────────── -->
   <main class="tab-panel max-w-6xl mx-auto px-4 md:px-8 py-6 md:py-10" data-panel="agent">
-<div class="hook-gate max-w-3xl mx-auto" data-hook="B">
-  <div class="hook-before space-y-5 text-ink-soft leading-relaxed">
-    <header class="space-y-2">
-      <h2 class="text-xl font-semibold text-ink">中場 — 換一種工具、換一種任務</h2>
-      <p>剛剛 Hook A 說的「依我們公司真政策回信」那種要碰你公司檔案的活，ChatGPT 碰不到。現在看一個真的要動你電腦的任務：</p>
-      <blockquote class="border-l-2 border-edge pl-3 text-ink">你電腦裡有 50 份客戶會議逐字稿，你想讓 AI 讀過全部、摘出客戶最常抱怨什麼。</blockquote>
-      <p>你聽說 Claude Code / Codex 能直接讀你電腦的檔。</p>
-    </header>
-
-    <fieldset class="space-y-2">
-      <legend class="font-medium text-ink">Q1. 這種「要讀你本機 50 份檔」的活，你會交給 Claude Code / Codex 嗎？</legend>
-      <label class="block"><input type="radio" name="B-q1" value="yes-know-how"> 會，我大概知道怎麼弄</label>
-      <label class="block"><input type="radio" name="B-q1" value="know-direction-cant-do"> 知道方向但不會做</label>
-      <label class="block"><input type="radio" name="B-q1" value="dont-know-where-to-start"> 不知道怎麼開始</label>
-    </fieldset>
-
-    <fieldset class="space-y-2">
-      <legend class="font-medium text-ink">Q2. 你知道它「真的」怎麼讀到你的檔嗎？</legend>
-      <label class="block"><input type="radio" name="B-q2" value="know"> 知道</label>
-      <label class="block"><input type="radio" name="B-q2" value="roughly"> 大概</label>
-      <label class="block"><input type="radio" name="B-q2" value="feels-like-magic"> 覺得有點像魔法</label>
-    </fieldset>
-
-    <div class="space-y-1">
-      <label class="font-medium text-ink block" for="B-text">Q3.（可選）如果要做，你會用什麼？</label>
-      <textarea id="B-text" class="hook-text w-full rounded-md border border-edge bg-surface px-3 py-2 text-sm font-mono" rows="3"></textarea>
-    </div>
-
-    <button class="hook-done inline-flex items-center px-4 py-2 rounded-md bg-ink text-surface text-sm font-medium hover:bg-ink-soft transition-colors">我看完了 → 進 Tab ④</button>
-  </div>
-
-  <div class="hook-revisit space-y-5 text-ink-soft leading-relaxed" hidden></div>
-</div>
-<div class="hook-content">
-<div class="text-right max-w-2xl"><button class="hook-revisit-btn text-xs text-final hover:underline">↻ 再回顧中場那題</button></div>
     <section class="prompt-area space-y-3">
       <label for="system-prompt-agent" class="block text-sm font-medium text-ink-soft">System Prompt(預填,可改)</label>
       <details class="info-tag">
@@ -440,7 +362,6 @@ help me
       </div>
       <div class="final-content text-base md:text-lg leading-relaxed text-ink"></div>
     </section>
-</div><!-- /.hook-content -->
   </main>
 
   <!-- ─────────────────────────────────────────────────────────────────
@@ -676,8 +597,6 @@ curl "https://api.weatherapi.com/v1/current.json?key=YOUR_KEY&amp;q=Taipei"
         <p class="text-muted">7 章走完了。我們看你學到什麼、然後給這些東西「一個家」。</p>
       </header>
 
-      <section class="hook-recap space-y-4" data-hook-recap></section>
-
       <section class="space-y-3">
         <h3 class="text-lg font-medium text-ink">§1. 你現在懂的 7 件事</h3>
         <table class="text-sm w-full border border-edge-soft my-2">
@@ -853,7 +772,6 @@ AI → git push
     </div>
   </main>
 
-  <script src="app.js?v=55"></script>
-<script src="hooks.js?v=55"></script>
+  <script src="app.js?v=56"></script>
 </body>
 </html>
