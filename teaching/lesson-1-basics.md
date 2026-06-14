@@ -24,10 +24,10 @@ Ask each question in order:
 ## Demo Segments
 
 ### Segment 1 — Text the model has memorized (peaked)
-- Set-up: "I'm going to drive the browser automatically: send `床前明月光` (a classical poem line the model has memorized) to a 0.6B model and watch it complete one token at a time. Watch the probability chart on the right."
+- Set-up: "I'm going to drive the browser automatically: send `床前明月光,疑是地上` (the first lines of a classical poem the model has memorized) to a 0.6B model and watch the next token. Watch the probability chart on the right." (Collect a prediction first: what's the next character?)
 - Run: `python3 teaching/demos/demo_tab1.py --segment 1 --lang en`
-- On screen: select preset → submit → tokens appear one by one → click a token → top-10 bar chart
-- Debrief: top-1 probability 99%+ — the model has "memorized" this line; completion is not a database lookup, it's probability
+- On screen: select preset → submit → tokens appear one by one → click the first token → top-10 bar chart
+- Debrief: it completes with `霜`, top-1 94%+ (next-best only 3%) — the model has "memorized" the whole poem; completion is not a database lookup, it's probability. This is what **peaked** looks like: high confidence
 
 ### Segment 2 — The made-up planet (peaked ≠ true)
 - Set-up: "This time we send `祖樹星上最高的山叫做` — `祖樹星` is a planet I made up. Guess: will the model say 'I don't know', or will it invent a mountain name?" (Collect learner predictions first!)

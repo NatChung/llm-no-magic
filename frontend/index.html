@@ -42,7 +42,7 @@
       },
     };
   </script>
-  <link rel="stylesheet" href="styles.css?v=56">
+  <link rel="stylesheet" href="styles.css?v=57">
 </head>
 <body class="min-h-screen bg-surface text-ink antialiased">
   <div id="swap-banner" class="hidden fixed top-16 left-1/2 -translate-x-1/2 rounded-md bg-final-tint px-4 py-2 text-sm text-final shadow-md z-50">
@@ -100,7 +100,7 @@
       <div class="preset-row">
         <select class="preset-select w-full max-w-md rounded-md border border-edge bg-surface px-3 py-2 text-sm focus:outline-none focus:border-final focus:ring-1 focus:ring-final">
           <option value="">(Pick a preset to prefill, or type your own)</option>
-          <option value="床前明月光">1. `床前明月光` — model knows this poem → peaked, top-1 99%+</option>
+          <option value="床前明月光,疑是地上">1. `床前明月光,疑是地上` — model has the whole poem memorized → "霜", top-1 94%+ (peaked)</option>
           <option value="祖樹星上最高的山叫做">2. `祖樹星上最高的山叫做` — fictional planet, model still confidently makes it up → peaked ≠ true</option>
           <option value="他打開冰箱,拿出">3. `他打開冰箱,拿出` — model has no idea what comes next → flat, top-K spread out</option>
         </select>
@@ -773,6 +773,6 @@ AI  → git push
     </div>
   </main>
 
-  <script src="app.js?v=56"></script>
+  <script src="app.js?v=57"></script>
 </body>
 </html>

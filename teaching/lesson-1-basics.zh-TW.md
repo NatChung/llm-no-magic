@@ -22,10 +22,10 @@
 ## Demo 段落
 
 ### 段落 1 — model 記得的文本(peaked)
-- 預告:「我讓瀏覽器自己動:送『床前明月光』給一個 0.6B 小 model,看它一個字一個字接。注意右邊機率圖。」
+- 預告:「我讓瀏覽器自己動:送『床前明月光,疑是地上』給一個 0.6B 小 model,看它接下一個字。注意右邊機率圖。」(先收學員預測:下一個字是什麼?)
 - 跑:`python3 teaching/demos/demo_tab1.py --segment 1 --lang zh-TW`
-- 畫面:選 preset → 送出 → token 蹦出 → 點 token → top-10 bar chart
-- debrief:top-1 99%+ — model「背過」這句;接龍不是查資料,是機率
+- 畫面:選 preset → 送出 → token 蹦出 → 點第一個 token → top-10 bar chart
+- debrief:接「霜」,top-1 94%+(次高才 3%)— model「背過」整首詩;接龍不是查資料,是機率。這就是 **peaked**:它很有把握
 
 ### 段落 2 — 瞎掰的星球(peaked ≠ 真實)
 - 預告:「這次送 `祖樹星上最高的山叫做` — 祖樹星是瞎掰的星球。你猜:model 會說『不知道』,還是編一個山名?」(先收學員預測!)
