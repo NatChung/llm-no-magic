@@ -70,11 +70,27 @@ def pick_preset(panel, value: str):
 
 
 def run_and_wait(panel):
-    """按送出、等生成結束(.run 回到 enabled)。"""
+    """按送出、等生成結束(.run 回到 enabled)。
+
+    生成「啟動」用 MutationObserver latch 抓,不直接 wait 那個瞬態 .run[disabled]:
+    短生成(如 chat 模式條列答)的 disabled 視窗只有 ~300ms,可能比 click 後、wait 前
+    的 slow_mo 延遲還短 → 直接 wait 會間歇性錯過瞬態而逾時。latch 是單調旗標,設了就不會
+    被錯過。空 prompt → app.js guard 不送 → 旗標永不為真 → wait_for_function 逾時(預期)。
+    """
+    page = panel.page
+    page.evaluate(
+        """() => {
+            const el = document.querySelector('main.tab-panel.active .run');
+            window.__genStarted = el.disabled;
+            window.__genObs = new MutationObserver(
+                () => { if (el.disabled) window.__genStarted = true; });
+            window.__genObs.observe(el, {attributes: true, attributeFilter: ['disabled']});
+        }"""
+    )
     panel.locator(".run").click()
-    # .run disabled 是 click handler 同步設定,不會 race;空 prompt 時 app.js 不送 → 這行逾時
-    panel.locator(".run[disabled]").wait_for(timeout=10_000)
-    panel.locator(".run:not([disabled])").wait_for(timeout=GEN_TIMEOUT_MS)
+    page.wait_for_function("() => window.__genStarted === true", timeout=10_000)  # 生成已啟動
+    panel.locator(".run:not([disabled])").wait_for(timeout=GEN_TIMEOUT_MS)        # 生成結束
+    page.evaluate("() => { if (window.__genObs) window.__genObs.disconnect(); }")
 
 
 def pause(page, args, ms: int):
