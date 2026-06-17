@@ -3,9 +3,9 @@
 > 中文版: [lesson-2-product.zh-TW.md](./lesson-2-product.zh-TW.md)
 
 ## Learning objectives
-1. Understand that "product-layer processing" = **concatenating more text** before and after your words before sending to the model (no other magic involved)
-2. Read and recognise `<|im_start|>system / user / assistant` role-boundary markers
-3. Connect back to Hook A: pasting an SOP into the chat box works precisely because "it's all just text concatenated into tokens"
+1. See that the heart of the chat template is the "**Q: / A:**" structure — the markers label "this part is what the user **asked**, now it's the assistant's turn to **answer**", which is why the model *answers* instead of treating your words as a prompt to *continue*
+2. Know that the system prompt is a **second knob** layered on top — it shapes **how** it answers (style/rules), not *whether* it answers
+3. Connect back to Hook A: the "Q:/A:" structure and the system line are, in the model's eyes, both just tokens wrapped by `<|im_start|>…` — which is why pasting an SOP straight into the chat box works just as well
 
 ## Hook questions (ask first, don't reveal answers)
 - "Same question — `一年有幾個月?` (how many months in a year?) — but with a line prepended: `你是行銷顧問,用條列式回答,只給 3 點。` (you are a marketing consultant, reply in bullet points, 3 points only). How different do you think the output will be? What changes?"
@@ -14,21 +14,25 @@
 ## Demo segments
 
 ### Segment 1 — Bare prompt (control group)
-- Preview: "Let's see the unprocessed version first: the question is fed in as-is, and the model treats it like a completion task."
+- Preview: "Let's see the unprocessed version first: the question is fed in as-is, with no structure at all."
 - Run: `python3 teaching/demos/demo_tab2.py --segment 1 --lang en`
-- Debrief: Output sprawls out and reads like a continuation, not an answer — the model has no idea "who is asking whom"
+- Debrief: Output sprawls out and reads like a continuation, not an answer (it may even loop) — the model doesn't know you're *asking*; it treats `一年有幾個月?` as text to continue. With no "Q:/A:" structure, it can't tell who's asking and who's answering
 
-### Segment 2 — Add system prompt + chat template
-- Preview: "Same question, now wrapped with a system prompt and the Qwen3 chat template. We'll first expand the 'final prompt actually sent to the model' so you can see the markers."
+### Segment 2 — Add chat template (Q:/A:) + system (how to answer)
+- Preview: "Same question, this time wrapped into a 'Q:/A:' structure by the Qwen3 chat template, plus one system line for style. We'll first expand the 'final prompt actually sent to the model' to see what it really looks like."
 - Run: `python3 teaching/demos/demo_tab2.py --segment 2 --lang en`
-- Debrief: Output becomes a clean bulleted list. Focus on the preview: how `<|im_start|>system…<|im_end|>` wraps your text; the marker looks like 12 characters but the model sees it as 1 token (vocab id `151644`)
+- Debrief: Output becomes a clean bulleted list. Two things stack up:
+  1. **The "Q:/A:" structure** (the main cause) — the markers tell the model "`<|im_start|>user` is the question, `<|im_start|>assistant` is your turn to answer", so it *answers* instead of continuing
+  2. **The system line** (you are a marketing consultant…) sits at the front and only governs **how** it answers (bullets, 3 points)
+- Expand the preview to see what "Q:/A:" really is in the model's eyes: the `<|im_start|>system…<|im_end|>` / `user` / `assistant` markers — each looks like 12 characters but the model sees it as 1 token (vocab id `151644`)
 
 ## Learner practice
 Preset 2 — `夏季冰飲文案` (summer iced-drink copy): have learners run it raw once, then with the system prompt, and compare how structured the output becomes. Encourage them to edit the system prompt content (e.g. "reply in Taiwanese accent", "reply in exactly 1 sentence") and observe the output change accordingly.
 
 ## Reveal & recap
-- Back to Hook A Q3: now you know why "paste in the SOP + spell out the rules" works — ChatGPT's web interface doesn't expose a system-prompt field, but **it's all just text concatenated into tokens**; typing it into the chat box has the same effect
-- One-liner summary: the product layer has no magic — it's "typing on your behalf"
+- Keep the two knobs separate: **the "Q:/A:" structure** decides *whether* it answers (vs continues), **the system line** decides *how* it answers (style/rules) — but in the model's eyes **both are just tokens wrapped by `<|im_start|>…`**
+- Back to Hook A Q3: that's why "paste in the SOP + spell out the rules" works — ChatGPT's web interface doesn't expose a system-prompt field, but **it's all just text concatenated into tokens**; typing it into the chat box has the same effect
+- One-liner summary: the product layer has no magic — it "types the 'Q:/A:' and the instructions on your behalf"
 
 ## Common questions
 - "Is the system prompt more 'authoritative'?" — Training makes the model follow the system turn more readily, but fundamentally it's still tokens
