@@ -1,5 +1,7 @@
 # Lesson 2 — Tab ② 產品層加工:system prompt 與 chat template
 
+> English: [lesson-2-product.md](./lesson-2-product.md)
+
 ## 學習目標
 1. 知道「產品層加工」= 在你的字前後**拼上更多文字**再丟給 model(沒有別的魔法)
 2. 看懂 `<|im_start|>system / user / assistant` 角色邊界 marker

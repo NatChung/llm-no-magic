@@ -1,5 +1,7 @@
 # Lesson 3 — Tab ③ 推理:thinking 就是把思考寫成 token
 
+> English: [lesson-3-reasoning.md](./lesson-3-reasoning.md)
+
 ## 學習目標
 1. 知道 thinking mode = model 先吐 `<think>…</think>` 思考 token、再吐答案
 2. 體會同一個 model,「有沒有空間想」對答案正確率的影響

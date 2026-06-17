@@ -10,7 +10,7 @@ Runs entirely local on your Mac — `llama.cpp` + Qwen3 GGUF models.
 
 ## What you'll see
 
-- **① Basics** — Type something → watch the model emit tokens one at a time + the top-10 probability distribution at each step. Three Chinese presets form a complete teaching arc: `床前明月光` (peaked — a Tang dynasty poem the model knows by heart → top-1 99%+), `祖樹星上最高的山叫做` (peaked, but **you made up** the star name — the model still confidently invents an answer → **peaked ≠ truth**), `他打開冰箱,拿出` (flat, the model has no idea what to fill in). Together they show "confidence ≠ correctness" + "shape of the distribution reflects model certainty".
+- **① Basics** — Type something → watch the model emit tokens one at a time + the top-10 probability distribution at each step. Three Chinese presets form a complete teaching arc: `床前明月光,疑是地上` (peaked — the model has this Tang poem memorized → completes `霜` at top-1 94%+), `祖樹星上最高的山叫做` (peaked, but **you made up** the star name — the model still confidently invents an answer → **peaked ≠ truth**), `他打開冰箱,拿出` (flat, the model has no idea what to fill in). Together they show "confidence ≠ correctness" + "shape of the distribution reflects model certainty".
 - **② Product Layer** — Add a system prompt + Qwen3 chat template, compare the "processed" prompt with raw. Three preset user prompts to try with one click: `一年有幾個月?` (general knowledge, short answer), `寫一個夏季冰飲的促銷文案` (creative), `請寫一首關於月亮的五言絕句` (literary form) — system prompt is yours to write (placeholder hint: "you are a marketing consultant, answer in bullet points, max 3").
 - **③ Reasoning** — Thinking on/off. Same question, direct answer vs writing a think block first (effect of reasoning on accuracy).
 - **④ Agent** — Multi-turn function calling. The model emits `<tool_call>` tokens → client parses them → **actually executes** (read/write files, run bash) → result goes back into the conversation → the model continues, until final.
@@ -76,7 +76,7 @@ Student usage: clone, open Claude Code in the repo folder, say "hi".
 ### Tab ① Basics — 60-second comparison
 
 1. Open Tab ① (default active)
-2. Preset 1 `床前明月光` + Send → expect the model to continue with `,疑是地上霜`, top-1 at 99%+ (high confidence on familiar text)
+2. Preset 1 `床前明月光,疑是地上` + Send → expect the model to continue with `霜`, top-1 at 94%+ (next-best only 3%, high confidence on familiar text)
 3. Preset 2 `祖樹星上最高的山叫做` + Send → expect the model to confidently invent a fake mountain name, top-1 also high — **same peaked shape, but this time it's made up** (peaked ≠ truth / confidence ≠ correctness)
 4. Preset 3 `他打開冰箱,拿出` + Send → expect top-10 spread out (water / eggs / leftovers / beer...flat), the model is "unsure what comes next"
 5. Click any token to see the top-10 bar chart. The "shape comparison" across the three presets is the entire teaching point of Tab ①.

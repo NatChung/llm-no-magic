@@ -10,7 +10,7 @@
 
 ## What you'll see
 
-- **① 基礎** — 打字進去 → 看 model 一個一個吐 token + 每個 token 當下 top-10 機率分佈。中文 preset 3 個有完整教學弧:`床前明月光`(peaked,model 記得 → top-1 99%+)、`祖樹星上最高的山叫做`(peaked,**你瞎掰**的星球 model 照樣自信編 → **peaked ≠ 真實**)、`他打開冰箱,拿出`(flat,model 不知接啥)。3 個對比展示「confidence ≠ correctness」+「分佈形狀反映 model 把握度」
+- **① 基礎** — 打字進去 → 看 model 一個一個吐 token + 每個 token 當下 top-10 機率分佈。中文 preset 3 個有完整教學弧:`床前明月光,疑是地上`(peaked,model 背過整首詩 → 接「霜」top-1 94%+)、`祖樹星上最高的山叫做`(peaked,**你瞎掰**的星球 model 照樣自信編 → **peaked ≠ 真實**)、`他打開冰箱,拿出`(flat,model 不知接啥)。3 個對比展示「confidence ≠ correctness」+「分佈形狀反映 model 把握度」
 - **② 產品層加工** — 加 system prompt + Qwen3 chat template,看「加工後」prompt 跟 raw 對比。中文 preset 3 個 user prompt 一鍵試:`一年有幾個月?`(常識短答)、`寫一個夏季冰飲的促銷文案`(創作)、`請寫一首關於月亮的五言絕句`(文學)— system 自填(textarea placeholder 已 hint「你是行銷顧問,用條列式回答,只給 3 點」)
 - **③ 推理** — thinking 開關。同題目,直答 vs 寫 think block 後再答(reasoning 對精度的影響)
 - **④ Agent** — multi-turn function calling,model 吐 `<tool_call>` token → client parse → **真的執行**(read/write 檔案、跑 bash)→ 結果塞回對話再吐字,直到 final
@@ -76,7 +76,7 @@ LISTEN_HOST=0.0.0.0 nohup python3 -u -m agent.server > /tmp/agent-server.log 2>&
 ### Tab ① 基礎 — 60 秒對比
 
 1. 切到 Tab ① (default active)
-2. preset 1「`床前明月光`」+ 送出 → 預期 model 接「,疑是地上霜」,top-1 99%+(model 對熟悉文本極高 confidence)
+2. preset 1「`床前明月光,疑是地上`」+ 送出 → 預期 model 接「霜」,top-1 94%+(次高才 3%,model 對熟悉文本極高 confidence)
 3. preset 2「`祖樹星上最高的山叫做`」+ 送出 → 預期 model 自信編一個假地名,top-1 也很高 — **同樣 peaked,但這次是瞎掰** (peaked ≠ 真實 / confidence ≠ correctness)
 4. preset 3「`他打開冰箱,拿出`」+ 送出 → 預期 top-10 分散(水 / 雞蛋 / 剩飯 / 啤酒...flat),model 表達「不知接啥」
 5. 點任一 token 看 top-10 bar chart;3 個 preset 的「形狀對比」就是 Tab ① 全部教學

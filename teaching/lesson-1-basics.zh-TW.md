@@ -1,5 +1,7 @@
 # Lesson 1 — Tab ① 基礎:token 與機率分佈
 
+> English: [lesson-1-basics.md](./lesson-1-basics.md)
+
 ## 學習目標
 1. 知道 model 是「一個 token 一個 token 接龍」,每步從機率分佈抽樣
 2. 會讀 top-10 bar chart:peaked(很有把握)vs flat(不知道接啥)

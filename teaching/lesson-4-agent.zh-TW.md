@@ -1,5 +1,7 @@
 # Lesson 4 — Tab ④ Agent:tool_call 約定與真執行(+ 整課收尾)
 
+> English: [lesson-4-agent.md](./lesson-4-agent.md)
+
 ## 學習目標
 1. 知道 Agent = model 吐 `<tool_call>` 約定標籤 → client parse → **真的執行** → 結果塞回對話
 2. 看懂 multi-turn loop:每個 turn 的輸出累積進 messages、直到不再 tool_call
