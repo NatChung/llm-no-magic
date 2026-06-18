@@ -24,12 +24,15 @@ Read this scenario aloud to participants:
 
 ### Segment 1 — What time is it? (get_time)
 - Preview: "The model has no clock. Guess how it knows the current time? Watch the purple '↑ Tool call' and green '↓ Tool result' blocks."
-- Run: `python3 teaching/demos/demo_tab4.py --segment 1 --lang en`
+- Via MCP: open http://localhost:9000/ → click Tab ④ (Agent) → re-snapshot until the "Loading…" banner is gone (loading the 4B model takes longer — be patient)
+- Select preset `現在幾點?` → click Submit → wait until the Submit button is re-enabled
+- Watch the turn trace (purple tool calls / green tool results) → read the final answer
 - Debrief: Turn 1 — model outputs `<tool_call>{"name":"get_time"…}` → client actually runs Python to get the time → feeds result back into the conversation → Turn 2 can now answer. **The XML tag is just a convention; the client is what executes.**
 
 ### Segment 2 — Count .md files (exec_bash)
 - Preview: "This time it will run a shell command and actually count files in this repo."
-- Run: `python3 teaching/demos/demo_tab4.py --segment 2 --lang en`
+- Via MCP: select preset `數一下這個 repo 底下有幾個 .md 檔` → click Submit → wait until the Submit button is re-enabled
+- Watch the turns accumulate → read the final answer
 - Debrief: Expand the "resend" details in the turn block — see how the conversation accumulates round by round to become the next input.
 
 ## Hands-On

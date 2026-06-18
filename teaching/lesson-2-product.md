@@ -15,16 +15,18 @@
 
 ### Segment 1 — Bare prompt (control group)
 - Preview: "Let's see the unprocessed version first: the question is fed in as-is, with no structure at all."
-- Run: `python3 teaching/demos/demo_tab2.py --segment 1 --lang en`
+- Via MCP: open http://localhost:9000/ → click Tab ② (Product-layer processing) → re-snapshot until the "Loading…" banner is gone
+- Confirm the mode radio is set to "Bare prompt" → select preset `一年有幾個月?` → click Submit → wait until the Submit button is re-enabled
 - Debrief: Output sprawls out and reads like a continuation, not an answer (it may even loop) — the model doesn't know you're *asking*; it treats `一年有幾個月?` as text to continue. With no "Q:/A:" structure, it can't tell who's asking and who's answering
 
 ### Segment 2 — Add chat template (Q:/A:) + system (how to answer)
 - Preview: "Same question, this time wrapped into a 'Q:/A:' structure by the Qwen3 chat template, plus one system line for style. We'll first expand the 'final prompt actually sent to the model' to see what it really looks like."
-- Run: `python3 teaching/demos/demo_tab2.py --segment 2 --lang en`
+- Via MCP: fill in the system field `你是行銷顧問,用條列式回答,只給 3 點。` → switch mode to "Product processing (chat)" → select preset `一年有幾個月?` → click to expand the "Final prompt actually sent to the model" preview
+- Click Submit → wait until the Submit button is re-enabled → read the output (clean bulleted list)
 - Debrief: Output becomes a clean bulleted list. Two things stack up:
   1. **The "Q:/A:" structure** (the main cause) — the markers tell the model "`<|im_start|>user` is the question, `<|im_start|>assistant` is your turn to answer", so it *answers* instead of continuing
-  2. **The system line** (you are a marketing consultant…) sits at the front and only governs **how** it answers (bullets, 3 points)
-- Expand the preview to see what "Q:/A:" really is in the model's eyes: the `<|im_start|>system…<|im_end|>` / `user` / `assistant` markers — each looks like 12 characters but the model sees it as 1 token (vocab id `151644`)
+  2. **The system line** (`你是行銷顧問,用條列式回答,只給 3 點。`) sits at the front and only governs **how** it answers (bullets, 3 points)
+- Point to the `<|im_start|>` markers in the preview — each looks like 12 characters but the model sees it as 1 token (vocab id `151644`)
 
 ## Learner practice
 Preset 2 — `夏季冰飲文案` (summer iced-drink copy): have learners run it raw once, then with the system prompt, and compare how structured the output becomes. Encourage them to edit the system prompt content (e.g. "reply in Taiwanese accent", "reply in exactly 1 sentence") and observe the output change accordingly.

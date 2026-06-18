@@ -24,13 +24,16 @@
 
 ### 段落 1 — 現在幾點?(get_time)
 - 預告:「model 沒有時鐘。猜它怎麼知道現在幾點?看紫色『↑ 工具呼叫』和綠色『↓ 工具結果』。」
-- 跑:`python3 teaching/demos/demo_tab4.py --segment 1 --lang zh-TW`
+- 用 MCP:開 http://localhost:9000/index.zh-TW.html → 點 Tab ④(Agent)→ 重複 snapshot 到「載入…中」消失(4B 換模載入較久,耐心等)
+- 選 preset「現在幾點?」→ 點「送出」→ 等「送出」鈕回 enabled
+- 看 turn 軌跡(紫色工具呼叫 / 綠色工具結果)→ 讀 final answer
 - debrief:Turn 1 model 吐 `<tool_call>{"name":"get_time"…}` → client 真的跑 Python 拿時間 →
   塞回對話 → Turn 2 才答得出來。**XML 標籤只是約定,執行的是 client**
 
 ### 段落 2 — 數 .md 檔(exec_bash)
 - 預告:「這次它要跑 shell 指令、真的數這個 repo 的檔案。」
-- 跑:`python3 teaching/demos/demo_tab4.py --segment 2 --lang zh-TW`
+- 用 MCP:選 preset「數一下這個 repo 底下有幾個 .md 檔」→ 點「送出」→ 等「送出」鈕回 enabled
+- 看 turn 累積 → 讀 final answer
 - debrief:展開 turn block 的「再送出」details:看 conversation 怎麼一輪輪累積成下次 input
 
 ## 學員動手
