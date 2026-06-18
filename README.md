@@ -63,9 +63,9 @@ LISTEN_HOST=0.0.0.0 nohup python3 -u -m agent.server > /tmp/agent-server.log 2>&
 Don't want to explore alone? Open this repo with an AI coding agent. It reads
 [AGENTS.md](./AGENTS.md), asks whether you're the teacher or a student, then:
 
-- runs `python3 init.py` to check your environment (llama.cpp, models, playwright) and guides any installs
-- runs the course from [teaching/](./teaching/): asks for your prediction → plays a Playwright demo on screen → debriefs
-- you just answer, watch, and occasionally drive
+- runs `python3 init.py` to check your environment (llama.cpp, models, Node/npx + a browser MCP) and guides any installs
+- runs the course from [teaching/](./teaching/): the AI **drives one browser itself via a browser MCP**, narrating as it goes, and leaves it open for you to try
+- you just watch that screen, listen, and occasionally drive (no opening URLs yourself)
 
 Student usage: clone, open Claude Code in the repo folder, say "hi".
 
