@@ -25,19 +25,19 @@
 
 ### 段落 1 — model 記得的文本(peaked)
 - 預告:「我讓瀏覽器自己動:送『床前明月光,疑是地上』給一個 0.6B 小 model,看它接下一個字。注意右邊機率圖。」(先收學員預測:下一個字是什麼?)
-- 跑:`python3 teaching/demos/demo_tab1.py --segment 1 --lang zh-TW`
-- 畫面:選 preset → 送出 → token 蹦出 → 點第一個 token → top-10 bar chart
-- debrief:接「霜」,top-1 94%+(次高才 3%)— model「背過」整首詩;接龍不是查資料,是機率。這就是 **peaked**:它很有把握
+- 用 MCP:開 http://localhost:9000/index.zh-TW.html → 點 Tab ①(`從這開始`旁的`① 基礎`)→ 重複 snapshot 到「載入…中」消失
+- 選 preset「床前明月光,疑是地上」→ 點「送出」→ 等「送出」鈕回 enabled
+- 點生成文字第一個 token → snapshot 讀機率(預期接「霜」、top-1 94%+)。旁白:它「背過」整首詩 → peaked
 
 ### 段落 2 — 瞎掰的星球(peaked ≠ 真實)
 - 預告:「這次送 `祖樹星上最高的山叫做` — 祖樹星是瞎掰的星球。你猜:model 會說『不知道』,還是編一個山名?」(先收學員預測!)
-- 跑:`python3 teaching/demos/demo_tab1.py --segment 2 --lang zh-TW`
-- debrief:照樣高 confidence 編出來 → peaked 只代表「它覺得順」,不代表真
+- 用 MCP:選 preset「祖樹星上最高的山叫做」(先收學員預測:會說不知道、還是編山名?)→ 送出 → 等完成
+- 點 token 讀 snapshot 機率。旁白:照樣高 confidence 編 → peaked ≠ 真實
 
 ### 段落 3 — 不知道接啥(flat)
 - 預告:「『他打開冰箱,拿出』— 你猜 top-10 會長怎樣?」
-- 跑:`python3 teaching/demos/demo_tab1.py --segment 3 --lang zh-TW`
-- debrief:水/雞蛋/啤酒…分散 → 分佈形狀 = model 把握度
+- 用 MCP:選 preset「他打開冰箱,拿出」(先問:top-10 會長怎樣?)→ 送出 → 等完成 → 點 token 讀機率
+- 旁白:水/雞蛋/啤酒…分散 → 分佈形狀 = model 把握度
 
 ## 學員動手
 請學員自己:換一個 preset 重跑、點不同 token 看分佈跳動;進階 — 打一句只有他們公司
