@@ -1,4 +1,9 @@
-"""Shared Playwright helpers for teaching demos.
+"""Shared Playwright helpers — CREATOR regression harness (NOT the student demo).
+
+v2 帶課由 AI 用 browser MCP 即時驅動(見 AGENTS.md / lesson playbook);這些 Python script
+降為 creator 跑 `--smoke` 的頁面回歸驗證(確認 preset/selector/生成流程沒漂移)。學生不用 pip playwright。
+
+Shared Playwright helpers for the demo smoke harness.
 
 契約(對應 frontend/app.js):
 - 切 tab 成功 = `main.tab-panel.active[data-panel=…]` 出現(swap 失敗會 alert 且不切)
