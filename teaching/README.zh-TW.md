@@ -22,17 +22,18 @@
 2. **先問預測再 demo** — 每課的 Hook 問答永遠在 demo 之前;把學員的回答記住(lesson 4 收尾要對照)
 3. **學員答錯不直接糾正** — 用 demo 讓他自己看到
 4. **對話語言跟學員**;教材雙語,取對應語言的 lesson 檔
-5. **Demo 三拍**:預告(說等下會看到什麼)→ 跑 script(blocking)→ 讀 stdout step log 來 debrief。不要嘗試邊跑邊解說
-6. Demo 一律用預寫 script,**不要**改用 browser MCP 即時操控
+5. **Demo 三拍**:預告(說等下會看到什麼)→ 用 browser MCP 操作頁面 → 看結果 debrief。一個瀏覽器、你操作、學員看
+6. demo 一律用 **browser MCP** 即時驅動,**不要**叫學生自己開網址、也不要跑 Python script 當學生 demo(那是 creator 跑 `--smoke` 回歸用)
 
-## 跑 demo
+## 帶 demo(用 browser MCP)
 
-```bash
-python3 teaching/demos/demo_tab1.py --segment 1 --lang zh-TW   # 段落式,有頭、放慢
-python3 teaching/demos/demo_tab1.py --smoke                     # 自驗:headless 跑全部
-```
+你(AI)用 browser MCP 開 http://localhost:9000/index.zh-TW.html(英文用 `/`)、照 lesson 的
+playbook 操作,demo 完**不要關**、留著讓學生試。等待 / 失敗訊號:
 
-前置:`python3 init.py` 全綠(含 playwright)、server 在跑、學員 browser 開著
-http://localhost:9000/index.zh-TW.html(讓學員看同一個畫面;demo script 會自己另開視窗)。
+- 切 tab 會觸發 model swap → 重複 snapshot 到「載入…中」banner 文字消失再往下
+- 生成中「送出」鈕 disabled、完成回 enabled;點 token 後機率值直接在 snapshot 文字裡
+- swap 失敗會跳 dialog「Model swap failed…」→ 處理 dialog + 跟學生說失敗,照 AGENTS.md Troubleshooting(port 8080)
 
-失敗時 script 會印一行原因(server 沒起/swap 失敗/逾時) — 照 AGENTS.md Troubleshooting 修,重跑同段落。
+前置:`python3 init.py` 全綠(Node/npx + MCP 設定就位)、server 在跑、browser MCP 已核准。
+
+> creator 回歸驗證(非帶課):`python3 teaching/demos/demo_tab*.py --smoke`(需 pip playwright)。

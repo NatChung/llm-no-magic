@@ -28,21 +28,25 @@ wrap-up — do not skip ahead).
 3. **Don't correct the learner directly when they're wrong** — let the demo show them
 4. **Match the learner's language**; materials are bilingual — pick the lesson file in the
    matching language
-5. **Three-beat demo**: announce (say what they're about to see) → run the script (blocking)
-   → read the stdout step log to debrief. Do not attempt to narrate while the script is running
-6. Always use the pre-written scripts for demos — **do not** substitute live browser MCP
-   control
+5. **Three-beat demo**: announce (say what they're about to see) → operate the page with browser
+   MCP → debrief on what they saw. One browser, you drive, the learner watches
+6. Always drive demos with **browser MCP** live — **do not** ask the learner to open the URL
+   themselves, and do not run Python scripts as the learner demo (those are the creator's
+   `--smoke` regression harness)
 
-## Running demos
+## Running demos (browser MCP)
 
-```bash
-python3 teaching/demos/demo_tab1.py --segment 1 --lang en   # segmented, with header + pacing
-python3 teaching/demos/demo_tab1.py --smoke                  # self-check: headless full run
-```
+You (AI) open http://localhost:9000/ via browser MCP and follow the lesson playbook. Leave the
+browser open after the demo so the learner can try it themselves. Wait / failure signals:
 
-Prerequisites: `python3 init.py` all green (including playwright), server running, learner's
-browser open at http://localhost:9000/ (learner watches the same screen; the demo script opens
-its own window).
+- Switching tabs triggers a model swap → keep snapshotting until the "Loading…" banner text
+  disappears before continuing
+- While generating, the Send button is disabled; it re-enables on completion; token probability
+  values appear directly in the snapshot text after clicking a token
+- A swap failure shows a dialog "Model swap failed…" → handle the dialog, tell the learner what
+  happened, and follow AGENTS.md Troubleshooting (port 8080)
 
-When a script fails it prints a one-line reason (server not up / swap failed / timeout) — fix
-it following AGENTS.md Troubleshooting, then rerun the same segment.
+Prerequisites: `python3 init.py` all green (Node/npx + MCP config in place), server running,
+browser MCP approved.
+
+> Creator regression testing (not for live teaching): `python3 teaching/demos/demo_tab*.py --smoke` (requires pip playwright).
