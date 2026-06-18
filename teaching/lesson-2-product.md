@@ -16,12 +16,12 @@
 ### Segment 1 — Bare prompt (control group)
 - Preview: "Let's see the unprocessed version first: the question is fed in as-is, with no structure at all."
 - Via MCP: open http://localhost:9000/ → click Tab ② (Product-layer processing) → re-snapshot until the "Loading…" banner is gone
-- Confirm the mode radio is set to "Bare prompt" → select preset `一年有幾個月?` → click Submit → wait until the Submit button is re-enabled
+- Confirm the mode radio is set to "Raw prompt" (the UI label is "Raw prompt (completion mode)") → select preset `一年有幾個月?` → click Submit → wait until the Submit button is re-enabled
 - Debrief: Output sprawls out and reads like a continuation, not an answer (it may even loop) — the model doesn't know you're *asking*; it treats `一年有幾個月?` as text to continue. With no "Q:/A:" structure, it can't tell who's asking and who's answering
 
 ### Segment 2 — Add chat template (Q:/A:) + system (how to answer)
 - Preview: "Same question, this time wrapped into a 'Q:/A:' structure by the Qwen3 chat template, plus one system line for style. We'll first expand the 'final prompt actually sent to the model' to see what it really looks like."
-- Via MCP: fill in the system field `你是行銷顧問,用條列式回答,只給 3 點。` → switch mode to "Product processing (chat)" → select preset `一年有幾個月?` → click to expand the "Final prompt actually sent to the model" preview
+- Via MCP: fill in the system field `你是行銷顧問,用條列式回答,只給 3 點。` → switch mode to "Product layer" (the UI label is "Product layer (Qwen3 chat template)") → select preset `一年有幾個月?` → click to expand the "Final prompt actually sent to the model" preview
 - Click Submit → wait until the Submit button is re-enabled → read the output (clean bulleted list)
 - Debrief: Output becomes a clean bulleted list. Two things stack up:
   1. **The "Q:/A:" structure** (the main cause) — the markers tell the model "`<|im_start|>user` is the question, `<|im_start|>assistant` is your turn to answer", so it *answers* instead of continuing
