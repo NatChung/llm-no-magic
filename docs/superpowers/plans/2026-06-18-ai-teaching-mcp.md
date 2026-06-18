@@ -258,6 +258,8 @@ MCP_JSON = '''{
 }
 '''
 CODEX_TOML = '[mcp_servers.playwright]\ncommand = "npx"\nargs = ["-y", "@playwright/mcp@0.0.76"]\n'
+# 注意:版本 0.0.76 出現在 3 處(.mcp.json、.codex/config.toml、這裡的 MCP_JSON/CODEX_TOML)。
+# 升版時三處一起改、重跑 spec §8 MCP dry-run。
 
 
 def restore_mcp_config() -> None:
@@ -273,6 +275,12 @@ def restore_mcp_config() -> None:
             f.write_text(CODEX_TOML); print("→ wrote .codex/config.toml")
 ```
 在 `main` 裡 `if args.fix:` 區塊內、`apply_fixes(checks)` 之前加 `restore_mcp_config()`。
+
+3i. **保護既有測試**：`main(["--fix"])` 現在會呼叫新的 `restore_mcp_config()`，它會碰真實 repo FS（`REPO_ROOT`）。既有測試 `test_fix_mode_reruns_checks_twice` 沒 mock 它 → 在有 `~/.claude.json` 的機器會讀真實 `.mcp.json`（Task 1 已建、含 "playwright" → 跳過寫入，安全但不該碰真 FS）。在該測試的 `monkeypatch` 區塊補一行：
+```python
+    monkeypatch.setattr(init, "restore_mcp_config", lambda: None)
+```
+（與既有的 `monkeypatch.setattr(init, "apply_fixes", lambda checks: None)` 並列）。
 
 - [ ] **Step 4: 跑測試確認 pass**
 
@@ -371,17 +379,30 @@ git commit -m "docs(agents): student mode drives page via MCP, leaves browser op
 **Files:**
 - Modify: `README.md`、`README.zh-TW.md`（現有「🤖 AI 帶課模式 / AI-guided mode」一節）
 
-- [ ] **Step 1: 改 `README.zh-TW.md` 該節的條列**
+- [ ] **Step 1: 改 `README.zh-TW.md` 該節三條 bullet（L66-68，標題與「學員用法」不動）**
 
-把現有三條 bullet 換成（保留標題與最後一句「學員用法」）：
+old（確切現值）:
+```markdown
+- 跑 `python3 init.py` 幫你檢查環境(llama.cpp、模型、playwright),缺什麼帶你裝
+- 照 [teaching/](./teaching/) 的課綱帶課:先問你預測 → 跑 Playwright demo 給你看畫面動 → 再揭曉
+- 你只要回答問題、看畫面、偶爾自己動手
+```
+new:
 ```markdown
 - 跑 `python3 init.py` 幫你檢查環境(llama.cpp、模型、Node/npx + browser MCP),缺什麼帶你裝
 - 照 [teaching/](./teaching/) 課綱帶課:AI **自己用 browser MCP 開並操作**那一個瀏覽器、邊做邊解說,demo 完留著讓你接手試
 - 你只要看那個畫面、聽解說、偶爾自己動手(不用自己開網址)
 ```
 
-- [ ] **Step 2: 改 `README.md` 對應英文**
+- [ ] **Step 2: 改 `README.md` 對應英文（L66-68）**
 
+old（確切現值）:
+```markdown
+- runs `python3 init.py` to check your environment (llama.cpp, models, playwright) and guides any installs
+- runs the course from [teaching/](./teaching/): asks for your prediction → plays a Playwright demo on screen → debriefs
+- you just answer, watch, and occasionally drive
+```
+new:
 ```markdown
 - runs `python3 init.py` to check your environment (llama.cpp, models, Node/npx + a browser MCP) and guides any installs
 - runs the course from [teaching/](./teaching/): the AI **drives one browser itself via a browser MCP**, narrating as it goes, and leaves it open for you to try
