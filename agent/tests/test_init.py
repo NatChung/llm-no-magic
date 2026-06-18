@@ -104,6 +104,70 @@ def test_fix_mode_reruns_checks_twice(monkeypatch):
 
     monkeypatch.setattr(init, "run_checks", fake_run_checks)
     monkeypatch.setattr(init, "apply_fixes", lambda checks: None)
+    monkeypatch.setattr(init, "restore_mcp_config", lambda: None)
     code = init.main(["--fix"])
     assert code == 0
     assert calls["n"] == 2  # once before fixes, once after
+
+
+def test_check_node_missing(monkeypatch):
+    monkeypatch.setattr(init.shutil, "which", lambda _: None)
+    c = init.check_node()
+    assert not c.ok and c.warn_only and c.warn_label == "teaching"
+
+
+def test_check_node_present(monkeypatch):
+    monkeypatch.setattr(init.shutil, "which", lambda name: "/usr/bin/npx" if name == "npx" else None)
+    assert init.check_node().ok
+
+
+def test_detect_agents_claude_only(monkeypatch, tmp_path):
+    monkeypatch.setattr(init.Path, "home", classmethod(lambda cls: tmp_path))
+    (tmp_path / ".claude.json").write_text("{}")
+    assert init._detect_agents() == ["claude"]
+
+
+def test_detect_agents_both(monkeypatch, tmp_path):
+    monkeypatch.setattr(init.Path, "home", classmethod(lambda cls: tmp_path))
+    (tmp_path / ".claude.json").write_text("{}")
+    (tmp_path / ".codex").mkdir()
+    assert set(init._detect_agents()) == {"claude", "codex"}
+
+
+def test_mcp_config_ok_for_claude(monkeypatch, tmp_path):
+    monkeypatch.setattr(init, "_detect_agents", lambda: ["claude"])
+    monkeypatch.setattr(init, "REPO_ROOT", tmp_path)
+    (tmp_path / ".mcp.json").write_text('{"mcpServers":{"playwright":{}}}')
+    assert init.check_mcp_config().ok
+
+
+def test_mcp_config_missing_codex_toml(monkeypatch, tmp_path):
+    monkeypatch.setattr(init, "_detect_agents", lambda: ["codex"])
+    monkeypatch.setattr(init, "REPO_ROOT", tmp_path)
+    c = init.check_mcp_config()
+    assert not c.ok and c.warn_label == "teaching"
+
+
+def test_mcp_config_codex_string_scan(monkeypatch, tmp_path):
+    monkeypatch.setattr(init, "_detect_agents", lambda: ["codex"])
+    monkeypatch.setattr(init, "REPO_ROOT", tmp_path)
+    cdir = tmp_path / ".codex"; cdir.mkdir()
+    (cdir / "config.toml").write_text("[mcp_servers.playwright]\ncommand='npx'\n")
+    assert init.check_mcp_config().ok
+
+
+def test_playwright_warn_label_is_creator():
+    c = init.check_playwright()
+    assert c.warn_only and c.warn_label == "creator"
+
+
+def test_summarize_groups_warn_by_label():
+    checks = [
+        init.Check("Python", True),
+        init.Check("Node/npx(教學用)", False, warn_only=True, warn_label="teaching"),
+        init.Check("playwright(creator 驗證用)", False, warn_only=True, warn_label="creator"),
+    ]
+    line, code = init.summarize(checks)
+    assert code == 0
+    assert "WARN teaching: Node/npx(教學用) missing" in line
+    assert "WARN creator: playwright(creator 驗證用) missing" in line
