@@ -42,7 +42,7 @@
       },
     };
   </script>
-  <link rel="stylesheet" href="styles.css?v=57">
+  <link rel="stylesheet" href="styles.css?v=58">
 </head>
 <body class="min-h-screen bg-surface text-ink antialiased">
   <div id="swap-banner" class="hidden fixed top-16 left-1/2 -translate-x-1/2 rounded-md bg-final-tint px-4 py-2 text-sm text-final shadow-md z-50">
@@ -90,7 +90,6 @@
         <p>你已經在用 AI 了。但<em>哪個</em>任務該用<em>哪個</em>工具——還有它為什麼有時會一臉自信地亂編?上完你會知道什麼時候該用<strong>說話工具</strong>(ChatGPT / Gemini)、什麼時候該用<strong>動手工具</strong>(Claude Code / Codex),以及它們背後到底在做什麼。</p>
       </div>
       <p>用 Claude Code / Codex 打開這個 repo,AI 會自己讀說明、帶你跑這堂課:開場跟中場會先問你真實工作場景的問題,等你懂了原理,再讓你看自己的判斷怎麼變。<strong>沒有魔法 — 只有 token、約定,跟你能驗證的工具呼叫。</strong></p>
-      <p class="text-sm text-muted">準備好了?點上面的 <strong>① 基礎</strong> 開始。</p>
     </article>
   </main>
 
@@ -330,7 +329,7 @@ help me
 
     <section class="turns-area mt-8 md:mt-10 space-y-3">
       <h2 class="text-xs uppercase tracking-wider text-muted font-medium">Agent 跑的軌跡</h2>
-      <p class="text-sm text-muted leading-relaxed">每個 turn 結束都會 <span class="font-medium text-ink-soft">累積進 messages</span>,送進下一次 model 看。</p>
+      <p class="text-sm text-muted">每個 turn 累積進 messages、送進下一次。細節聽 AI 講。</p>
       <details class="info-tag">
         <summary class="cursor-pointer text-xs text-final hover:underline list-none [&::-webkit-details-marker]:hidden select-none inline-block py-0.5">(?) 什麼是 Agent / Tool / &lt;tool_call&gt; / Turn</summary>
         <div class="mt-1.5 p-3 rounded-md bg-final-tint text-sm text-ink-soft max-w-2xl leading-relaxed space-y-3">
@@ -772,6 +771,6 @@ AI → git push
     </div>
   </main>
 
-  <script src="app.js?v=57"></script>
+  <script src="app.js?v=58"></script>
 </body>
 </html>

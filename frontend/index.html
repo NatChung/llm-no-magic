@@ -42,7 +42,7 @@
       },
     };
   </script>
-  <link rel="stylesheet" href="styles.css?v=57">
+  <link rel="stylesheet" href="styles.css?v=58">
 </head>
 <body class="min-h-screen bg-surface text-ink antialiased">
   <div id="swap-banner" class="hidden fixed top-16 left-1/2 -translate-x-1/2 rounded-md bg-final-tint px-4 py-2 text-sm text-final shadow-md z-50">
@@ -90,7 +90,6 @@
         <p>You already use AI. But <em>which</em> tool for <em>which</em> job — and why does it sometimes confidently make things up? By the end you'll know when to reach for a <strong>speaking tool</strong> (ChatGPT / Gemini) vs a <strong>doing tool</strong> (Claude Code / Codex), and what each is really doing under the hood.</p>
       </div>
       <p>Open this repo with Claude Code / Codex and the AI will read the docs and run this course with you: at the start and at half-time it asks you a real-work-scenario question first, and once you understand the mechanics it shows you how your own judgement has shifted. <strong>No magic — just tokens, conventions, and tool calls you can verify.</strong></p>
-      <p class="text-sm text-muted">Ready? Click <strong>① Basics</strong> above to begin.</p>
     </article>
   </main>
 
@@ -330,7 +329,7 @@ help me
 
     <section class="turns-area mt-8 md:mt-10 space-y-3">
       <h2 class="text-xs uppercase tracking-wider text-muted font-medium">Agent trace</h2>
-      <p class="text-sm text-muted leading-relaxed">After each turn ends, everything <span class="font-medium text-ink-soft">accumulates into messages</span> and gets sent to the model on the next turn.</p>
+      <p class="text-sm text-muted">Each turn accumulates into messages and feeds the next. Details from the AI.</p>
       <details class="info-tag">
         <summary class="cursor-pointer text-xs text-final hover:underline list-none [&::-webkit-details-marker]:hidden select-none inline-block py-0.5">(?) What are Agent / Tool / &lt;tool_call&gt; / Turn</summary>
         <div class="mt-1.5 p-3 rounded-md bg-final-tint text-sm text-ink-soft max-w-2xl leading-relaxed space-y-3">
@@ -773,6 +772,6 @@ AI  → git push
     </div>
   </main>
 
-  <script src="app.js?v=57"></script>
+  <script src="app.js?v=58"></script>
 </body>
 </html>
