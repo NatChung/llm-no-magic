@@ -5,7 +5,7 @@ Usage:
     python3 init.py          # 只檢查,一項一行 + 最後一行 summary
     python3 init.py --fix    # pip 類自動補裝;brew / 模型下載印指令請人跑
 
-Exit: 0 = 核心項全過(playwright 缺只 WARN,因為只有教學 demo 需要)、1 = 有核心項缺。
+Exit: 0 = 核心項全過(Node/npx、MCP 設定、playwright 都是 warn-only:缺只 WARN 不影響 exit)、1 = 有核心項缺。
 """
 from __future__ import annotations
 
@@ -65,9 +65,17 @@ def _detect_agents() -> list[str]:
     out = []
     if (Path.home() / ".claude.json").exists():
         out.append("claude")
-    if (Path.home() / ".codex").exists():
+    if (Path.home() / ".codex").is_dir():
         out.append("codex")
     return out
+
+
+def _read_safe(path) -> str:
+    """讀檔內容;不存在 / 不可讀都回 ""(OSError 涵蓋 FileNotFoundError/PermissionError)。"""
+    try:
+        return path.read_text()
+    except OSError:
+        return ""
 
 
 def check_mcp_config() -> Check:
@@ -76,11 +84,11 @@ def check_mcp_config() -> Check:
     missing = []
     if "claude" in agents:
         f = REPO_ROOT / ".mcp.json"
-        if not (f.exists() and "playwright" in f.read_text()):
+        if "playwright" not in _read_safe(f):
             missing.append(".mcp.json")
     if "codex" in agents:
         f = REPO_ROOT / ".codex" / "config.toml"
-        if not (f.exists() and "[mcp_servers.playwright]" in f.read_text()):
+        if "[mcp_servers.playwright]" not in _read_safe(f):
             missing.append(".codex/config.toml")
     detail = ("偵測到:" + ",".join(agents)) if agents else "未偵測到 Claude Code / Codex"
     return Check("browser MCP 設定(教學用)", not missing, detail,
@@ -213,12 +221,12 @@ def restore_mcp_config() -> None:
     agents = _detect_agents()
     if "claude" in agents:
         f = REPO_ROOT / ".mcp.json"
-        if not (f.exists() and "playwright" in f.read_text()):
+        if "playwright" not in _read_safe(f):
             f.write_text(MCP_JSON); print("→ wrote .mcp.json")
     if "codex" in agents:
         d = REPO_ROOT / ".codex"; d.mkdir(exist_ok=True)
         f = d / "config.toml"
-        if not (f.exists() and "[mcp_servers.playwright]" in f.read_text()):
+        if "[mcp_servers.playwright]" not in _read_safe(f):
             f.write_text(CODEX_TOML); print("→ wrote .codex/config.toml")
 
 

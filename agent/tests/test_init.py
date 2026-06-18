@@ -171,3 +171,19 @@ def test_summarize_groups_warn_by_label():
     assert code == 0
     assert "WARN teaching: Node/npx(教學用) missing" in line
     assert "WARN creator: playwright(creator 驗證用) missing" in line
+
+
+def test_mcp_config_no_agents(monkeypatch):
+    monkeypatch.setattr(init, "_detect_agents", lambda: [])
+    assert init.check_mcp_config().ok
+
+
+def test_restore_mcp_config_writes_when_missing(monkeypatch, tmp_path):
+    monkeypatch.setattr(init, "_detect_agents", lambda: ["claude"])
+    monkeypatch.setattr(init, "REPO_ROOT", tmp_path)
+    init.restore_mcp_config()
+    f = tmp_path / ".mcp.json"
+    assert f.exists() and "playwright" in f.read_text()
+    before = f.read_text()
+    init.restore_mcp_config()  # idempotent
+    assert f.read_text() == before
