@@ -405,35 +405,40 @@ def drive(tab: str, user: str, system: str = "", mode: str = "") -> dict:
         publish({"type": "drive_start", "tab": tab, "mode": mode,
                  "user": user, "system": system})
 
-        final = ""
-        if tab == "4":
-            turns = []
-            for ev in agent_loop(system, user):
+        try:
+            final = ""
+            if tab == "4":
+                turns = []
+                for ev in agent_loop(system, user):
+                    publish(ev)
+                    if ev["type"] == "turn_complete":
+                        turns.append(ev)
+                    elif ev["type"] == "final":
+                        final = ev["content"]
+                    elif ev["type"] == "error":
+                        # agent_loop hit MAX_TURNS etc. — surface as 5xx (spec §3.1),
+                        # not a silent 200 with empty final.
+                        return {"error": ev["message"], "subscribers": subscriber_count()}
+                    if CANCEL.is_set():
+                        break
+                return {"subscribers": subscriber_count(), "tab": tab,
+                        "turns": turns, "final": final}
+
+            tokens = []
+            for ev in completion_generate(tab, user, system, mode):
                 publish(ev)
-                if ev["type"] == "turn_complete":
-                    turns.append(ev)
+                if ev["type"] == "token":
+                    tlp = ev["top_logprobs"]
+                    prob = math.exp(tlp[0]["logprob"]) if tlp else None
+                    tokens.append({"token": ev["token"], "top_logprobs": tlp, "prob": prob})
                 elif ev["type"] == "final":
                     final = ev["content"]
-                elif ev["type"] == "error":
-                    # agent_loop hit MAX_TURNS etc. — surface as 5xx (spec §3.1),
-                    # not a silent 200 with empty final.
-                    return {"error": ev["message"], "subscribers": subscriber_count()}
-                if CANCEL.is_set():
-                    break
             return {"subscribers": subscriber_count(), "tab": tab,
-                    "turns": turns, "final": final}
-
-        tokens = []
-        for ev in completion_generate(tab, user, system, mode):
-            publish(ev)
-            if ev["type"] == "token":
-                tlp = ev["top_logprobs"]
-                prob = math.exp(tlp[0]["logprob"]) if tlp else None
-                tokens.append({"token": ev["token"], "top_logprobs": tlp, "prob": prob})
-            elif ev["type"] == "final":
-                final = ev["content"]
-        return {"subscribers": subscriber_count(), "tab": tab,
-                "tokens": tokens, "final": final}
+                    "tokens": tokens, "final": final}
+        except Exception as exc:
+            msg = f"{type(exc).__name__}: {exc}"
+            publish({"type": "error", "message": msg})
+            return {"error": msg, "subscribers": subscriber_count()}
     finally:
         GEN_LOCK.release()
 
@@ -522,7 +527,7 @@ class AgentHandler(SimpleHTTPRequestHandler):
             unsubscribe(q)
 
     def do_OPTIONS(self) -> None:
-        # CORS preflight: frontend on :9000 → backend on :8082 is cross-origin
+        # CORS preflight for the relay/API endpoints
         self.send_response(204)
         self._send_cors()
         self.end_headers()

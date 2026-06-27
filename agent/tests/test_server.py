@@ -925,6 +925,25 @@ def test_post_inspect_publishes_inspect_frame(monkeypatch):
         srv.shutdown()
 
 
+def test_drive_publishes_error_when_generation_raises(monkeypatch):
+    """llama down mid-generation: drive must publish an error frame AND return
+    {error:...} (→ 500), not propagate a traceback / hang the page."""
+    import agent.server as server
+    monkeypatch.setattr(server, "SUBSCRIBERS", [])
+    monkeypatch.setitem(server.GLOBAL_STATE, "model", "0.6B")  # no swap
+    def boom(*a, **kw):
+        raise server.requests.ConnectionError("llama down")
+    monkeypatch.setattr(server, "completion_generate", boom)
+    q = server.subscribe()
+    result = server.drive("1", "床前明月光,疑是地上")
+    assert "llama down" in result["error"]
+    frames = [q.get_nowait() for _ in range(q.qsize())]
+    assert any(f.get("type") == "error" and "llama down" in f["message"] for f in frames)
+    # GEN_LOCK must have been released despite the exception
+    assert server.GEN_LOCK.acquire(blocking=False)
+    server.GEN_LOCK.release()
+
+
 def test_post_stop_sets_cancel(monkeypatch):
     import agent.server as server
     server.CANCEL.clear()
