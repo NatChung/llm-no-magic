@@ -18,6 +18,7 @@
 - **`/events` token frame carries llama-native `{token, logprob}`** in `top_logprobs` (the frontend `renderProbs` does `Math.exp(logprob)`); the `/drive` JSON additionally exposes a computed linear `prob` per token for the AI.
 - **Tab ⑥ skill is OUT of scope** — do not touch `/skill-agent`, `_handle_skill_agent`, or `skill_agent_loop`.
 - **Keep the existing test style:** plain `def test_*` functions, `monkeypatch`, `_start_server_in_thread()` helper for HTTP-level tests.
+- **`/drive` payloads for tabs ②③ always include `mode`** (the lessons pass it). `build_completion_prompt` treats a missing tab-② `mode` as chat (templated) — which diverges from the frontend's `"raw"` default — so callers must send `mode` explicitly for tab ②.
 
 ## File Structure
 
@@ -51,9 +52,6 @@ No files are created. No frontend, init.py, or teaching files in THIS plan (sepa
 Append to `agent/tests/test_server.py`:
 
 ```python
-import queue as _queue
-
-
 def test_publish_fans_frame_to_all_subscribers(monkeypatch):
     import agent.server as server
     monkeypatch.setattr(server, "SUBSCRIBERS", [])
@@ -409,14 +407,17 @@ Append to `agent/tests/test_server.py`:
 
 ```python
 class _FakeStreamResp:
-    """Mimics requests stream response: .iter_lines() + raise_for_status()."""
+    """Mimics requests stream response: .iter_lines() + raise_for_status() + close()."""
     def __init__(self, lines):
         self._lines = lines
+        self.closed = False
     def raise_for_status(self):
         pass
     def iter_lines(self, decode_unicode=False):
         for ln in self._lines:
             yield ln
+    def close(self):
+        self.closed = True
 
 
 def _llama_stream_lines(steps, stop_text=""):
@@ -495,6 +496,18 @@ def test_completion_generate_stops_on_cancel(monkeypatch):
     # no token events emitted, but a final still closes the stream
     assert [e for e in events if e["type"] == "token"] == []
     assert events[-1]["type"] == "final"
+
+
+def test_completion_generate_closes_llama_response_on_cancel(monkeypatch):
+    """POST /stop -> CANCEL -> completion_generate must close the llama HTTP
+    connection (that is what actually aborts llama's in-flight generation)."""
+    import agent.server as server
+    server.CANCEL.set()
+    resp = _FakeStreamResp(_llama_stream_lines([("a", -0.1), ("b", -0.2)]))
+    monkeypatch.setattr(server.requests, "post", lambda *a, **kw: resp)
+    list(server.completion_generate("1", "hi"))
+    server.CANCEL.clear()
+    assert resp.closed is True
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
@@ -540,30 +553,36 @@ def completion_generate(tab: str, user: str, system: str = "", mode: str = "") -
     resp.raise_for_status()
 
     pieces: list[str] = []
-    for line in resp.iter_lines(decode_unicode=True):
-        if CANCEL.is_set():
-            break
-        if not line or not line.startswith("data: "):
-            continue
-        try:
-            data = json.loads(line[len("data: "):])
-        except json.JSONDecodeError:
-            continue
-        cps = data.get("completion_probabilities")
-        if cps:
-            step = cps[0]
-            yield {"type": "token", "token": step["token"],
-                   "top_logprobs": step["top_logprobs"]}
-            pieces.append(step["token"])
-        if data.get("stop"):
-            break
+    try:
+        for line in resp.iter_lines(decode_unicode=True):
+            if CANCEL.is_set():
+                break
+            if not line or not line.startswith("data: "):
+                continue
+            try:
+                data = json.loads(line[len("data: "):])
+            except json.JSONDecodeError:
+                continue
+            cps = data.get("completion_probabilities")
+            if cps:
+                step = cps[0]
+                yield {"type": "token", "token": step["token"],
+                       "top_logprobs": step["top_logprobs"]}
+                pieces.append(step["token"])
+            if data.get("stop"):
+                break
+    finally:
+        # Closing the HTTP connection is what aborts llama's in-flight
+        # generation — without this, POST /stop only stops the page updating
+        # while the model runs on to full n_predict (spec §3.3).
+        resp.close()
     yield {"type": "final", "content": "".join(pieces)}
 ```
 
 - [ ] **Step 4: Run tests to verify they pass**
 
 Run: `pytest agent/tests/test_server.py -k completion_generate -v`
-Expected: PASS (5 tests)
+Expected: PASS (6 tests)
 
 - [ ] **Step 5: Commit**
 
@@ -671,6 +690,19 @@ def test_drive_swap_failure_publishes_error(monkeypatch):
     assert "port 8080 still busy" in result["error"]
     frames = [q.get_nowait() for _ in range(q.qsize())]
     assert {"type": "error", "message": "port 8080 still busy"} in frames
+
+
+def test_drive_tab4_agent_error_returns_error(monkeypatch):
+    """agent_loop yields an error event (e.g. MAX_TURNS) → drive returns
+    {error:...} so the handler maps it to 5xx, not a silent 200."""
+    import agent.server as server
+    monkeypatch.setattr(server, "SUBSCRIBERS", [])
+    monkeypatch.setitem(server.GLOBAL_STATE, "model", "4B")  # no swap needed
+    monkeypatch.setattr(server, "agent_loop",
+        lambda s, u: iter([{"type": "error", "message": "max_turns (6) reached"}]))
+    result = server.drive("4", "loop forever")
+    assert "max_turns" in result["error"]
+    assert result.get("final", "") == ""
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
@@ -721,6 +753,10 @@ def drive(tab: str, user: str, system: str = "", mode: str = "") -> dict:
                     turns.append(ev)
                 elif ev["type"] == "final":
                     final = ev["content"]
+                elif ev["type"] == "error":
+                    # agent_loop hit MAX_TURNS etc. — surface as 5xx (spec §3.1),
+                    # not a silent 200 with empty final.
+                    return {"error": ev["message"], "subscribers": subscriber_count()}
                 if CANCEL.is_set():
                     break
             return {"subscribers": subscriber_count(), "tab": tab,
@@ -744,7 +780,7 @@ def drive(tab: str, user: str, system: str = "", mode: str = "") -> dict:
 - [ ] **Step 4: Run tests to verify they pass**
 
 Run: `pytest agent/tests/test_server.py -k drive -v`
-Expected: PASS (4 tests)
+Expected: PASS (5 tests)
 
 - [ ] **Step 5: Commit**
 
@@ -957,7 +993,7 @@ git commit -m "feat(server): POST /drive /inspect /stop handlers + routing"
 - [ ] **Step 1: Run the whole backend test suite**
 
 Run: `pytest agent/tests -q`
-Expected: PASS — all prior tests still green plus the ~25 new ones. If `test_init.py` fails, that's expected (a later plan rewrites init.py); note it but do not fix here.
+Expected: PASS — all prior tests still green plus the ~27 new ones. This plan does not touch `init.py`, so `test_init.py` must stay green too; a failure there is a real regression, not expected.
 
 - [ ] **Step 2: Manual smoke — relay end to end against a real model**
 
