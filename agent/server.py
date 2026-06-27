@@ -11,6 +11,7 @@ http.server, backend :8082 via this file) into one. Reduces ports the
 classroom LAN demo has to expose from 3 → 2 (this + llama-server :8080).
 """
 import json
+import math
 import os
 import queue
 import socket
@@ -206,6 +207,12 @@ def handle_swap(wanted: str) -> dict:
 # string given messages + tools. Used by /preview for teaching consistency (Tab 2/3 style).
 LLAMA_TEMPLATE_URL = LLAMA_URL.replace("/v1/chat/completions", "/apply-template")
 
+# Tab ①②③ use llama's raw /completion (NOT /v1/chat/completions) — Tab ② raw
+# mode emits the user text with no chat template, impossible via chat-completions.
+LLAMA_COMPLETION_URL = LLAMA_URL.replace("/v1/chat/completions", "/completion")
+
+CANCEL = threading.Event()   # set by POST /stop; checked each token by generators
+
 
 def agent_loop(system: str, user: str) -> Iterable[dict]:
     """Run multi-turn agent loop against llama. Yields SSE event dicts.
@@ -322,6 +329,55 @@ def build_completion_prompt(tab: str, user: str, system: str = "", mode: str = "
             return chat_base                          # leave <think> open for the model
         return chat_base + "<think>\n\n</think>\n\n"  # direct: suppress thinking
     return user
+
+
+def completion_generate(tab: str, user: str, system: str = "", mode: str = "") -> Iterable[dict]:
+    """Tabs ①②③: stream llama /completion, yield one token frame per step then final.
+
+    Honors CANCEL (POST /stop). n_predict mirrors the frontend: 1500 for the
+    reasoning tab (Qwen3 thinking can run 600-1500 tokens before </think>),
+    else 80.
+    """
+    prompt = build_completion_prompt(tab, user, system, mode)
+    # llama.cpp Qwen3-0.6B tokenizer 500s on a single CJK char prompt — pad it.
+    if len(prompt) == 1 and ord(prompt[0]) > 127:
+        prompt = prompt + " "
+    n_predict = 1500 if tab == "3" else 80
+
+    resp = requests.post(LLAMA_COMPLETION_URL, json={
+        "prompt":      prompt,
+        "n_predict":   n_predict,
+        "n_probs":     10,
+        "stream":      True,
+        "temperature": 0,
+    }, stream=True, timeout=(5, 60))   # (connect, per-read) — long gens stream fine
+    resp.raise_for_status()
+
+    pieces: list[str] = []
+    try:
+        for line in resp.iter_lines(decode_unicode=True):
+            if CANCEL.is_set():
+                break
+            if not line or not line.startswith("data: "):
+                continue
+            try:
+                data = json.loads(line[len("data: "):])
+            except json.JSONDecodeError:
+                continue
+            cps = data.get("completion_probabilities")
+            if cps:
+                step = cps[0]
+                yield {"type": "token", "token": step["token"],
+                       "top_logprobs": step["top_logprobs"]}
+                pieces.append(step["token"])
+            if data.get("stop"):
+                break
+    finally:
+        # Closing the HTTP connection is what aborts llama's in-flight
+        # generation — without this, POST /stop only stops the page updating
+        # while the model runs on to full n_predict (spec §3.3).
+        resp.close()
+    yield {"type": "final", "content": "".join(pieces)}
 
 
 class AgentHandler(SimpleHTTPRequestHandler):

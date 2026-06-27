@@ -651,3 +651,107 @@ def test_build_prompt_reasoning_thinking_leaves_think_open():
     out = build_completion_prompt("3", "蘋果問題", system="", mode="thinking")
     assert out.endswith("<|im_start|>assistant\n")
     assert "</think>" not in out
+
+
+class _FakeStreamResp:
+    """Mimics requests stream response: .iter_lines() + raise_for_status() + close()."""
+    def __init__(self, lines):
+        self._lines = lines
+        self.closed = False
+    def raise_for_status(self):
+        pass
+    def iter_lines(self, decode_unicode=False):
+        for ln in self._lines:
+            yield ln
+    def close(self):
+        self.closed = True
+
+
+def _llama_stream_lines(steps, stop_text=""):
+    """Build llama /completion SSE-style 'data: {...}' lines."""
+    lines = []
+    for tok, lp in steps:
+        lines.append("data: " + json.dumps({
+            "completion_probabilities": [
+                {"token": tok, "top_logprobs": [{"token": tok, "logprob": lp}]}
+            ]
+        }))
+    lines.append("data: " + json.dumps({"content": stop_text, "stop": True}))
+    return lines
+
+
+def test_completion_generate_yields_tokens_then_final(monkeypatch):
+    import agent.server as server
+    server.CANCEL.clear()
+    lines = _llama_stream_lines([("霜", -0.06), ("。", -1.2)])
+    monkeypatch.setattr(server.requests, "post",
+                        lambda *a, **kw: _FakeStreamResp(lines))
+    events = list(server.completion_generate("1", "床前明月光,疑是地上"))
+    assert events[0] == {"type": "token", "token": "霜",
+                         "top_logprobs": [{"token": "霜", "logprob": -0.06}]}
+    assert events[1]["type"] == "token" and events[1]["token"] == "。"
+    assert events[-1] == {"type": "final", "content": "霜。"}
+
+
+def test_completion_generate_sets_n_predict_1500_for_reasoning(monkeypatch):
+    import agent.server as server
+    server.CANCEL.clear()
+    captured = {}
+    def fake_post(url, json=None, **kw):
+        captured["json"] = json
+        return _FakeStreamResp(_llama_stream_lines([("x", -0.1)]))
+    monkeypatch.setattr(server.requests, "post", fake_post)
+    list(server.completion_generate("3", "蘋果問題", mode="thinking"))
+    assert captured["json"]["n_predict"] == 1500
+    assert captured["json"]["temperature"] == 0
+    assert captured["json"]["n_probs"] == 10
+    assert captured["json"]["stream"] is True
+
+
+def test_completion_generate_default_n_predict_80(monkeypatch):
+    import agent.server as server
+    server.CANCEL.clear()
+    captured = {}
+    def fake_post(url, json=None, **kw):
+        captured["json"] = json
+        return _FakeStreamResp(_llama_stream_lines([("x", -0.1)]))
+    monkeypatch.setattr(server.requests, "post", fake_post)
+    list(server.completion_generate("1", "hi"))
+    assert captured["json"]["n_predict"] == 80
+
+
+def test_completion_generate_cjk_single_char_gets_trailing_space(monkeypatch):
+    import agent.server as server
+    server.CANCEL.clear()
+    captured = {}
+    def fake_post(url, json=None, **kw):
+        captured["json"] = json
+        return _FakeStreamResp(_llama_stream_lines([("x", -0.1)]))
+    monkeypatch.setattr(server.requests, "post", fake_post)
+    list(server.completion_generate("1", "霜"))
+    assert captured["json"]["prompt"] == "霜 "
+
+
+def test_completion_generate_stops_on_cancel(monkeypatch):
+    import agent.server as server
+    server.CANCEL.set()  # cancel before any token
+    monkeypatch.setattr(server.requests, "post",
+                        lambda *a, **kw: _FakeStreamResp(
+                            _llama_stream_lines([("a", -0.1), ("b", -0.2)])))
+    events = list(server.completion_generate("1", "hi"))
+    server.CANCEL.clear()
+    # no token events emitted, but a final still closes the stream
+    assert [e for e in events if e["type"] == "token"] == []
+    assert events[-1]["type"] == "final"
+
+
+def test_completion_generate_closes_llama_response_on_cancel(monkeypatch):
+    """POST /stop -> CANCEL -> completion_generate must close the llama HTTP
+    connection (that is what actually aborts llama's in-flight generation)."""
+    import agent.server as server
+    server.CANCEL.set()
+    resp = _FakeStreamResp(_llama_stream_lines([("a", -0.1), ("b", -0.2)]))
+    monkeypatch.setattr(server.requests, "post", lambda *a, **kw: resp)
+    list(server.completion_generate("1", "hi"))
+    server.CANCEL.clear()
+    assert resp.closed is True
