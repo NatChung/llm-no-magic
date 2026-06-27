@@ -27,7 +27,7 @@ use the `.zh-TW` files and reply in 繁體中文).
   + 4 tools), `teaching/` (AI-led course material), `init.py` (env checker).
 - Tests: `pytest agent/tests -q` (plain pytest functions + mocks; keep that style).
 - Conventions: **bilingual** — every user-facing change lands in BOTH the EN and zh-TW
-  file (`index.html`/`index.zh-TW.html`, `README.md`/`README.zh-TW.md`, lessons).
+  file (`index.html`/`index.zh-TW.html`, `README.md` (zh-TW)/`README.en.md`, lessons).
   Bump the `?v=NN` cache-bust query in both HTML files whenever frontend files change.
 - Start server: `nohup python3 -u -m agent.server > /tmp/agent-server.log 2>&1 &`
 
