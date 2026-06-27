@@ -53,8 +53,23 @@ In `frontend/app.js`, after `renderProbs` (ends ~line 154), add:
 //    GET /events. Backend GEN_LOCK serializes generation, so exactly one
 //    panel is "active" at a time — a single pointer set on drive_start. ──
 const PANEL_TO_TAB = { basic: "1", advanced: "2", reasoning: "3", agent: "4" };
+const TAB_TO_PANEL = { "1": "basic", "2": "advanced", "3": "reasoning", "4": "agent" };
 const PANELS = {};   // tab id "1".."4" → render callbacks (registered in setup*)
 
+// Switch the visible tab + panel by panel-name (HTML data-tab/data-panel value).
+// Shared by the tab buttons AND drive_start (spec §3.6: drive_start → switch tab UI).
+function activateTabUI(panelName) {
+  document.querySelectorAll(".tab").forEach((b) =>
+    b.classList.toggle("active", b.dataset.tab === panelName));
+  document.querySelectorAll(".tab-panel").forEach((p) =>
+    p.classList.toggle("active", p.dataset.panel === panelName));
+}
+
+// Returns the fetch Response (or null on network error) so callers can detect
+// 409-busy and re-enable their Send button (no drive_start/final will arrive
+// for a rejected drive). On 200 the response resolves AFTER generation, by
+// which point final has already re-enabled — so the 409 branch is the only one
+// that needs to act.
 async function postDrive(payload) {
   try {
     const r = await fetch("/drive", {
@@ -63,8 +78,10 @@ async function postDrive(payload) {
       body: JSON.stringify(payload),
     });
     if (r.status === 409) console.warn("[drive] busy (409) — a generation is already running");
+    return r;
   } catch (err) {
     console.error("[drive] failed", err);
+    return null;
   }
 }
 
@@ -83,6 +100,7 @@ function connectEvents() {
       case "swap_start":  showSwapBanner(f.model); break;
       case "drive_start":
         hideSwapBanner();
+        if (TAB_TO_PANEL[f.tab]) activateTabUI(TAB_TO_PANEL[f.tab]);  // §3.6: bring the driven tab into view
         active = PANELS[f.tab] || null;
         active && active.onDriveStart && active.onDriveStart(f);
         break;
@@ -105,13 +123,7 @@ Replace the whole tab-switching block (`document.querySelectorAll(".tab").forEac
 // ── Tab switching — UI only. The server swaps the model inside /drive;
 //    the page reacts to the swap_start frame (banner). No /swap from here. ──
 document.querySelectorAll(".tab").forEach((btn) => {
-  btn.addEventListener("click", () => {
-    const id = btn.dataset.tab;
-    document.querySelectorAll(".tab").forEach((b) => b.classList.toggle("active", b === btn));
-    document.querySelectorAll(".tab-panel").forEach((p) => {
-      p.classList.toggle("active", p.dataset.panel === id);
-    });
-  });
+  btn.addEventListener("click", () => activateTabUI(btn.dataset.tab));
 });
 ```
 
@@ -119,7 +131,7 @@ document.querySelectorAll(".tab").forEach((btn) => {
 
 In `setupPanel`, the basic panel currently runs `runCompletion()` which fetches llama. Replace the basic-panel rendering+wiring. Specifically:
 
-(a) Keep `renderProbs`, `appendClickableToken`, `highlightStep`, `tokenSteps`, `phase`, `buildFinalPrompt`, `nPredict`, `refreshPreview` as they are — they are reused.
+(a) Keep `renderProbs`, `appendClickableToken`, `highlightStep`, `tokenSteps`, `phase`, `buildFinalPrompt`, `refreshPreview` as they are — they are reused (`buildFinalPrompt`/`refreshPreview` still power the ②③ `final-prompt-preview`). Note: `nPredict` (line 222) is NOT reused — its only consumer was `runCompletion`, which this task deletes; the server now owns `n_predict`. It is removed in Task 4's dead-code sweep.
 
 (b) Add these three callbacks inside `setupPanel` (after `highlightStep`, before `runCompletion`):
 
@@ -176,17 +188,27 @@ In `setupPanel`, the basic panel currently runs `runCompletion()` which fetches 
     } else if (panelType === "reasoning") {
       payload.mode = panel.querySelector('input[name="mode-reasoning"]:checked')?.value || "direct";
     }
-    postDrive(payload);
+    // Re-enable Send if the drive was rejected (409 busy) or failed — no
+    // drive_start/final will arrive for it. On 200 final has already re-enabled.
+    postDrive(payload).then((r) => { if (!r || r.status === 409) runBtn.disabled = false; });
   }
 ```
 
 (c) Delete the entire old `runCompletion` function (the `async function runCompletion() { ... }` block, ~lines 254-366).
 
-(d) Replace the event wiring (`runBtn.addEventListener` / `stopBtn.addEventListener` / `promptEl keydown`, ~lines 369-381) with:
+(d) Delete the entire preset-handler block in `setupPanel` (the `const presetEl = panel.querySelector(".preset-select"); if (presetEl) { ... }` block, ~lines 383-394) — wholesale, not just the declaration. The dropdown markup is removed in Task 4; leaving a half-block (declaration without body, or vice versa) is a ReferenceError.
+
+(e) Replace the event wiring (`runBtn.addEventListener` / `stopBtn.addEventListener` / `promptEl keydown`, ~lines 369-381) with:
 
 ```javascript
   runBtn.addEventListener("click", driveThisPanel);
-  stopBtn.addEventListener("click", postStop);
+  stopBtn.addEventListener("click", () => {
+    postStop();
+    // Optimistic re-enable: clicking Stop should free Send immediately. (Tabs
+    // ①②③ also get a final from the server on cancel, but Tab ④'s agent_loop
+    // does not — see Task 3 note — so the client re-enables to avoid a stuck UI.)
+    runBtn.disabled = false; stopBtn.disabled = true;
+  });
   promptEl.addEventListener("keydown", (e) => {
     if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
       if (!promptEl.value.trim() || runBtn.disabled) return;
@@ -305,7 +327,8 @@ In `setupAgent`, keep `renderTurnBlock`, `renderFinal`, `renderError`, `clearAll
   function driveAgent() {
     if (!promptEl.value.trim()) return;
     runBtn.disabled = true;   // immediate, avoid double-fire 409
-    postDrive({ tab: "4", user: promptEl.value, system: systemEl.value });
+    postDrive({ tab: "4", user: promptEl.value, system: systemEl.value })
+      .then((r) => { if (!r || r.status === 409) runBtn.disabled = false; });
   }
 ```
 
@@ -315,8 +338,15 @@ In `setupAgent`, keep `renderTurnBlock`, `renderFinal`, `renderError`, `clearAll
 
 ```javascript
   runBtn.addEventListener("click", driveAgent);
-  stopBtn.addEventListener("click", postStop);
+  stopBtn.addEventListener("click", () => {
+    postStop();
+    // Tab ④ backend (agent_loop) breaks on CANCEL without emitting a final, so
+    // no onFinal fires — re-enable Send here to avoid a stuck button.
+    runBtn.disabled = false; stopBtn.disabled = true;
+  });
 ```
+
+> **Backend note (out of scope for this plan, log as a follow-up):** a `/stop` triggered by the *AI* (not the page) during a Tab ④ run still leaves Send disabled, because `drive()`'s tab-4 branch breaks on `CANCEL` without publishing a `final`/`error` frame. A one-line backend fix (publish a `final` on cancel in the tab-4 loop) would close this. For this frontend plan, the page-side Stop button is covered by the optimistic re-enable above.
 
 (The `presetEl` handler is removed; `presetEl` itself becomes unused — its markup is deleted in Task 4. Leave the `const presetEl = panel.querySelector(".preset-select");` line for now OR delete it; if you delete it, also delete the unused `const previewEl`-adjacent lookups only if truly unused. Safest: delete the `presetEl` declaration since nothing references it after removing the handler.)
 
@@ -352,10 +382,15 @@ In `frontend/index.html` AND `frontend/index.zh-TW.html`, delete the three `.pre
 - [ ] **Step 2: Remove the (?) explainers + always-on prose on interactive tabs**
 
 In both HTML files, within the `data-panel="basic"`, `data-panel="advanced"`, `data-panel="reasoning"`, and `data-panel="agent"` panels only, delete:
-- the `(?)` explainer `<details>`/`<group>` blocks (the elements rendered as `(?) …` dropdowns), and
+- every `<details class="info-tag">…</details>` block — these ARE the `(?)` explainers (6 of them in index.html, lines ~129/154/168/254/298/333; same in `.zh-TW`), and
 - always-on descriptive `<p>` prose that duplicates what the AI narrates.
 
-Keep: the input fields, mode radios, the `實際送進 model 的 final prompt(預覽)` preview `<details>` (it shows the chat-template text, which is instrument data, not narration — keep it), the output areas, and the Send/Stop buttons. Do NOT touch article tabs ⓪⑤⑦⑧ or Tab ⑥.
+**Keep — do NOT delete:**
+- `<details class="preview-details …">` (the `final-prompt-preview`, lines ~222/266/319) — it shows the chat-template text, which is instrument data, not narration.
+- the input fields (`.prompt`, `.system-prompt`), mode radios (`name="mode-advanced"`/`name="mode-reasoning"`), output areas (`.generated-text`, `.probs`, `.thinking-area`, `.thinking-content`, `.turns`, `.final-content`), Send/Stop buttons.
+- article tabs ⓪⑤⑦⑧ and Tab ⑥ skill — untouched entirely.
+
+Verify after: `grep -c 'class="info-tag"' frontend/index.html` returns `0`; `grep -c 'preview-details' frontend/index.html` still returns `3`. Spot-check app.js's queried classes still exist: `grep -o 'thinking-area\|final-prompt-preview\|mode-reasoning' frontend/index.html` all present.
 
 > Decision point (spec §5 D6, reversible): this removes ALL `(?)`/prose on interactive tabs. If the user wants the collapsed `(?)` kept, skip the `(?)` deletions and remove only always-on prose. Default per spec: remove both.
 
@@ -365,9 +400,12 @@ In `frontend/app.js`, delete these — each is unreferenced after Tasks 1–3:
 - `const LLAMA_URL = ...;` (was only used by the deleted `runCompletion`)
 - `const AGENT_BACKEND_URL = "/agent";` (was only used by the deleted `runAgent`)
 - The swap machinery used only by the old tab-switch/load: `const SWAP_URL`, `const TAB_TO_MODEL`, `let currentLLMModel`, and `async function ensureModel(...)`. **Keep** `showSwapBanner`/`hideSwapBanner` (still used by `connectEvents`).
-- Any leftover `const presetEl = panel.querySelector(".preset-select");` lines now that the dropdowns are gone.
+- `const nPredict = panelType === "reasoning" ? 1500 : 80;` in `setupPanel` (line ~222) — dead after `runCompletion` is gone (server owns `n_predict`).
+- The dead `let abortCtl = null;` in `setupPanel` (line ~192) and in `setupAgent` (line ~458) — both fetch paths that used them are deleted, and Stop now calls `postStop`. **Do NOT touch** the `let abortCtl = null;` in `setupSkill` (line ~741) — Tab ⑥ is out of scope and still uses it.
 
-Verify after: `grep -n 'LLAMA_URL\|AGENT_BACKEND_URL\|ensureModel\|TAB_TO_MODEL\|preset-select' frontend/app.js` returns nothing.
+(The `setupPanel` and `setupAgent` preset-handler blocks were already deleted in Tasks 1 and 3 respectively — nothing to remove here.)
+
+Verify after: `grep -n 'LLAMA_URL\|AGENT_BACKEND_URL\|ensureModel\|TAB_TO_MODEL\|preset-select\|nPredict' frontend/app.js` returns nothing; `grep -c 'abortCtl' frontend/app.js` returns only the `setupSkill` occurrences (the `let` decl + its uses in skill `run`/stop).
 
 - [ ] **Step 4: Bump cache-bust in both HTML files**
 
@@ -406,7 +444,7 @@ curl -s -X POST localhost:9000/drive -H 'Content-Type: application/json' -d '{"t
 curl -s -X POST localhost:9000/drive -H 'Content-Type: application/json' -d '{"tab":"4","user":"現在幾點?"}'
 ```
 
-Expected: each snapshot shows the corresponding panel rendering (the dispatcher auto-switches the active panel via `drive_start`; note the page's visible tab does not auto-switch — only the panel's content updates, which is acceptable for v3). For tab 4, the `swap_start` banner shows during the swap.
+Expected: each snapshot shows the page **switch to the driven tab** and render it (the `drive_start` handler calls `activateTabUI(TAB_TO_PANEL[f.tab])` per spec §3.6 — so driving tab 3 while viewing tab 1 brings tab 3 into view, the "AI drives → student watches" loop). For tab 4, the `swap_start` banner shows during the swap.
 
 - [ ] **Step 2: Verify `/inspect` and `/stop` from the AI side**
 
