@@ -536,6 +536,12 @@ class AgentHandler(SimpleHTTPRequestHandler):
             self._handle_preview()
         elif self.path == "/swap":
             self._handle_swap_route()
+        elif self.path == "/drive":
+            self._handle_drive()
+        elif self.path == "/inspect":
+            self._handle_inspect()
+        elif self.path == "/stop":
+            self._handle_stop()
         else:
             self.send_response(404)
             self._send_cors()
@@ -656,6 +662,34 @@ class AgentHandler(SimpleHTTPRequestHandler):
         self._send_cors()
         self.end_headers()
         self.wfile.write(json.dumps({"prompt": prompt_text}).encode("utf-8"))
+
+    def _handle_drive(self) -> None:
+        """spec §3.1: AI/human teaching command. Serialized in drive()."""
+        body = self._read_body()
+        if body is None:
+            return
+        result = drive(body.get("tab", ""), body.get("user", ""),
+                       body.get("system", ""), body.get("mode", ""))
+        if result.get("busy"):
+            code = 409
+        elif result.get("error"):
+            code = 500
+        else:
+            code = 200
+        self._send_json(result, code)
+
+    def _handle_inspect(self) -> None:
+        """spec §3.2: pop the probability chart for token N on the page."""
+        body = self._read_body()
+        if body is None:
+            return
+        publish({"type": "inspect", "tokenIndex": body.get("tokenIndex", 0)})
+        self._send_json({"ok": True, "subscribers": subscriber_count()})
+
+    def _handle_stop(self) -> None:
+        """spec §3.3: cancel the in-flight generation."""
+        CANCEL.set()
+        self._send_json({"ok": True})
 
 def main() -> None:
     """Run single-port server on $LISTEN_HOST:9000 (default 127.0.0.1 — safe).

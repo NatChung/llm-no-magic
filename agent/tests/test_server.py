@@ -844,3 +844,99 @@ def test_drive_tab4_agent_error_returns_error(monkeypatch):
     result = server.drive("4", "loop forever")
     assert "max_turns" in result["error"]
     assert result.get("final", "") == ""
+
+
+def test_post_drive_returns_200_with_aggregate(monkeypatch):
+    import agent.server as server
+    monkeypatch.setattr(server, "drive",
+        lambda tab, user, system="", mode="": {
+            "subscribers": 1, "tab": tab, "tokens": [], "final": "霜"})
+    srv, port = _start_server_in_thread()
+    try:
+        req = urllib.request.Request(
+            f"http://127.0.0.1:{port}/drive",
+            data=json.dumps({"tab": "1", "user": "床前明月光,疑是地上"}).encode("utf-8"),
+            headers={"Content-Type": "application/json"}, method="POST")
+        resp = urllib.request.urlopen(req, timeout=2)
+        assert resp.status == 200
+        body = json.loads(resp.read().decode("utf-8"))
+        assert body["tab"] == "1"
+        assert body["final"] == "霜"
+    finally:
+        srv.shutdown()
+
+
+def test_post_drive_returns_409_when_busy(monkeypatch):
+    import agent.server as server
+    monkeypatch.setattr(server, "drive", lambda *a, **kw: {"busy": True})
+    srv, port = _start_server_in_thread()
+    try:
+        req = urllib.request.Request(
+            f"http://127.0.0.1:{port}/drive",
+            data=json.dumps({"tab": "1", "user": "x"}).encode("utf-8"),
+            headers={"Content-Type": "application/json"}, method="POST")
+        try:
+            urllib.request.urlopen(req, timeout=2)
+            assert False, "expected 409"
+        except urllib.error.HTTPError as e:
+            assert e.code == 409
+    finally:
+        srv.shutdown()
+
+
+def test_post_drive_returns_500_on_error(monkeypatch):
+    import agent.server as server
+    monkeypatch.setattr(server, "drive",
+        lambda *a, **kw: {"error": "port 8080 still busy", "subscribers": 0})
+    srv, port = _start_server_in_thread()
+    try:
+        req = urllib.request.Request(
+            f"http://127.0.0.1:{port}/drive",
+            data=json.dumps({"tab": "4", "user": "x"}).encode("utf-8"),
+            headers={"Content-Type": "application/json"}, method="POST")
+        try:
+            urllib.request.urlopen(req, timeout=2)
+            assert False, "expected 500"
+        except urllib.error.HTTPError as e:
+            assert e.code == 500
+            body = json.loads(e.read().decode("utf-8"))
+            assert "port 8080" in body["error"]
+    finally:
+        srv.shutdown()
+
+
+def test_post_inspect_publishes_inspect_frame(monkeypatch):
+    import agent.server as server
+    monkeypatch.setattr(server, "SUBSCRIBERS", [])
+    q = server.subscribe()
+    srv, port = _start_server_in_thread()
+    try:
+        req = urllib.request.Request(
+            f"http://127.0.0.1:{port}/inspect",
+            data=json.dumps({"tokenIndex": 3}).encode("utf-8"),
+            headers={"Content-Type": "application/json"}, method="POST")
+        resp = urllib.request.urlopen(req, timeout=2)
+        assert resp.status == 200
+        body = json.loads(resp.read().decode("utf-8"))
+        assert body["ok"] is True
+        assert body["subscribers"] == 1
+        assert q.get_nowait() == {"type": "inspect", "tokenIndex": 3}
+    finally:
+        srv.shutdown()
+
+
+def test_post_stop_sets_cancel(monkeypatch):
+    import agent.server as server
+    server.CANCEL.clear()
+    srv, port = _start_server_in_thread()
+    try:
+        req = urllib.request.Request(
+            f"http://127.0.0.1:{port}/stop", data=b"{}",
+            headers={"Content-Type": "application/json"}, method="POST")
+        resp = urllib.request.urlopen(req, timeout=2)
+        assert resp.status == 200
+        assert json.loads(resp.read().decode("utf-8"))["ok"] is True
+        assert server.CANCEL.is_set()
+    finally:
+        server.CANCEL.clear()
+        srv.shutdown()
