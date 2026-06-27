@@ -564,3 +564,49 @@ def test_publish_with_no_subscribers_is_noop(monkeypatch):
     monkeypatch.setattr(server, "SUBSCRIBERS", [])
     server.publish({"type": "final", "content": "x"})  # must not raise
     assert server.subscriber_count() == 0
+
+
+def test_health_returns_status_immediately(monkeypatch):
+    import agent.server as server
+    monkeypatch.setitem(server.GLOBAL_STATE, "model", "0.6B")
+    monkeypatch.setattr(server, "SUBSCRIBERS", [])
+    srv, port = _start_server_in_thread()
+    try:
+        resp = urllib.request.urlopen(f"http://127.0.0.1:{port}/health", timeout=2)
+        assert resp.status == 200
+        body = json.loads(resp.read().decode("utf-8"))
+        assert body["status"] == "ok"
+        assert body["model"] == "0.6B"
+        assert body["subscribers"] == 0
+    finally:
+        srv.shutdown()
+
+
+def test_events_streams_a_published_frame(monkeypatch):
+    import agent.server as server
+    import time as _time
+    monkeypatch.setattr(server, "SUBSCRIBERS", [])
+    srv, port = _start_server_in_thread()
+    got = {}
+
+    def reader():
+        resp = urllib.request.urlopen(f"http://127.0.0.1:{port}/events", timeout=5)
+        got["ctype"] = resp.getheader("Content-Type")
+        got["line"] = resp.readline()  # blocks until first frame
+
+    try:
+        th = threading.Thread(target=reader, daemon=True)
+        th.start()
+        # wait until the /events handler registered its queue
+        for _ in range(50):
+            if server.subscriber_count() == 1:
+                break
+            _time.sleep(0.05)
+        assert server.subscriber_count() == 1
+        server.publish({"type": "token", "token": "霜"})
+        th.join(timeout=3)
+        assert got["ctype"] == "text/event-stream"
+        payload = json.loads(got["line"].decode("utf-8").removeprefix("data: "))
+        assert payload == {"type": "token", "token": "霜"}
+    finally:
+        srv.shutdown()

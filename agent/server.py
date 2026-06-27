@@ -326,6 +326,10 @@ class AgentHandler(SimpleHTTPRequestHandler):
     def do_GET(self) -> None:
         if self._redirect_legacy_frontend_prefix():
             return
+        if self.path == "/events":
+            return self._handle_events()
+        if self.path == "/health":
+            return self._handle_health()
         super().do_GET()
 
     def do_HEAD(self) -> None:
@@ -336,6 +340,44 @@ class AgentHandler(SimpleHTTPRequestHandler):
     def _send_cors(self) -> None:
         for k, v in CORS_HEADERS.items():
             self.send_header(k, v)
+
+    def _send_json(self, obj: dict, code: int = 200) -> None:
+        self.send_response(code)
+        self.send_header("Content-Type", "application/json")
+        self._send_cors()
+        self.end_headers()
+        self.wfile.write(json.dumps(obj, ensure_ascii=False).encode("utf-8"))
+
+    def _handle_health(self) -> None:
+        self._send_json({
+            "status": "ok",
+            "model": GLOBAL_STATE["model"],
+            "subscribers": subscriber_count(),
+        })
+
+    def _handle_events(self) -> None:
+        """Long-lived SSE subscription. Owns one queue; sole writer of this
+        wfile. publish() (other threads) only put() into the queue."""
+        self.send_response(200)
+        self.send_header("Content-Type", "text/event-stream")
+        self.send_header("Cache-Control", "no-cache")
+        self._send_cors()
+        self.end_headers()
+        q = subscribe()
+        try:
+            while True:
+                try:
+                    frame = q.get(timeout=15)
+                except queue.Empty:
+                    self.wfile.write(b": ping\n\n")
+                    self.wfile.flush()
+                    continue
+                self.wfile.write(sse(frame))
+                self.wfile.flush()
+        except (BrokenPipeError, ConnectionResetError):
+            pass
+        finally:
+            unsubscribe(q)
 
     def do_OPTIONS(self) -> None:
         # CORS preflight: frontend on :9000 → backend on :8082 is cross-origin
