@@ -358,10 +358,16 @@ def completion_generate(tab: str, user: str, system: str = "", mode: str = "") -
 
     pieces: list[str] = []
     try:
-        for line in resp.iter_lines(decode_unicode=True):
+        # Decode bytes as UTF-8 ourselves — do NOT use iter_lines(decode_unicode=True):
+        # llama's stream response is text/event-stream with no charset, so requests
+        # falls back to latin-1 and mangles every CJK token (霜 → mojibake).
+        for raw in resp.iter_lines():
             if CANCEL.is_set():
                 break
-            if not line or not line.startswith("data: "):
+            if not raw:
+                continue
+            line = raw.decode("utf-8", "replace")
+            if not line.startswith("data: "):
                 continue
             try:
                 data = json.loads(line[len("data: "):])

@@ -654,13 +654,16 @@ def test_build_prompt_reasoning_thinking_leaves_think_open():
 
 
 class _FakeStreamResp:
-    """Mimics requests stream response: .iter_lines() + raise_for_status() + close()."""
+    """Mimics requests stream response: .iter_lines() + raise_for_status() + close().
+
+    Faithful to real requests: iter_lines() yields BYTES (the server must decode
+    UTF-8 itself; relying on decode_unicode=True mangles CJK on charset-less SSE)."""
     def __init__(self, lines):
         self._lines = lines
         self.closed = False
     def raise_for_status(self):
         pass
-    def iter_lines(self, decode_unicode=False):
+    def iter_lines(self):
         for ln in self._lines:
             yield ln
     def close(self):
@@ -668,15 +671,16 @@ class _FakeStreamResp:
 
 
 def _llama_stream_lines(steps, stop_text=""):
-    """Build llama /completion SSE-style 'data: {...}' lines."""
+    """Build llama /completion SSE-style 'data: {...}' lines as UTF-8 BYTES
+    (matching real requests.iter_lines())."""
     lines = []
     for tok, lp in steps:
-        lines.append("data: " + json.dumps({
+        lines.append(("data: " + json.dumps({
             "completion_probabilities": [
                 {"token": tok, "top_logprobs": [{"token": tok, "logprob": lp}]}
             ]
-        }))
-    lines.append("data: " + json.dumps({"content": stop_text, "stop": True}))
+        })).encode("utf-8"))
+    lines.append(("data: " + json.dumps({"content": stop_text, "stop": True})).encode("utf-8"))
     return lines
 
 
