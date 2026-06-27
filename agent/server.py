@@ -296,6 +296,34 @@ def agent_loop(system: str, user: str) -> Iterable[dict]:
     yield {"type": "error", "message": f"max_turns ({MAX_TURNS}) reached"}
 
 
+# ── Tab ①②③ generation: ported from frontend buildFinalPrompt (app.js:197) ──
+
+def build_completion_prompt(tab: str, user: str, system: str = "", mode: str = "") -> str:
+    """Build the raw /completion prompt string for Tabs ①②③.
+
+    Mirrors frontend buildFinalPrompt exactly:
+      - tab "1" (basic): user verbatim (no template)
+      - tab "2" (advanced): raw → user verbatim; chat → templated + think-suppressed
+      - tab "3" (reasoning): direct → templated + think-suppressed; thinking → templated
+    """
+    if tab == "1":
+        return user
+    sys_block = f"<|im_start|>system\n{system.strip()}<|im_end|>\n" if system.strip() else ""
+    chat_base = (
+        sys_block
+        + f"<|im_start|>user\n{user}<|im_end|>\n<|im_start|>assistant\n"
+    )
+    if tab == "2":
+        if mode == "raw":
+            return user
+        return chat_base + "<think>\n\n</think>\n\n"  # chat mode: skip thinking
+    if tab == "3":
+        if mode == "thinking":
+            return chat_base                          # leave <think> open for the model
+        return chat_base + "<think>\n\n</think>\n\n"  # direct: suppress thinking
+    return user
+
+
 class AgentHandler(SimpleHTTPRequestHandler):
     """One handler:
       - GET → SimpleHTTPRequestHandler serves static files from STATIC_ROOT

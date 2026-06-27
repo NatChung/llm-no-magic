@@ -610,3 +610,44 @@ def test_events_streams_a_published_frame(monkeypatch):
         assert payload == {"type": "token", "token": "霜"}
     finally:
         srv.shutdown()
+
+
+def test_build_prompt_basic_returns_user_verbatim():
+    from agent.server import build_completion_prompt
+    assert build_completion_prompt("1", "床前明月光,疑是地上") == "床前明月光,疑是地上"
+
+
+def test_build_prompt_advanced_raw_returns_user_verbatim():
+    from agent.server import build_completion_prompt
+    assert build_completion_prompt("2", "一年有幾個月?", system="你是行銷顧問", mode="raw") \
+        == "一年有幾個月?"
+
+
+def test_build_prompt_advanced_chat_wraps_system_and_suppresses_think():
+    from agent.server import build_completion_prompt
+    out = build_completion_prompt("2", "一年有幾個月?", system="你是行銷顧問", mode="chat")
+    assert out == (
+        "<|im_start|>system\n你是行銷顧問<|im_end|>\n"
+        "<|im_start|>user\n一年有幾個月?<|im_end|>\n<|im_start|>assistant\n"
+        "<think>\n\n</think>\n\n"
+    )
+
+
+def test_build_prompt_chat_without_system_omits_system_block():
+    from agent.server import build_completion_prompt
+    out = build_completion_prompt("2", "hi", system="", mode="chat")
+    assert out.startswith("<|im_start|>user\nhi<|im_end|>")
+    assert "system" not in out
+
+
+def test_build_prompt_reasoning_direct_suppresses_think():
+    from agent.server import build_completion_prompt
+    out = build_completion_prompt("3", "蘋果問題", system="", mode="direct")
+    assert out.endswith("<|im_start|>assistant\n<think>\n\n</think>\n\n")
+
+
+def test_build_prompt_reasoning_thinking_leaves_think_open():
+    from agent.server import build_completion_prompt
+    out = build_completion_prompt("3", "蘋果問題", system="", mode="thinking")
+    assert out.endswith("<|im_start|>assistant\n")
+    assert "</think>" not in out
