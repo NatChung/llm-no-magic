@@ -535,3 +535,32 @@ def test_post_swap_returns_500_on_other_error(monkeypatch):
             assert "binary not found" in body["message"]
     finally:
         srv.shutdown()
+
+
+def test_publish_fans_frame_to_all_subscribers(monkeypatch):
+    import agent.server as server
+    monkeypatch.setattr(server, "SUBSCRIBERS", [])
+    q1 = server.subscribe()
+    q2 = server.subscribe()
+    assert server.subscriber_count() == 2
+    server.publish({"type": "token", "token": "霜"})
+    assert q1.get_nowait() == {"type": "token", "token": "霜"}
+    assert q2.get_nowait() == {"type": "token", "token": "霜"}
+
+
+def test_unsubscribe_removes_queue_and_is_idempotent(monkeypatch):
+    import agent.server as server
+    monkeypatch.setattr(server, "SUBSCRIBERS", [])
+    q = server.subscribe()
+    assert server.subscriber_count() == 1
+    server.unsubscribe(q)
+    assert server.subscriber_count() == 0
+    server.unsubscribe(q)  # second time must not raise
+    assert server.subscriber_count() == 0
+
+
+def test_publish_with_no_subscribers_is_noop(monkeypatch):
+    import agent.server as server
+    monkeypatch.setattr(server, "SUBSCRIBERS", [])
+    server.publish({"type": "final", "content": "x"})  # must not raise
+    assert server.subscriber_count() == 0

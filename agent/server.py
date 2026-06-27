@@ -12,6 +12,7 @@ classroom LAN demo has to expose from 3 → 2 (this + llama-server :8080).
 """
 import json
 import os
+import queue
 import socket
 import subprocess
 import threading
@@ -48,6 +49,38 @@ CORS_HEADERS = {
 }
 
 MAX_TURNS = 6
+
+# ── relay pub/sub (spec §1.2) ───────────────────────────────────────────
+# Each /events connection owns one queue.Queue; publish() fans a frame into
+# every queue. publish() NEVER writes a socket — cross-thread comms is queues
+# only (the /events thread is the sole writer of its own wfile).
+SUBSCRIBERS: list[queue.Queue] = []
+SUBS_LOCK = threading.Lock()
+
+
+def subscribe() -> queue.Queue:
+    q: queue.Queue = queue.Queue()
+    with SUBS_LOCK:
+        SUBSCRIBERS.append(q)
+    return q
+
+
+def unsubscribe(q: queue.Queue) -> None:
+    with SUBS_LOCK:
+        if q in SUBSCRIBERS:
+            SUBSCRIBERS.remove(q)
+
+
+def publish(frame: dict) -> None:
+    with SUBS_LOCK:
+        for q in SUBSCRIBERS:
+            q.put(frame)
+
+
+def subscriber_count() -> int:
+    with SUBS_LOCK:
+        return len(SUBSCRIBERS)
+
 
 # ── /swap orchestrator state (spec §4) ──────────────────────────────────
 
