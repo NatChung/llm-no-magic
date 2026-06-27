@@ -755,3 +755,92 @@ def test_completion_generate_closes_llama_response_on_cancel(monkeypatch):
     list(server.completion_generate("1", "hi"))
     server.CANCEL.clear()
     assert resp.closed is True
+
+
+def test_drive_busy_returns_busy_flag(monkeypatch):
+    import agent.server as server
+    monkeypatch.setattr(server, "SUBSCRIBERS", [])
+    server.GEN_LOCK.acquire()
+    try:
+        assert server.drive("1", "hi") == {"busy": True}
+    finally:
+        server.GEN_LOCK.release()
+
+
+def test_drive_basic_publishes_and_aggregates(monkeypatch):
+    import agent.server as server
+    monkeypatch.setattr(server, "SUBSCRIBERS", [])
+    monkeypatch.setitem(server.GLOBAL_STATE, "model", "0.6B")  # no swap needed
+    monkeypatch.setattr(server, "completion_generate",
+        lambda tab, user, system="", mode="": iter([
+            {"type": "token", "token": "霜",
+             "top_logprobs": [{"token": "霜", "logprob": -0.06}]},
+            {"type": "final", "content": "霜"},
+        ]))
+    q = server.subscribe()
+    result = server.drive("1", "床前明月光,疑是地上")
+    # aggregate for the AI
+    assert result["tab"] == "1"
+    assert result["final"] == "霜"
+    assert result["tokens"][0]["token"] == "霜"
+    assert abs(result["tokens"][0]["prob"] - 0.9418) < 0.01  # exp(-0.06)
+    assert result["subscribers"] == 1
+    # fanned-out frames for the page
+    frames = []
+    while not q.empty():
+        frames.append(q.get_nowait())
+    assert frames[0] == {"type": "drive_start", "tab": "1", "mode": "",
+                         "user": "床前明月光,疑是地上", "system": ""}
+    assert {"type": "token", "token": "霜",
+            "top_logprobs": [{"token": "霜", "logprob": -0.06}]} in frames
+    assert frames[-1] == {"type": "final", "content": "霜"}
+
+
+def test_drive_swaps_and_publishes_swap_start(monkeypatch):
+    import agent.server as server
+    monkeypatch.setattr(server, "SUBSCRIBERS", [])
+    monkeypatch.setitem(server.GLOBAL_STATE, "model", "0.6B")  # current
+    calls = {}
+    def fake_swap(wanted):
+        calls["wanted"] = wanted
+        server.GLOBAL_STATE["model"] = wanted
+        return {"status": "ready", "model": wanted}
+    monkeypatch.setattr(server, "handle_swap", fake_swap)
+    monkeypatch.setattr(server, "agent_loop",
+        lambda s, u: iter([{"type": "final", "content": "現在是 12:00:00"}]))
+    q = server.subscribe()
+    result = server.drive("4", "現在幾點?")
+    assert calls["wanted"] == "4B"  # tab 4 needs 4B
+    assert result["final"] == "現在是 12:00:00"
+    frames = []
+    while not q.empty():
+        frames.append(q.get_nowait())
+    assert frames[0] == {"type": "swap_start", "tab": "4", "model": "4B"}
+    assert {"type": "drive_start", "tab": "4", "mode": "",
+            "user": "現在幾點?", "system": ""} in frames
+
+
+def test_drive_swap_failure_publishes_error(monkeypatch):
+    import agent.server as server
+    monkeypatch.setattr(server, "SUBSCRIBERS", [])
+    monkeypatch.setitem(server.GLOBAL_STATE, "model", "0.6B")
+    monkeypatch.setattr(server, "handle_swap",
+        lambda wanted: {"status": "error", "message": "port 8080 still busy"})
+    q = server.subscribe()
+    result = server.drive("4", "現在幾點?")
+    assert "port 8080 still busy" in result["error"]
+    frames = [q.get_nowait() for _ in range(q.qsize())]
+    assert {"type": "error", "message": "port 8080 still busy"} in frames
+
+
+def test_drive_tab4_agent_error_returns_error(monkeypatch):
+    """agent_loop yields an error event (e.g. MAX_TURNS) → drive returns
+    {error:...} so the handler maps it to 5xx, not a silent 200."""
+    import agent.server as server
+    monkeypatch.setattr(server, "SUBSCRIBERS", [])
+    monkeypatch.setitem(server.GLOBAL_STATE, "model", "4B")  # no swap needed
+    monkeypatch.setattr(server, "agent_loop",
+        lambda s, u: iter([{"type": "error", "message": "max_turns (6) reached"}]))
+    result = server.drive("4", "loop forever")
+    assert "max_turns" in result["error"]
+    assert result.get("final", "") == ""

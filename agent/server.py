@@ -213,6 +213,9 @@ LLAMA_COMPLETION_URL = LLAMA_URL.replace("/v1/chat/completions", "/completion")
 
 CANCEL = threading.Event()   # set by POST /stop; checked each token by generators
 
+GEN_LOCK = threading.Lock()   # serialize /drive: one generation fans out at a time
+MODEL_FOR_TAB = {"1": "0.6B", "2": "0.6B", "3": "0.6B", "4": "4B"}
+
 
 def agent_loop(system: str, user: str) -> Iterable[dict]:
     """Run multi-turn agent loop against llama. Yields SSE event dicts.
@@ -378,6 +381,61 @@ def completion_generate(tab: str, user: str, system: str = "", mode: str = "") -
         # while the model runs on to full n_predict (spec §3.3).
         resp.close()
     yield {"type": "final", "content": "".join(pieces)}
+
+
+def drive(tab: str, user: str, system: str = "", mode: str = "") -> dict:
+    """Orchestrate one teaching action: serialize, swap if needed, generate,
+    fan out to /events subscribers, and return the aggregate for the AI.
+
+    spec §1.3/§1.4/§3.1. Reject-while-busy (409) — does not queue.
+    """
+    if not GEN_LOCK.acquire(blocking=False):
+        return {"busy": True}
+    try:
+        CANCEL.clear()
+        wanted = MODEL_FOR_TAB.get(tab, "0.6B")
+        if GLOBAL_STATE["model"] != wanted:
+            publish({"type": "swap_start", "tab": tab, "model": wanted})
+            sr = handle_swap(wanted)
+            if sr.get("status") != "ready":
+                msg = sr.get("message", "swap failed")
+                publish({"type": "error", "message": msg})
+                return {"error": msg, "subscribers": subscriber_count()}
+
+        publish({"type": "drive_start", "tab": tab, "mode": mode,
+                 "user": user, "system": system})
+
+        final = ""
+        if tab == "4":
+            turns = []
+            for ev in agent_loop(system, user):
+                publish(ev)
+                if ev["type"] == "turn_complete":
+                    turns.append(ev)
+                elif ev["type"] == "final":
+                    final = ev["content"]
+                elif ev["type"] == "error":
+                    # agent_loop hit MAX_TURNS etc. — surface as 5xx (spec §3.1),
+                    # not a silent 200 with empty final.
+                    return {"error": ev["message"], "subscribers": subscriber_count()}
+                if CANCEL.is_set():
+                    break
+            return {"subscribers": subscriber_count(), "tab": tab,
+                    "turns": turns, "final": final}
+
+        tokens = []
+        for ev in completion_generate(tab, user, system, mode):
+            publish(ev)
+            if ev["type"] == "token":
+                tlp = ev["top_logprobs"]
+                prob = math.exp(tlp[0]["logprob"]) if tlp else None
+                tokens.append({"token": ev["token"], "top_logprobs": tlp, "prob": prob})
+            elif ev["type"] == "final":
+                final = ev["content"]
+        return {"subscribers": subscriber_count(), "tab": tab,
+                "tokens": tokens, "final": final}
+    finally:
+        GEN_LOCK.release()
 
 
 class AgentHandler(SimpleHTTPRequestHandler):
