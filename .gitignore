@@ -21,6 +21,7 @@ __pycache__/
 # Local models(too big for git;用戶自己 download)
 *.gguf
 
-# Local agent / tooling scratch (codegraph index, SDD ledger/briefs)
+# Local agent / tooling scratch (codegraph index, SDD ledger/briefs, playwright output)
 .codegraph/
 .superpowers/
+.playwright-mcp/
