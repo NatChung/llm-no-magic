@@ -423,12 +423,14 @@ def drive(tab: str, user: str, system: str = "", mode: str = "") -> dict:
             final = ""
             if tab == "4":
                 turns = []
+                saw_final = False
                 for ev in agent_loop(system, user):
                     publish(ev)
                     if ev["type"] == "turn_complete":
                         turns.append(ev)
                     elif ev["type"] == "final":
                         final = ev["content"]
+                        saw_final = True
                     elif ev["type"] == "error":
                         # agent_loop hit MAX_TURNS etc. — surface as 5xx (spec §3.1),
                         # not a silent 200 with empty final. The error frame is
@@ -436,6 +438,12 @@ def drive(tab: str, user: str, system: str = "", mode: str = "") -> dict:
                         return _fail(ev["message"], error_already_published=True)
                     if CANCEL.is_set():
                         break
+                if not saw_final:
+                    # CANCEL broke the loop before agent_loop emitted its final
+                    # (spec §3.3 'publish(final) 收尾'; terminal-final invariant
+                    # §3.6). Tabs ①②③ get this free from completion_generate's
+                    # unconditional trailing final; tab-4 must emit it here.
+                    publish({"type": "final", "content": ""})
                 return {"subscribers": subscriber_count(), "tab": tab,
                         "turns": turns, "final": final}
 

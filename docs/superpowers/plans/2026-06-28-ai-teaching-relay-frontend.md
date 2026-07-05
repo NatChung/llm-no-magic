@@ -346,7 +346,7 @@ In `setupAgent`, keep `renderTurnBlock`, `renderFinal`, `renderError`, `clearAll
   });
 ```
 
-> **Backend note (out of scope for this plan, log as a follow-up):** a `/stop` triggered by the *AI* (not the page) during a Tab ④ run still leaves Send disabled, because `drive()`'s tab-4 branch breaks on `CANCEL` without publishing a `final`/`error` frame. A one-line backend fix (publish a `final` on cancel in the tab-4 loop) would close this. For this frontend plan, the page-side Stop button is covered by the optimistic re-enable above.
+> **Backend note (RESOLVED 2026-07-05, commit pending):** an AI-triggered `/stop` during a Tab ④ run previously left Send disabled because `drive()`'s tab-4 branch broke on `CANCEL` without publishing a `final`/`error`. Fixed in `docs/superpowers/plans/2026-07-05-drive-tab4-cancel-final.md`: `drive()` now publishes a terminal `{type:"final",content:""}` on cancel, so the page's `onFinal` re-enables Send even for an AI-side stop. The optimistic client-side re-enable below is now belt-and-suspenders, not load-bearing.
 
 (The `presetEl` handler is removed; `presetEl` itself becomes unused — its markup is deleted in Task 4. Leave the `const presetEl = panel.querySelector(".preset-select");` line for now OR delete it; if you delete it, also delete the unused `const previewEl`-adjacent lookups only if truly unused. Safest: delete the `presetEl` declaration since nothing references it after removing the handler.)
 

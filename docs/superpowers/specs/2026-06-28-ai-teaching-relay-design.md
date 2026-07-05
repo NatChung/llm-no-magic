@@ -136,7 +136,7 @@ init.py / AI ──GET /health──► server ──► 立即回 {status, mode
 - 設進行中生成的 cancel flag(生成迴圈每 token 檢查)→ 中止 fan-out、`publish(final)` 收尾
 - 取代前端原本 `abortCtl.abort()`(`app.js:373,695`):relay 下中止 client fetch **不會**停 server 生成,故必須 server 端 stop。尤其 ③ 1500-token thinking 要可中止
 - 回應 `{ "ok":true }`
-- **已知限制(backend, 2026-07-05 code-review #2)**:①②③ 逐 token 生成每 token 檢查 `CANCEL`,stop **立即**生效(高風險的 ③ 1500-token 就是這條)。但 **tab④ agent 的每一 turn 是 blocking `requests.post(timeout=60)`、turn 內不看 `CANCEL`**,故 `/stop` 落在某 turn 進行中時,要等該 turn 的 llama call 回來(最慢 60s)才在 turn 之間生效——即 tab④ stop 是 **turn 粒度**,非 token 粒度。單機單人可接受(agent turn 通常短);要 token 粒度須把 `agent_loop` 的 turn call 改成 streamed + CANCEL-aware(未排程)
+- **已知限制(backend, 2026-07-05 code-review #2)**:①②③ 逐 token 生成每 token 檢查 `CANCEL`,stop **立即**生效(高風險的 ③ 1500-token 就是這條)。但 **tab④ agent 的每一 turn 是 blocking `requests.post(timeout=60)`、turn 內不看 `CANCEL`**,故 `/stop` 落在某 turn 進行中時,要等該 turn 的 llama call 回來(最慢 60s)才在 turn 之間生效——即 tab④ stop 是 **turn 粒度**,非 token 粒度。單機單人可接受(agent turn 通常短);要 token 粒度須把 `agent_loop` 的 turn call 改成 streamed + CANCEL-aware(未排程)。另:cancel 中止 tab④ 後,`drive()` 會補發 `{type:final,content:""}` 收尾(spec §3.3「`publish(final)` 收尾」、§3.6 terminal-final 不變量),故送出鈕會 re-enable——turn 粒度的只是**中止延遲**,不是「卡死」
 
 ### 3.4 `GET /health`(`[R6]`)
 - **立即回應**(不可 hang):`{ "status":"ok", "model":<current>, "subscribers":N }`

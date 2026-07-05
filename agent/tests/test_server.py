@@ -888,6 +888,42 @@ def test_drive_tab4_agent_error_returns_error(monkeypatch):
     assert {"type": "final", "content": ""} in frames
 
 
+def test_drive_tab4_cancel_emits_final(monkeypatch):
+    """A /stop mid-agent-run breaks drive()'s tab-4 loop; it must STILL emit a
+    terminal final so the page re-enables Send (spec §3.3 'publish(final) 收尾';
+    terminal-final invariant §3.6). Tabs ①②③ get this free from
+    completion_generate's unconditional trailing final — tab-4 did not.
+    Cancel is a normal stop, so the aggregate is 200-shaped (no 'error' key)."""
+    import agent.server as server
+    monkeypatch.setattr(server, "SUBSCRIBERS", [])
+    monkeypatch.setitem(server.GLOBAL_STATE, "model", "4B")  # no swap needed
+
+    def fake_loop(system, user):
+        # simulate /stop landing during turn 1: set CANCEL, then yield a
+        # turn_complete. drive() publishes it, sees CANCEL, and breaks — WITHOUT
+        # agent_loop ever yielding its own final.
+        server.CANCEL.set()
+        yield {"type": "turn_complete", "turn": 1, "message_tokens": [],
+               "tool_calls": [], "tool_results": [], "received_chunk": "",
+               "next_prompt": ""}
+
+    monkeypatch.setattr(server, "agent_loop", fake_loop)
+    q = server.subscribe()
+    try:
+        result = server.drive("4", "現在幾點?")
+    finally:
+        server.CANCEL.clear()  # never leak a set CANCEL into later tests
+
+    frames = [q.get_nowait() for _ in range(q.qsize())]
+    # the cancelled run terminates the stream with a final (re-enables Send)
+    assert {"type": "final", "content": ""} in frames
+    # cancel is NOT an error → normal 200-shaped aggregate, GEN_LOCK released
+    assert "error" not in result
+    assert result["tab"] == "4"
+    assert server.GEN_LOCK.acquire(blocking=False)
+    server.GEN_LOCK.release()
+
+
 def test_post_drive_returns_200_with_aggregate(monkeypatch):
     import agent.server as server
     monkeypatch.setattr(server, "drive",
