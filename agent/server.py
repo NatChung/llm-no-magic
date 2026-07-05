@@ -395,6 +395,16 @@ def drive(tab: str, user: str, system: str = "", mode: str = "") -> dict:
 
     spec §1.3/§1.4/§3.1. Reject-while-busy (409) — does not queue.
     """
+    # terminal-final invariant: every error exit still emits a `final` frame so
+    # the page re-enables Send (spec §3.6: only `final` re-enables the control,
+    # `error` alone would leave it wedged until reload). `error` shows the msg,
+    # the empty `final` clears the loading banner + re-enables the button.
+    def _fail(msg, error_already_published=False):
+        if not error_already_published:
+            publish({"type": "error", "message": msg})
+        publish({"type": "final", "content": ""})
+        return {"error": msg, "subscribers": subscriber_count()}
+
     if not GEN_LOCK.acquire(blocking=False):
         return {"busy": True}
     try:
@@ -404,9 +414,7 @@ def drive(tab: str, user: str, system: str = "", mode: str = "") -> dict:
             publish({"type": "swap_start", "tab": tab, "model": wanted})
             sr = handle_swap(wanted)
             if sr.get("status") != "ready":
-                msg = sr.get("message", "swap failed")
-                publish({"type": "error", "message": msg})
-                return {"error": msg, "subscribers": subscriber_count()}
+                return _fail(sr.get("message", "swap failed"))
 
         publish({"type": "drive_start", "tab": tab, "mode": mode,
                  "user": user, "system": system})
@@ -423,8 +431,9 @@ def drive(tab: str, user: str, system: str = "", mode: str = "") -> dict:
                         final = ev["content"]
                     elif ev["type"] == "error":
                         # agent_loop hit MAX_TURNS etc. — surface as 5xx (spec §3.1),
-                        # not a silent 200 with empty final.
-                        return {"error": ev["message"], "subscribers": subscriber_count()}
+                        # not a silent 200 with empty final. The error frame is
+                        # already published above via publish(ev).
+                        return _fail(ev["message"], error_already_published=True)
                     if CANCEL.is_set():
                         break
                 return {"subscribers": subscriber_count(), "tab": tab,
@@ -442,9 +451,7 @@ def drive(tab: str, user: str, system: str = "", mode: str = "") -> dict:
             return {"subscribers": subscriber_count(), "tab": tab,
                     "tokens": tokens, "final": final}
         except Exception as exc:
-            msg = f"{type(exc).__name__}: {exc}"
-            publish({"type": "error", "message": msg})
-            return {"error": msg, "subscribers": subscriber_count()}
+            return _fail(f"{type(exc).__name__}: {exc}")
     finally:
         GEN_LOCK.release()
 

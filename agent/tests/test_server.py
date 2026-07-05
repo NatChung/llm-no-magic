@@ -612,6 +612,36 @@ def test_events_streams_a_published_frame(monkeypatch):
         srv.shutdown()
 
 
+def test_events_unsubscribes_on_client_disconnect(monkeypatch):
+    """A client that drops mid-stream must have its queue removed (no leak).
+    The write to a dead socket raises Broken/ResetError → finally:unsubscribe.
+    Publishing a frame after the client closes triggers that write."""
+    import agent.server as server
+    import time as _time
+    monkeypatch.setattr(server, "SUBSCRIBERS", [])
+    srv, port = _start_server_in_thread()
+    try:
+        resp = urllib.request.urlopen(f"http://127.0.0.1:{port}/events", timeout=5)
+        for _ in range(50):
+            if server.subscriber_count() == 1:
+                break
+            _time.sleep(0.05)
+        assert server.subscriber_count() == 1
+        resp.close()  # client disconnects
+        # the handler is blocked on q.get(); publishing delivers frames it then
+        # writes to the closed socket. TCP usually needs a second write before
+        # write() raises (first write succeeds, peer RSTs, next write EPIPEs) →
+        # keep publishing (as a real drive does) until finally:unsubscribe fires.
+        for _ in range(50):
+            if server.subscriber_count() == 0:
+                break
+            server.publish({"type": "token", "token": "x"})
+            _time.sleep(0.05)
+        assert server.subscriber_count() == 0
+    finally:
+        srv.shutdown()
+
+
 def test_build_prompt_basic_returns_user_verbatim():
     from agent.server import build_completion_prompt
     assert build_completion_prompt("1", "床前明月光,疑是地上") == "床前明月光,疑是地上"
@@ -835,6 +865,9 @@ def test_drive_swap_failure_publishes_error(monkeypatch):
     assert "port 8080 still busy" in result["error"]
     frames = [q.get_nowait() for _ in range(q.qsize())]
     assert {"type": "error", "message": "port 8080 still busy"} in frames
+    # terminal-final invariant: even swap failure must emit a final so the
+    # page re-enables Send (spec §3.6 only final re-enables the control)
+    assert {"type": "final", "content": ""} in frames
 
 
 def test_drive_tab4_agent_error_returns_error(monkeypatch):
@@ -845,9 +878,14 @@ def test_drive_tab4_agent_error_returns_error(monkeypatch):
     monkeypatch.setitem(server.GLOBAL_STATE, "model", "4B")  # no swap needed
     monkeypatch.setattr(server, "agent_loop",
         lambda s, u: iter([{"type": "error", "message": "max_turns (6) reached"}]))
+    q = server.subscribe()
     result = server.drive("4", "loop forever")
     assert "max_turns" in result["error"]
     assert result.get("final", "") == ""
+    frames = [q.get_nowait() for _ in range(q.qsize())]
+    assert {"type": "error", "message": "max_turns (6) reached"} in frames
+    # terminal-final invariant: a tab-4 agent error must still re-enable Send
+    assert {"type": "final", "content": ""} in frames
 
 
 def test_post_drive_returns_200_with_aggregate(monkeypatch):
@@ -943,6 +981,8 @@ def test_drive_publishes_error_when_generation_raises(monkeypatch):
     assert "llama down" in result["error"]
     frames = [q.get_nowait() for _ in range(q.qsize())]
     assert any(f.get("type") == "error" and "llama down" in f["message"] for f in frames)
+    # terminal-final invariant: a mid-generation crash must still re-enable Send
+    assert {"type": "final", "content": ""} in frames
     # GEN_LOCK must have been released despite the exception
     assert server.GEN_LOCK.acquire(blocking=False)
     server.GEN_LOCK.release()

@@ -136,6 +136,7 @@ init.py / AI ──GET /health──► server ──► 立即回 {status, mode
 - 設進行中生成的 cancel flag(生成迴圈每 token 檢查)→ 中止 fan-out、`publish(final)` 收尾
 - 取代前端原本 `abortCtl.abort()`(`app.js:373,695`):relay 下中止 client fetch **不會**停 server 生成,故必須 server 端 stop。尤其 ③ 1500-token thinking 要可中止
 - 回應 `{ "ok":true }`
+- **已知限制(backend, 2026-07-05 code-review #2)**:①②③ 逐 token 生成每 token 檢查 `CANCEL`,stop **立即**生效(高風險的 ③ 1500-token 就是這條)。但 **tab④ agent 的每一 turn 是 blocking `requests.post(timeout=60)`、turn 內不看 `CANCEL`**,故 `/stop` 落在某 turn 進行中時,要等該 turn 的 llama call 回來(最慢 60s)才在 turn 之間生效——即 tab④ stop 是 **turn 粒度**,非 token 粒度。單機單人可接受(agent turn 通常短);要 token 粒度須把 `agent_loop` 的 turn call 改成 streamed + CANCEL-aware(未排程)
 
 ### 3.4 `GET /health`(`[R6]`)
 - **立即回應**(不可 hang):`{ "status":"ok", "model":<current>, "subscribers":N }`
@@ -154,6 +155,8 @@ init.py / AI ──GET /health──► server ──► 立即回 {status, mode
 | `final` | `content` | 收尾;**re-enable 送出鈕** |
 | `inspect` | `tokenIndex` | 程式化彈該 token 機率圖 |
 | `error` | `message` | 顯示錯誤 |
+
+**terminal-`final` 不變量(backend, 2026-07-05 code-review #1)**:`drive()` 的**每一條錯誤路徑**(swap 失敗、tab④ agent error、生成中途 crash)在 `publish(error)` 後**必再 `publish({type:final, content:""})`**。理由:上表只有 `final` re-enable 送出鈕;若只發 `error`,前端會把送出鈕永久 disable 到 reload(單人可靠性 wedge)。故前端合約為 **`error` → 顯示錯誤訊息、清 banner;`final`(空 content 亦然)→ re-enable 送出鈕**。前端不可假設 `final` 一定帶非空結果。
 
 ## 4. 前端改動(`[R4]` app.js 必進改動清單)
 
@@ -189,6 +192,7 @@ init.py / AI ──GET /health──► server ──► 立即回 {status, mode
 - **`[R2-6]` swap 前先 `publish(swap_start)`** → 頁面顯示 banner,3-5s 不空白;swap 完才 `publish(drive_start)` 開始生成
 - **頁面收 `drive_start`/`swap_start` 只更新 UI,不可呼叫 `/swap`**
 - swap 失敗 → `publish(error)` + `/drive` 5xx;AI 用人話告知 + 照 Troubleshooting(port 8080)
+- **已知限制(backend, 2026-07-05 code-review #3)**:舊 `POST /swap` route 仍 wired 在 `do_POST`(v2 遺留)。v3 頁面**不該**呼叫它,但無強制。若有人(stale cache 前端 / 手動 curl)在 `drive()` 內部 swap 進行中同時打 `/swap`,`SWAP_LOCK` 會讓其一拿 409「another swap in progress」;若 `drive()` 敗則冒出一次 spurious error frame。單人紀律下無害,保留 route 是為 debug 方便;若之後要 harden 可 gate 或移除 `_handle_swap_route`
 
 ## 8. lesson ①–④ ×2 語言改寫
 
