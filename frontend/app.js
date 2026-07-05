@@ -153,26 +153,75 @@ function renderProbs(probsEl, topLogprobs) {
   }
 }
 
-// ── Tab switching ────────────────────────────────────────────────────
-// 切 tab 前先確保 :8080 上是正確的 model(spec §5);swap 失敗就不切 tab。
-document.querySelectorAll(".tab").forEach((btn) => {
-  btn.addEventListener("click", async () => {
-    const id = btn.dataset.tab;
-    const wanted = TAB_TO_MODEL[id];
+// ── Relay: page is a pure instrument driven by POST /drive, reflecting via
+//    GET /events. Backend GEN_LOCK serializes generation, so exactly one
+//    panel is "active" at a time — a single pointer set on drive_start. ──
+const PANEL_TO_TAB = { basic: "1", advanced: "2", reasoning: "3", agent: "4" };
+const TAB_TO_PANEL = { "1": "basic", "2": "advanced", "3": "reasoning", "4": "agent" };
+const PANELS = {};   // tab id "1".."4" → render callbacks (registered in setup*)
 
-    if (wanted) {
-      try {
-        await ensureModel(wanted);
-      } catch (err) {
-        return;  // swap 失敗 → tab 不切,user 從 alert 知道有問題
-      }
-    }
+// Switch the visible tab + panel by panel-name (HTML data-tab/data-panel value).
+// Shared by the tab buttons AND drive_start (spec §3.6: drive_start → switch tab UI).
+function activateTabUI(panelName) {
+  document.querySelectorAll(".tab").forEach((b) =>
+    b.classList.toggle("active", b.dataset.tab === panelName));
+  document.querySelectorAll(".tab-panel").forEach((p) =>
+    p.classList.toggle("active", p.dataset.panel === panelName));
+}
 
-    document.querySelectorAll(".tab").forEach((b) => b.classList.toggle("active", b === btn));
-    document.querySelectorAll(".tab-panel").forEach((p) => {
-      p.classList.toggle("active", p.dataset.panel === id);
+// Returns the fetch Response (or null on network error) so callers can detect
+// 409-busy and re-enable their Send button (no drive_start/final will arrive
+// for a rejected drive). On 200 the response resolves AFTER generation, by
+// which point final has already re-enabled — so the 409 branch is the only one
+// that needs to act.
+async function postDrive(payload) {
+  try {
+    const r = await fetch("/drive", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
     });
-  });
+    if (r.status === 409) console.warn("[drive] busy (409) — a generation is already running");
+    return r;
+  } catch (err) {
+    console.error("[drive] failed", err);
+    return null;
+  }
+}
+
+async function postStop() {
+  try { await fetch("/stop", { method: "POST", body: "{}" }); }
+  catch (err) { console.error("[stop] failed", err); }
+}
+
+function connectEvents() {
+  let active = null;   // the PANELS[tab] entry currently being driven
+  const es = new EventSource("/events");
+  es.onmessage = (e) => {
+    let f;
+    try { f = JSON.parse(e.data); } catch (_) { return; }
+    switch (f.type) {
+      case "swap_start":  showSwapBanner(f.model); break;
+      case "drive_start":
+        hideSwapBanner();
+        if (TAB_TO_PANEL[f.tab]) activateTabUI(TAB_TO_PANEL[f.tab]);  // §3.6: bring the driven tab into view
+        active = PANELS[f.tab] || null;
+        active && active.onDriveStart && active.onDriveStart(f);
+        break;
+      case "token":          active && active.onToken && active.onToken(f); break;
+      case "turn_complete":  active && active.onTurnComplete && active.onTurnComplete(f); break;
+      case "final":          active && active.onFinal && active.onFinal(f); break;
+      case "inspect":        active && active.onInspect && active.onInspect(f); break;
+      case "error":          active && active.onError && active.onError(f); break;
+    }
+  };
+  es.onerror = () => { /* EventSource auto-reconnects; banner stays as-is */ };
+}
+
+// ── Tab switching — UI only. The server swaps the model inside /drive;
+//    the page reacts to the swap_start frame (banner). No /swap from here. ──
+document.querySelectorAll(".tab").forEach((btn) => {
+  btn.addEventListener("click", () => activateTabUI(btn.dataset.tab));
 });
 
 // ── Per-panel setup (closure pattern,每 tab 自己一份 state)──────────
@@ -251,147 +300,77 @@ function setupPanel(panel) {
     });
   }
 
-  async function runCompletion() {
-    abortCtl = new AbortController();
+  // ── Relay render callbacks (replace the old self-fetch runCompletion) ──
+  let isThinkingMode = false;
+  function beginRun(frame) {
     runBtn.disabled = true; stopBtn.disabled = false;
     textEl.textContent = ""; probsEl.innerHTML = "";
     tokenSteps = [];
-
-    // detect thinking mode (reasoning panel only)
-    const isThinkingMode = panelType === "reasoning" &&
-      panel.querySelector('input[name="mode-reasoning"]:checked')?.value === "thinking";
-    // direct mode: no <think> emitted, all tokens are final answer → start in "in_answer"
+    isThinkingMode = panelType === "reasoning" && frame.mode === "thinking";
     phase = isThinkingMode ? "pre_think" : "in_answer";
     if (thinkingContentEl) thinkingContentEl.textContent = "";
     if (thinkingArea) thinkingArea.classList.toggle("hidden", !isThinkingMode);
+  }
+  function onTokenStep(step) {
+    const stepIdx = tokenSteps.length;
+    tokenSteps.push({ token: step.token, top_logprobs: step.top_logprobs });
+    const trim = step.token.replace(/[\s\n]/g, "");
+    if (isThinkingMode) appendClickableToken(stepIdx, step.token, thinkingContentEl);
+    if (isThinkingMode && trim === "<think>") phase = "in_think";
+    else if (isThinkingMode && trim === "</think>") phase = "in_answer";
+    else if (phase === "in_answer") appendClickableToken(stepIdx, step.token, textEl);
+    if (stepIdx === 0) { renderProbs(probsEl, step.top_logprobs); highlightStep(0); }
+  }
+  function endRun() { runBtn.disabled = false; stopBtn.disabled = true; }
+  function onInspect(frame) {
+    const s = tokenSteps[frame.tokenIndex];
+    if (!s) return;
+    renderProbs(probsEl, s.top_logprobs);
+    highlightStep(frame.tokenIndex);
+  }
+  function onError(frame) {
+    textEl.textContent += `\n[error] ${frame.message}`;
+    endRun();
+  }
 
-    const finalPrompt = buildFinalPrompt();
+  // Register this panel so the global /events dispatcher can drive it.
+  PANELS[PANEL_TO_TAB[panelType]] = {
+    onDriveStart: beginRun,
+    onToken: (f) => onTokenStep(f),
+    onFinal: endRun,
+    onInspect: onInspect,
+    onError: onError,
+  };
 
-    // llama.cpp Qwen3-0.6B tokenizer 對單個 CJK 字 prompt throw 500 — 自動補尾空格
-    let safePrompt = finalPrompt;
-    if (finalPrompt.length === 1 && finalPrompt.charCodeAt(0) > 127) {
-      safePrompt = finalPrompt + " ";
-      console.info(t('cjk_guard_log', {ch: finalPrompt}));
+  function driveThisPanel() {
+    if (!promptEl.value.trim()) return;
+    runBtn.disabled = true;   // disable immediately to avoid double-fire 409
+    const payload = { tab: PANEL_TO_TAB[panelType], user: promptEl.value };
+    if (panelType === "advanced") {
+      payload.system = systemEl?.value || "";
+      payload.mode = panel.querySelector('input[name="mode-advanced"]:checked')?.value || "raw";
+    } else if (panelType === "reasoning") {
+      payload.mode = panel.querySelector('input[name="mode-reasoning"]:checked')?.value || "direct";
     }
-
-    let res;
-    try {
-      res = await fetch(LLAMA_URL, {
-        method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({
-          prompt: safePrompt,
-          n_predict: nPredict,
-          n_probs: 10,
-          stream: true,
-          temperature: 0,  // greedy
-        }),
-        signal: abortCtl.signal,
-      });
-    } catch (err) {
-      if (err.name === "AbortError") textEl.textContent += "\n[stopped]";
-      else { textEl.textContent = `[fetch error] ${err.message}`; console.error(err); }
-      runBtn.disabled = false; stopBtn.disabled = true;
-      return;
-    }
-
-    if (!res.ok) {
-      textEl.textContent = `[server error] HTTP ${res.status} ${res.statusText}`;
-      runBtn.disabled = false; stopBtn.disabled = true;
-      return;
-    }
-
-    const reader = res.body.getReader();
-    const decoder = new TextDecoder();
-    let buf = "";
-
-    try {
-      while (true) {
-        const {done, value} = await reader.read();
-        if (done) break;
-        buf += decoder.decode(value, {stream: true});
-        const lines = buf.split("\n");
-        buf = lines.pop();
-        for (const ln of lines) {
-          if (!ln.startsWith("data: ")) continue;
-          let data;
-          try { data = JSON.parse(ln.slice(6)); }
-          catch (e) { console.warn("JSON parse err", ln); continue; }
-          if (data.completion_probabilities && data.completion_probabilities[0]) {
-            const step = data.completion_probabilities[0];
-            const stepIdx = tokenSteps.length;
-            tokenSteps.push({token: step.token, top_logprobs: step.top_logprobs});
-
-            // LEFT (complete-response, thinking-content) — gets every token in
-            // thinking mode (always-clickable, models the real stream).
-            // RIGHT (final-answer, textEl) — gets only post-</think> tokens
-            // (i.e. what the user actually sees).
-            // <think> / </think> are single Qwen3 tokens; marker goes to LEFT only.
-            const trim = step.token.replace(/[\s\n]/g, "");
-
-            // LEFT: in thinking mode, every token goes here
-            if (isThinkingMode) {
-              appendClickableToken(stepIdx, step.token, thinkingContentEl);
-            }
-
-            // Phase transitions on markers (thinking mode only — direct mode
-            // starts at "in_answer" and stays there)
-            if (isThinkingMode && trim === "<think>") {
-              phase = "in_think";
-            } else if (isThinkingMode && trim === "</think>") {
-              phase = "in_answer";
-            } else if (phase === "in_answer") {
-              // RIGHT: tokens that are part of the final answer (mirrors
-              // LEFT post-</think>, OR in direct mode = the only output)
-              appendClickableToken(stepIdx, step.token, textEl);
-            }
-            if (stepIdx === 0) {
-              renderProbs(probsEl, step.top_logprobs);
-              highlightStep(0);
-            }
-          } else if (data.content !== undefined && !data.stop) {
-            textEl.appendChild(document.createTextNode(data.content));
-          }
-          if (data.stop) break;
-        }
-      }
-    } catch (err) {
-      if (err.name !== "AbortError") {
-        console.error("stream read err", err);
-        textEl.textContent += `\n[stream error] ${err.message}`;
-      } else textEl.textContent += "\n[stopped]";
-    }
-
-    runBtn.disabled = false; stopBtn.disabled = true;
+    // Re-enable Send if the drive was rejected (409 busy) or failed — no
+    // drive_start/final will arrive for it. On 200 final has already re-enabled.
+    postDrive(payload).then((r) => { if (!r || r.status === 409) runBtn.disabled = false; });
   }
 
   // ── Wire events ────────────────────────────────────────────────────
-  runBtn.addEventListener("click", () => {
-    if (!promptEl.value.trim()) return;
-    runCompletion();
+  runBtn.addEventListener("click", driveThisPanel);
+  stopBtn.addEventListener("click", () => {
+    postStop();
+    // Optimistic re-enable so Stop frees Send instantly; the server also
+    // sends a final on cancel (belt-and-suspenders).
+    runBtn.disabled = false; stopBtn.disabled = true;
   });
-  stopBtn.addEventListener("click", () => abortCtl?.abort());
-
-  // Ctrl/Cmd+Enter submit
   promptEl.addEventListener("keydown", (e) => {
     if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
       if (!promptEl.value.trim() || runBtn.disabled) return;
-      runCompletion();
+      driveThisPanel();
     }
   });
-
-  // Preset dropdown(目前只 Tab ① basic 有;Tab 2/3 用 mode radio 不用 preset)
-  const presetEl = panel.querySelector(".preset-select");
-  if (presetEl) {
-    presetEl.addEventListener("change", () => {
-      if (presetEl.value) {
-        promptEl.value = presetEl.value;
-        presetEl.selectedIndex = 0;  // reset 讓 user 可重選同 preset
-        // Tab 2/3 才有 preview,basic 沒;先 guard
-        if (panelType !== "basic" && previewEl) refreshPreview();
-      }
-    });
-  }
 
   // Advanced / Reasoning panel:live preview update
   if (panelType !== "basic") {
@@ -695,14 +674,9 @@ function setupAgent(panel) {
   stopBtn.addEventListener("click", () => abortCtl?.abort());
 }
 
-// Initial page load:確保當前 active tab 的 model 已 loaded
-window.addEventListener("DOMContentLoaded", () => {
-  const active = document.querySelector(".tab.active");
-  if (active) {
-    const wanted = TAB_TO_MODEL[active.dataset.tab];
-    if (wanted) ensureModel(wanted).catch(() => {});
-  }
-});
+// On load: subscribe to the relay. No model swap here — the server swaps
+// inside the first /drive (page reacts to swap_start).
+window.addEventListener("DOMContentLoaded", connectEvents);
 
 // Initialize panels — basic/advanced/reasoning go through setupPanel;
 // agent uses setupAgent; skill uses setupSkill; placeholders (script/api/mcp) skip.
