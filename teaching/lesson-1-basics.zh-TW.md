@@ -25,22 +25,24 @@
 
 ### 段落 1 — model 記得的文本(peaked)
 - 預告:「我讓瀏覽器自己動:送『床前明月光,疑是地上』給一個 0.6B 小 model,看它接下一個字。注意右邊機率圖。」(先收學員預測:下一個字是什麼?)
-- 用 MCP:開 http://localhost:9000/index.zh-TW.html → 點 Tab ①(`從這開始`旁的`① 基礎`)→ 重複 snapshot 到「載入…中」消失
-- 選 preset「床前明月光,疑是地上」→ 點「送出」→ 等「送出」鈕回 enabled
-- 點生成文字第一個 token → snapshot 讀機率(預期接「霜」、top-1 94%+)。旁白:它「背過」整首詩 → peaked
+- 驅動:`POST /drive {"tab":"1","user":"床前明月光,疑是地上"}` → 學員頁面自動切到 Tab ① 並逐 token 渲染
+- 讀回應:首 token「霜」、top-1 94%+,分佈 peaked → 旁白:它「背過」整首詩 → peaked
+- 點深看:`POST /inspect {"tokenIndex":0}` → 學員頁面彈該 token 機率圖
 
 ### 段落 2 — 瞎掰的星球(peaked ≠ 真實)
 - 預告:「這次送 `祖樹星上最高的山叫做` — 祖樹星是瞎掰的星球。你猜:model 會說『不知道』,還是編一個山名?」(先收學員預測!)
-- 用 MCP:選 preset「祖樹星上最高的山叫做」(先收學員預測:會說不知道、還是編山名?)→ 送出 → 等完成
-- 點 token 讀 snapshot 機率。旁白:照樣高 confidence 編 → peaked ≠ 真實
+- 驅動:`POST /drive {"tab":"1","user":"祖樹星上最高的山叫做"}` → 學員頁面自動切到 Tab ① 並逐 token 渲染
+- 讀回應:首 token 仍高信心編一個山名 → 旁白:照樣高 confidence 編 → peaked ≠ 真實
+- 點深看:`POST /inspect {"tokenIndex":0}` → 學員頁面彈該 token 機率圖
 
 ### 段落 3 — 不知道接啥(flat)
 - 預告:「『他打開冰箱,拿出』— 你猜 top-10 會長怎樣?」
-- 用 MCP:選 preset「他打開冰箱,拿出」(先問:top-10 會長怎樣?)→ 送出 → 等完成 → 點 token 讀機率
-- 旁白:水/雞蛋/啤酒…分散 → 分佈形狀 = model 把握度
+- 驅動:`POST /drive {"tab":"1","user":"他打開冰箱,拿出"}` → 學員頁面自動切到 Tab ① 並逐 token 渲染
+- 讀回應:top-10 分散(水/雞蛋/啤酒…)→ 旁白:分佈形狀 = model 把握度
+- 點深看:`POST /inspect {"tokenIndex":0}` → 學員頁面彈該 token 機率圖
 
 ## 學員動手
-請學員自己:換一個 preset 重跑、點不同 token 看分佈跳動;進階 — 打一句只有他們公司
+請學員自己:換一句 prompt 重打、點不同 token 看分佈跳動;進階 — 打一句只有他們公司
 才知道的事實開頭,看 model 怎麼自信亂編(自製祖樹星)。
 
 ## 揭曉與回顧(對照 Hook 答案)

@@ -25,22 +25,24 @@ Ask each question in order:
 
 ### Segment 1 — Text the model has memorized (peaked)
 - Set-up: "I'm going to drive the browser automatically: send `床前明月光,疑是地上` (the first lines of a classical poem the model has memorized) to a 0.6B model and watch the next token. Watch the probability chart on the right." (Collect a prediction first: what's the next character?)
-- Via MCP: open http://localhost:9000/ → click Tab ① (`① Basics` next to `Start Here`) → repeat snapshot until the "Loading…" banner is gone
-- Select preset `床前明月光,疑是地上` → click Submit → wait until the Submit button is re-enabled
-- Click the first generated token → read probabilities from snapshot (expect `霜`, top-1 94%+). Narrate: the model has "memorized" the whole poem → peaked
+- Drive: `POST /drive {"tab":"1","user":"床前明月光,疑是地上"}` → the page auto-switches to Tab ① and renders token by token
+- Read: first token `霜`, top-1 94%+, peaked distribution → Narrate: the model has "memorized" the whole poem → peaked
+- Inspect: `POST /inspect {"tokenIndex":0}` → the page pops up that token's probability chart
 
 ### Segment 2 — The made-up planet (peaked ≠ true)
 - Set-up: "This time we send `祖樹星上最高的山叫做` — `祖樹星` is a planet I made up. Guess: will the model say 'I don't know', or will it invent a mountain name?" (Collect learner predictions first!)
-- Via MCP: select preset `祖樹星上最高的山叫做` (collect learner predictions first: will it say "I don't know", or invent a name?) → Submit → wait until complete
-- Click a token and read probabilities from snapshot. Narrate: high confidence output anyway → peaked ≠ true
+- Drive: `POST /drive {"tab":"1","user":"祖樹星上最高的山叫做"}` → the page auto-switches to Tab ① and renders token by token
+- Read: first token is still high-confidence, inventing a mountain name → Narrate: high confidence output anyway → peaked ≠ true
+- Inspect: `POST /inspect {"tokenIndex":0}` → the page pops up that token's probability chart
 
 ### Segment 3 — No clear next token (flat)
 - Set-up: "`他打開冰箱,拿出` ('He opened the fridge and took out') — what do you think the top-10 chart looks like?"
-- Via MCP: select preset `他打開冰箱,拿出` (ask first: what do you think the top-10 chart looks like?) → Submit → wait until complete → click a token and read probabilities from snapshot
-- Narrate: water / eggs / beer … spread across many candidates → the shape of the distribution reflects the model's uncertainty
+- Drive: `POST /drive {"tab":"1","user":"他打開冰箱,拿出"}` → the page auto-switches to Tab ① and renders token by token
+- Read: top-10 spread across many candidates (water / eggs / beer …) → Narrate: the shape of the distribution reflects the model's uncertainty
+- Inspect: `POST /inspect {"tokenIndex":0}` → the page pops up that token's probability chart
 
 ## Learner Practice
-Ask learners to try it themselves: switch to a different preset and re-run, then click different tokens to see how the distribution shifts. Advanced: type the opening of a fact only their company would know, and watch the model confidently hallucinate (their own made-up planet).
+Ask learners to try it themselves: type a different prompt and re-run, then click different tokens to see how the distribution shifts. Advanced: type the opening of a fact only their company would know, and watch the model confidently hallucinate (their own made-up planet).
 
 ## Reveal & Recap (cross-reference Hook answers)
 - Pull up each learner's Q2 answer, and connect it to Segment 2: the model doesn't over-promise because it's "bad" — it's because **it doesn't have your company's refund policy**. It can only do probability chaining, and it does so with full confidence. Hallucination isn't "ChatGPT can't be trusted" — it's "ChatGPT is missing that piece of knowledge."
