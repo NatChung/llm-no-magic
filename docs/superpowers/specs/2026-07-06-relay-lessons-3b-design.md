@@ -43,8 +43,9 @@
 ```
 
 **轉換規則**:
-1. **刪除**每段的 MCP 機械行:「開頁 URL」「點 Tab N」「repeat snapshot 到載入消失」「選 preset X」「點送出」「等送出鈕 enabled」「點 token → snapshot 讀機率」。
-2. **換上** relay 行:`POST /drive {payload}`(具體 JSON,payload 字串沿用原 preset 字串)+ 一行讀回應預期值 + (①②③ 適用)`POST /inspect {tokenIndex}`。頁面切 tab 由 `drive_start` 自動處理,食譜註明「頁面自動切到 Tab N」不叫 AI 點。
+1. **刪除**每段**現有的** MCP 機械行——**逐段看哪些在**(不是每段都齊):**第一段**通常有「開頁 URL」「點 Tab N」「repeat snapshot 到載入消失」;**後續段**因頁面已開,通常只有「選 preset X / 送出 / 點 token 讀 snapshot」。有哪行刪哪行。
+2. **換上** relay 行:`POST /drive {payload}`(具體 JSON)+ 一行讀回應預期值 + (只有 lesson-1 逐 token 段適用)`POST /inspect {tokenIndex}`。頁面切 tab 由 `drive_start` 自動處理(已驗:`activateTabUI` + `beginRun` 反映 user/system/mode 到欄位),食譜註明「頁面自動切到 Tab N」不叫 AI 點。
+   - **`user` payload 字串來源**:①②④ 沿用原段落的 preset 字串(逐字)。**③(reasoning)無 preset 字串**——prompt 只存在 HTML 預填(`index*.html` 的 reasoning 面板 prefill,如 zh-TW 的 `爸爸有3顆蘋果,兒子多他2顆。請問兒子幾顆?`),`user` 直接用**該 HTML prefill 字串逐字**(注意 Hook 裡的版本可能有空格差異,以 prefill 為準);plan 抓出各語言 prefill 的確切字串。lesson-3 段落是靠 **mode radio**(direct/thinking)切換、不是 preset。
 3. **保留**每段的預告(教學問答/收預測)與旁白文字——只把「我讓瀏覽器自己動」這類仍正確的敘述留著。
 4. **per-tab payload**(對齊 relay API,母 spec §3.1):
    - ① `{"tab":"1","user":"…"}`
@@ -55,14 +56,17 @@
 ## 各課特例
 
 - **lesson-1(basic)**:3 段,每段 `/drive` + `/inspect`(點 token 看分佈)。學員動手「換一個 preset 重跑」→「換一句 prompt 重打」(preset 下拉已移除)。
-- **lesson-2(advanced)**:raw vs chat 兩模式,payload 帶 `system` + `mode`。讀回應看「chat 條列 vs raw 亂續」的差異。**教學點:chat template**——原課有引導學員看 `final-prompt-preview`(`<|im_start|>` 那段 template 文字)。**驗證時要確認**:AI 用 `/drive` 驅動、`drive_start` 程式化填輸入框後,頁面的 preview 面板**是否**跟著刷新(`refreshPreview` 綁 input 事件,程式化 set value 可能不觸發)。若刷新 → 食譜叫學員/AI 展開 preview 看;**若不刷新** → 食譜改成叫**學員自己在輸入框打字**(觸發 input 事件、preview 才更新)後再展開,或指向 server 的 `/preview` 端點。plan 依驗證結果定稿這段。
+- **lesson-2(advanced)**:raw vs chat 兩模式,payload 帶 `system` + `mode`。讀回應看「chat 條列 vs raw 亂續」的差異。**教學點:chat template**——原課引導學員看 `final-prompt-preview`(`<|im_start|>` 那段 template 文字)。**內容確實會刷新**:`drive_start` handler(`beginRun`)直接呼叫 `refreshPreview()`(不靠 input 事件),AI 驅動後 preview 內容是新的。**真正的卡點**:preview 在一個**收合的 `<details class="preview-details">`** 裡,而 relay **沒有展開 `<details>` 的指令**(§3.6 frame table 無此 type)。所以解法同母 spec §8 對 lesson-4 的處理——**AI 旁白「學員,點一下把 preview 展開來看」**(人類手動展開),不是程式驅動。
 - **lesson-3(reasoning)**:direct vs thinking,payload 帶 `mode`。thinking 段讀回應看 `<think>…</think>` 相位 + `</think>` 後的 final answer(頁面 thinking-content + generated-text)。`n_predict=1500` 在 server 端,thinking 會跑完。
-- **lesson-4(agent)**:payload `{tab:"4",…}`。**無 `/inspect`**——這課的重點是 **turn 軌跡**(紫色↑工具呼叫 / 綠色↓工具結果 / final answer),食譜讀「turn 數 + 工具呼叫 + final」而非 token 機率。**第一次 drive tab4 會 0.6B→4B swap**,食譜保留「banner 等 3-5s」的預告(swap 現在在 `/drive` 內,頁面收 `swap_start` 顯示 banner)。學員動手「preset 2 讀+寫摘要 → 開 `~/Desktop/llm-summary.md`」照舊(那是 exec 結果,不涉驅動機制)。
+- **lesson-4(agent)**:payload `{tab:"4",…}`。**無 `/inspect`**——這課的重點是 **turn 軌跡**(紫色↑工具呼叫 / 綠色↓工具結果 / final answer),食譜讀「turn 數 + 工具呼叫 + final」而非 token 機率。**第一次 drive tab4 會 0.6B→4B swap**,食譜保留「banner 等 3-5s」的預告(swap 現在在 `/drive` 內,頁面收 `swap_start` 顯示 banner)。
+  - **「展開 resend details」→ 改人類手動展開**(母 spec §8:「lesson 4『展開 resend 細節』因 `reveal` YAGNI → 改寫成人類 practice 手動展開」):原段落 debrief 叫「展開 turn block 的『再送出』details」,那是收合的 `<details>`、relay 不能展開 → 改成 AI 旁白「學員,點一下展開那個 turn 的『再送出』看 conversation 怎麼累積」。
+  - **學員動手 preset → 打字**:原文「preset 2『讀+寫摘要』」——preset 下拉已移除(母 spec §4.3),改成「學員在輸入框**打**那句 prompt(plan 抓出確切字串)」,跑完去開 `~/Desktop/llm-summary.md`(exec 結果那半照舊)。
+- **lesson-1/2 學員動手同樣掃 preset**:lesson-1 已列「換 preset→換 prompt 打」;**lesson-2 學員動手若也提 preset(如「preset 2 夏季冰飲文案」)一律改成打 prompt 字串**。目標:preset 下拉移除後,沒有任何 lesson 叫學員去「選 preset」。
 
 ## 驗證
 
 - **每課 relay 實跑**:改完一課,用 relay 對 live server 實跑該課每段的 `/drive`(像 3a demos smoke),確認食譜寫的**預期值**(① 霜 ~0.95、② chat 條列 vs raw 亂續、③ thinking 有 `<think>` 相位、④ get_time/exec_bash turn 軌跡)跟真實輸出對得上——食譜的數字不能憑空寫。用 Playwright 開頁面觀察 + curl `/drive` 讀回應。
-- **grep gate(每課雙語)**:互動 lesson 的驅動段落不再有 `用 MCP`/`Via MCP`/`snapshot`/`選 preset`/`select preset`/`點 Tab`/`click Tab`/`preset` 殘留;`POST /drive` 出現在每課雙語。
+- **grep gate(每課雙語,file-wide)**:因 I3 把學員動手的 preset 也清掉,`preset` 應該**全檔 0**;連同 `用 MCP`/`Via MCP`/`snapshot`/`選 preset`/`select preset`/`點 Tab`/`click Tab` 也全檔 0(這些是 v2 驅動殘留)。`POST /drive` 出現在每課雙語。(注意:`<details>` 展開改人類手動後,食譜可能仍有「展開 preview / 展開 resend」字樣——那是叫**學員**點,不是 MCP 驅動,合法保留。)
 - **雙語同步**:每課 EN + zh-TW 鏡像同一結構(段落數、payload、預期值一致;只語言不同)。
 
 ## 執行方式
