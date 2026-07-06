@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────────────
-// LLM 課 frontend — 2 tabs(基礎 / 產品加工),各自獨立 state
+// LLM 課 frontend — basic/advanced/reasoning/agent 互動 tabs,由 /events relay 驅動,各自獨立 state
 // ─────────────────────────────────────────────────────────────────────
 
 // ── i18n: language is taken from <html lang>;預設 en,zh-TW fallback ──
@@ -12,10 +12,6 @@ const I18N = {
   tok_title: {
     'en':    'Generated token #{n} — click to see its distribution',
     'zh-TW': '第 {n} 個生成 token — 點看當下分布',
-  },
-  cjk_guard_log: {
-    'en':    '[llama.cpp guard] single CJK char "{ch}" — appending trailing space',
-    'zh-TW': '[llama.cpp guard] 單 CJK 字 "{ch}" 補尾空格',
   },
   turn_subtitle_more: {
     'en':    'The whole turn (model output plus tool results) accumulates into messages and is sent to the model next turn',
@@ -124,10 +120,10 @@ function activateTabUI(panelName) {
 }
 
 // Returns the fetch Response (or null on network error) so callers can detect
-// 409-busy and re-enable their Send button (no drive_start/final will arrive
-// for a rejected drive). On 200 the response resolves AFTER generation, by
-// which point final has already re-enabled — so the 409 branch is the only one
-// that needs to act.
+// a rejected/failed drive (409 busy, or a 5xx e.g. swap failure) and re-enable
+// their Send button — no drive_start/final will arrive for it. On 200 the
+// response resolves AFTER generation, by which point final has already
+// re-enabled — so callers only need to act when !r.ok.
 async function postDrive(payload) {
   try {
     const r = await fetch("/drive", {
@@ -144,8 +140,13 @@ async function postDrive(payload) {
 }
 
 async function postStop() {
-  try { await fetch("/stop", { method: "POST", body: "{}" }); }
-  catch (err) { console.error("[stop] failed", err); }
+  try {
+    await fetch("/stop", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: "{}",
+    });
+  } catch (err) { console.error("[stop] failed", err); }
 }
 
 function connectEvents() {
@@ -164,9 +165,20 @@ function connectEvents() {
         break;
       case "token":          active && active.onToken && active.onToken(f); break;
       case "turn_complete":  active && active.onTurnComplete && active.onTurnComplete(f); break;
-      case "final":          active && active.onFinal && active.onFinal(f); break;
+      case "final":
+        hideSwapBanner();
+        active && active.onFinal && active.onFinal(f);
+        break;
       case "inspect":        active && active.onInspect && active.onInspect(f); break;
-      case "error":          active && active.onError && active.onError(f); break;
+      case "error":
+        hideSwapBanner();
+        // active may be null (first-ever drive never reached drive_start) or
+        // stale (a later drive's swap failed before its own drive_start) — in
+        // either case active.onError may not fire, so surface the error to
+        // the student directly rather than letting it vanish silently.
+        if (active && active.onError) active.onError(f);
+        else alert(t('swap_failed', { err: f.message }));
+        break;
     }
   };
   es.onerror = () => { /* EventSource auto-reconnects; banner stays as-is */ };
@@ -253,10 +265,20 @@ function setupPanel(panel) {
     runBtn.disabled = true; stopBtn.disabled = false;
     textEl.textContent = ""; probsEl.innerHTML = "";
     tokenSteps = [];
+    // §3.6 顯示輸入 — drive_start carries the driven user/system/mode; reflect
+    // them into this panel's own input fields so the student watches the
+    // instrument show the question that was actually asked, not a blank one.
+    if (frame.user != null) promptEl.value = frame.user;
+    if (systemEl && frame.system != null) systemEl.value = frame.system;
+    if (frame.mode != null) {
+      const radio = panel.querySelector(`input[name="mode-${panelType}"][value="${frame.mode}"]`);
+      if (radio) radio.checked = true;
+    }
     isThinkingMode = panelType === "reasoning" && frame.mode === "thinking";
     phase = isThinkingMode ? "pre_think" : "in_answer";
     if (thinkingContentEl) thinkingContentEl.textContent = "";
     if (thinkingArea) thinkingArea.classList.toggle("hidden", !isThinkingMode);
+    if (panelType !== "basic") refreshPreview();
   }
   function onTokenStep(step) {
     const stepIdx = tokenSteps.length;
@@ -299,9 +321,10 @@ function setupPanel(panel) {
     } else if (panelType === "reasoning") {
       payload.mode = panel.querySelector('input[name="mode-reasoning"]:checked')?.value || "direct";
     }
-    // Re-enable Send if the drive was rejected (409 busy) or failed — no
-    // drive_start/final will arrive for it. On 200 final has already re-enabled.
-    postDrive(payload).then((r) => { if (!r || r.status === 409) runBtn.disabled = false; });
+    // Re-enable Send if the drive was rejected (409 busy) or failed (e.g. a
+    // 5xx from a swap failure) — no drive_start/final will arrive for it.
+    // On 200 (r.ok) final has already re-enabled via onFinal.
+    postDrive(payload).then((r) => { if (!r || !r.ok) runBtn.disabled = false; });
   }
 
   // ── Wire events ────────────────────────────────────────────────────
@@ -547,9 +570,14 @@ function setupAgent(panel) {
   }
 
   // ── Relay: register so the global /events dispatcher drives this panel ──
-  function beginRun() {
+  function beginRun(frame) {
     clearAll();
     runBtn.disabled = true; stopBtn.disabled = false;
+    // §3.6 顯示輸入 — reflect the driven user/system into the panel's own
+    // input fields so the student sees the question that was actually asked.
+    if (frame && frame.user != null) promptEl.value = frame.user;
+    if (frame && frame.system != null) systemEl.value = frame.system;
+    refreshPreview();
   }
   function endRun() { runBtn.disabled = false; stopBtn.disabled = true; }
   PANELS["4"] = {
@@ -564,7 +592,7 @@ function setupAgent(panel) {
     if (!promptEl.value.trim()) return;
     runBtn.disabled = true;   // immediate, avoid double-fire 409
     postDrive({ tab: "4", user: promptEl.value, system: systemEl.value })
-      .then((r) => { if (!r || r.status === 409) runBtn.disabled = false; });
+      .then((r) => { if (!r || !r.ok) runBtn.disabled = false; });
   }
 
   runBtn.addEventListener("click", driveAgent);
