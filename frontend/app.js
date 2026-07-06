@@ -156,7 +156,10 @@ function connectEvents() {
     let f;
     try { f = JSON.parse(e.data); } catch (_) { return; }
     switch (f.type) {
-      case "swap_start":  showSwapBanner(f.model); break;
+      case "swap_start":  showSwapBanner(f.model); active = null; break;
+        // ^ reset active so a swap FAILURE (swap_start → error → final, no
+        //   drive_start) can't misroute error/final to the previously-driven
+        //   panel. A successful swap re-sets active at drive_start below.
       case "drive_start":
         hideSwapBanner();
         if (TAB_TO_PANEL[f.tab]) activateTabUI(TAB_TO_PANEL[f.tab]);  // §3.6: bring the driven tab into view
@@ -172,10 +175,10 @@ function connectEvents() {
       case "inspect":        active && active.onInspect && active.onInspect(f); break;
       case "error":
         hideSwapBanner();
-        // active may be null (first-ever drive never reached drive_start) or
-        // stale (a later drive's swap failed before its own drive_start) — in
-        // either case active.onError may not fire, so surface the error to
-        // the student directly rather than letting it vanish silently.
+        // active is null on a swap failure (reset at swap_start) or a
+        // first-ever drive that never reached drive_start; a non-swap
+        // generation error keeps active = the driven panel. Fall back to a
+        // visible alert whenever no panel can render the error.
         if (active && active.onError) active.onError(f);
         else alert(t('swap_failed', { err: f.message }));
         break;
