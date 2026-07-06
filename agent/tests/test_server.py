@@ -456,83 +456,55 @@ def test_handle_swap_poll_timeout(monkeypatch):
     assert "4B" in result["message"]
 
 
+def test_handle_swap_resets_model_on_post_kill_failure(monkeypatch):
+    """After pkill, if the port never frees (or the new llama never loads),
+    GLOBAL_STATE['model'] must be reset to None — a stale tag would make the
+    next same-model drive skip the swap and hit a dead llama (→ 500)."""
+    import agent.server as server
+    monkeypatch.setitem(server.GLOBAL_STATE, "model", "0.6B")   # stale-ish current
+    monkeypatch.setattr(server.subprocess, "run", lambda *a, **k: None)  # pkill no-op
+    monkeypatch.setattr(server.time, "sleep", lambda x: None)   # skip the ~5s port-free wait
+    monkeypatch.setattr(server, "_is_port_free", lambda port: False)     # port never frees
+    result = server.handle_swap("4B")   # wants 4B, ≠ current → real swap attempt
+    assert result["status"] == "error"
+    assert "port 8080 still busy" in result["message"]
+    assert server.GLOBAL_STATE["model"] is None   # reset happened
+
+
+def test_handle_swap_409_does_not_reset_model(monkeypatch):
+    """The 409 'another swap in progress' guard fires BEFORE pkill and this
+    thread never held SWAP_LOCK — another swap is setting the real model, so
+    resetting here would clobber valid state. Must NOT reset."""
+    import agent.server as server
+    monkeypatch.setitem(server.GLOBAL_STATE, "model", "0.6B")
+    server.SWAP_LOCK.acquire()   # simulate another swap holding the lock
+    try:
+        result = server.handle_swap("4B")
+    finally:
+        server.SWAP_LOCK.release()
+    assert result.get("code") == 409
+    assert server.GLOBAL_STATE["model"] == "0.6B"   # untouched
+
+
 import urllib.error
 
 
-def test_post_swap_returns_200_on_ready(monkeypatch):
-    """End-to-end:POST /swap → handle_swap ready → 200 + JSON body。"""
+def test_post_swap_route_removed_returns_404():
+    """v3 removed the legacy POST /swap route — the page/demos never call it,
+    swaps happen inside /drive."""
     import agent.server as server
-    monkeypatch.setattr(server, "handle_swap", lambda wanted: {
-        "status": "ready", "model": wanted, "took_ms": 1234, "skipped": False,
-    })
-
+    import urllib.request, urllib.error, json
     srv, port = _start_server_in_thread()
     try:
         req = urllib.request.Request(
             f"http://127.0.0.1:{port}/swap",
             data=json.dumps({"model": "4B"}).encode("utf-8"),
-            headers={"Content-Type": "application/json"},
-            method="POST",
-        )
-        resp = urllib.request.urlopen(req, timeout=2)
-        assert resp.status == 200
-        body = json.loads(resp.read().decode("utf-8"))
-        assert body["status"] == "ready"
-        assert body["model"] == "4B"
-        assert body["took_ms"] == 1234
-        assert resp.getheader("Access-Control-Allow-Origin") == "*"
-    finally:
-        srv.shutdown()
-
-
-def test_post_swap_returns_409_on_concurrent(monkeypatch):
-    """concurrent swap → 409。"""
-    import agent.server as server
-    monkeypatch.setattr(server, "handle_swap", lambda wanted: {
-        "status": "error", "code": 409, "message": "another swap in progress",
-    })
-
-    srv, port = _start_server_in_thread()
-    try:
-        req = urllib.request.Request(
-            f"http://127.0.0.1:{port}/swap",
-            data=json.dumps({"model": "4B"}).encode("utf-8"),
-            headers={"Content-Type": "application/json"},
-            method="POST",
-        )
+            headers={"Content-Type": "application/json"}, method="POST")
         try:
             urllib.request.urlopen(req, timeout=2)
-            assert False, "should have raised HTTPError 409"
+            assert False, "expected 404"
         except urllib.error.HTTPError as e:
-            assert e.code == 409
-            body = json.loads(e.read().decode("utf-8"))
-            assert "another swap" in body["message"]
-    finally:
-        srv.shutdown()
-
-
-def test_post_swap_returns_500_on_other_error(monkeypatch):
-    """timeout / port busy / binary missing → 500。"""
-    import agent.server as server
-    monkeypatch.setattr(server, "handle_swap", lambda wanted: {
-        "status": "error", "message": "llama-server binary not found",
-    })
-
-    srv, port = _start_server_in_thread()
-    try:
-        req = urllib.request.Request(
-            f"http://127.0.0.1:{port}/swap",
-            data=json.dumps({"model": "4B"}).encode("utf-8"),
-            headers={"Content-Type": "application/json"},
-            method="POST",
-        )
-        try:
-            urllib.request.urlopen(req, timeout=2)
-            assert False, "should have raised HTTPError 500"
-        except urllib.error.HTTPError as e:
-            assert e.code == 500
-            body = json.loads(e.read().decode("utf-8"))
-            assert "binary not found" in body["message"]
+            assert e.code == 404
     finally:
         srv.shutdown()
 

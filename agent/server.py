@@ -3,8 +3,8 @@
 Architecture: stdlib http.server only (no FastAPI). One process on :9000
 serves both:
   - GET /, /index.html, /app.js, /styles.css ... → static files from frontend/
-  - POST /agent, /skill-agent, /swap, /preview → API handlers (SSE for /agent
-    and /skill-agent, JSON for /swap, plain proxy for /preview)
+  - POST /agent, /skill-agent, /preview → API handlers (SSE for /agent
+    and /skill-agent, plain proxy for /preview)
 
 This collapses what used to be two separate ports (frontend :9000 via
 http.server, backend :8082 via this file) into one. Reduces ports the
@@ -83,7 +83,7 @@ def subscriber_count() -> int:
         return len(SUBSCRIBERS)
 
 
-# ── /swap orchestrator state (spec §4) ──────────────────────────────────
+# ── model swap state (used by drive) (spec §4) ──────────────────────────
 
 # Model identifier convention (I2): one substring used by both detect and poll
 MODEL_TAG = {
@@ -140,6 +140,12 @@ def handle_swap(wanted: str) -> dict:
 
         # 1. Kill the existing llama-server on :8080
         subprocess.run(["pkill", "-f", "llama-server.*--port 8080"], check=False)
+        # Old llama is now dead; :8080 state is unknown until the ready-poll
+        # below sets it. Clear the model tag so that if this swap FAILS
+        # (port-busy / binary-missing / load-timeout), the next drive won't
+        # skip the swap on a stale tag and hit a dead llama (→ 500). The
+        # ready-poll re-sets it on success. (spec §6.1)
+        GLOBAL_STATE["model"] = None
 
         # C2: close the previous log file handle to avoid fd leak
         if GLOBAL_STATE.get("log_fh"):
@@ -560,8 +566,6 @@ class AgentHandler(SimpleHTTPRequestHandler):
             self._handle_skill_agent()
         elif self.path == "/preview":
             self._handle_preview()
-        elif self.path == "/swap":
-            self._handle_swap_route()
         elif self.path == "/drive":
             self._handle_drive()
         elif self.path == "/inspect":
@@ -634,28 +638,6 @@ class AgentHandler(SimpleHTTPRequestHandler):
                 self.wfile.flush()
             except Exception:
                 pass  # client may have disconnected
-
-    def _handle_swap_route(self) -> None:
-        """spec §4: handle POST /swap body {"model":...}, invoke handle_swap."""
-        body = self._read_body()
-        if body is None:
-            return  # _read_body already sent 400
-
-        wanted = body.get("model", "")
-        result = handle_swap(wanted)
-
-        if result["status"] == "ready":
-            status_code = 200
-        elif result.get("code") == 409:
-            status_code = 409
-        else:
-            status_code = 500
-
-        self.send_response(status_code)
-        self.send_header("Content-Type", "application/json")
-        self._send_cors()
-        self.end_headers()
-        self.wfile.write(json.dumps(result).encode("utf-8"))
 
     def _handle_preview(self) -> None:
         """Return chat-template-expanded prompt text for teaching consistency.
