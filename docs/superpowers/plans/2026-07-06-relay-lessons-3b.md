@@ -13,7 +13,7 @@
 ## Global Constraints
 
 - **Only swap the driving recipe + sweep preset/click prose.** Preserve verbatim: 學習目標/Learning Objectives, Hook 問答/Hook Questions, 旁白/narration text, 揭曉回顧/Reveal, 常見問題/Common Questions. Do NOT rewrite pedagogy, examples, or structure.
-- **Bilingual lockstep:** every structural edit lands identically in BOTH the `.md` (EN) and `.zh-TW.md` file of a lesson — same segments transformed, same payloads, same expected values; only prose language differs.
+- **Bilingual lockstep:** every structural edit lands identically in BOTH the `.md` (EN) and `.zh-TW.md` file of a lesson — same segments transformed, same payloads, same expected values; only prose language differs. **(review M2) The EN replacement lines must ALSO avoid the gate terms** — write "→ the page auto-switches to Tab N" NOT "click Tab N", and "student, click to expand the preview" (the student clicks, not the AI). Do not re-introduce `click Tab`/`select preset`/`snapshot` in the English prose.
 - **Relay recipe format** (per Demo segment, replacing the MCP lines that are present):
   ```
   - 驅動/Drive: `POST /drive {<payload>}` → 學員頁面自動切到 Tab N 並渲染 (drive_start auto-switches; do NOT tell the AI to click a tab)
@@ -24,7 +24,7 @@
 - **Delete-list is per-what's-present** (NOT a fixed uniform list): segment 1 usually has "open URL / click Tab N / repeat snapshot until loading gone"; later segments usually have only "select preset / submit / wait re-enabled / click token → snapshot". Delete whichever MCP lines exist in each segment.
 - **`<details>` interactions → human-expand narration** (relay has no expand command): lesson-2's `final-prompt-preview` and lesson-4's per-turn "resend details" become "AI narrates: student, click to expand …".
 - **preset dropdown is gone** — no lesson may tell the student to "select a preset". 學員動手/Learner Practice that said "換 preset / preset 2 …" → "type the prompt string".
-- **grep gate (file-wide, both langs), per lesson:** `preset` / `用 MCP` / `Via MCP` / `snapshot` / `選 preset` / `select preset` / `點 Tab` / `click Tab` → **0 matches**; `POST /drive` → present. ("expand the preview / expand resend" narration is fine — it tells the student to click, not the AI to MCP-drive.)
+- **grep gate (file-wide, both langs), per lesson — CASE-INSENSITIVE (`grep -ciE`, review I1):** `preset` (catches EN `Preset 2`) / `用 MCP` / `Via MCP` / `snapshot` / `選 preset` / `select preset` / `點 Tab` / `click Tab` → **0 matches**; `POST /drive` → present. ("expand the preview / expand resend" narration is fine — it tells the student to click, not the AI to MCP-drive.)
 - **Verification is a live relay run per lesson** (controller): drive each segment's payload against the running server and confirm the recipe's expected value holds (① `霜`~0.95; ② chat=tidy list vs raw=rambling; ③ thinking has `<think>` phase + post-`</think>` answer; ④ get_time/exec_bash turn trace). The server must be up (`nohup python3 -u -m agent.server …`).
 - **Commit trailers (every commit):**
   ```
@@ -50,13 +50,15 @@ The segments drive tab 1 with these three preset strings (verbatim from the curr
 ```
 Keep each segment's 預告/Set-up (prediction question) and 旁白/narrate text verbatim; only the mechanical MCP lines change. Mirror identically in the EN file (English prose, same payloads/expected values).
 
+**Note (review M1) — some lines FUSE the MCP verb with the expected value + 旁白** on one bullet, e.g. `lesson-1-basics.zh-TW.md:30`: `點生成文字第一個 token → snapshot 讀機率(預期接「霜」、top-1 94%+)。旁白:它「背過」整首詩 → peaked`. **Split it — DELETE only the MCP verb (`點 token`/`snapshot`); KEEP the expected value (`霜` 94%+) and the 旁白**, moving them into the 讀回應/Inspect lines. Do not drop the expected value or narration.
+
 - [ ] **Step 2: Sweep the preset/click prose**
 
 學員動手/Learner Practice currently says "換一個 preset 重跑" / "switch to a different preset and re-run" → change to "換一句 prompt 重打" / "type a different prompt and re-run". Any "點 Tab ①(`① 基礎`…)" / "click Tab ①" narration → drop (drive auto-switches). Set-up line "我讓瀏覽器自己動 / I'm going to drive the browser automatically" may stay (still true — the AI drives).
 
 - [ ] **Step 3: Grep gate (both files)**
 
-Run: `grep -cE "preset|用 MCP|Via MCP|snapshot|選 preset|select preset|點 Tab|click Tab" teaching/lesson-1-basics.md teaching/lesson-1-basics.zh-TW.md`
+Run: `grep -ciE "preset|用 MCP|Via MCP|snapshot|選 preset|select preset|點 Tab|click Tab" teaching/lesson-1-basics.md teaching/lesson-1-basics.zh-TW.md`
 Expected: `0` for both. Then `grep -c "POST /drive" teaching/lesson-1-basics.md teaching/lesson-1-basics.zh-TW.md` → ≥3 each.
 
 - [ ] **Step 4: Commit**
@@ -101,7 +103,7 @@ and for 段落2:
 
 - [ ] **Step 4: Grep gate + commit**
 
-`grep -cE "preset|用 MCP|Via MCP|snapshot|選 preset|select preset|點 Tab|click Tab" teaching/lesson-2-product.md teaching/lesson-2-product.zh-TW.md` → 0 both. `grep -c "POST /drive" …` → ≥2 each. Then:
+`grep -ciE "preset|用 MCP|Via MCP|snapshot|選 preset|select preset|點 Tab|click Tab" teaching/lesson-2-product.md teaching/lesson-2-product.zh-TW.md` → 0 both. `grep -c "POST /drive" …` → ≥2 each. Then:
 ```bash
 git add teaching/lesson-2-product.md teaching/lesson-2-product.zh-TW.md
 git commit -m "docs(lesson2): driving recipe MCP → relay + preview human-expand (3b)"
@@ -121,7 +123,7 @@ Drive both payloads; confirm raw = rambling vs chat = tidy list (visibly differe
 
 - [ ] **Step 1: Read both files + the HTML prefill, then transform the 2 Demo segments**
 
-lesson-3 has **no preset string** — the prompt is the reasoning panel's HTML prefill. Use it verbatim: zh-TW file → `爸爸有3顆蘋果,兒子多他2顆。請問兒子幾顆?` (from `frontend/index.zh-TW.html:157`, no spaces — NOT the spaced Hook version). EN file → the `frontend/index.html` reasoning prefill string (which is `爸爸有3顆蘋果,兒子多他2顆。請問兒子幾顆? (Dad has 3 apples, son has 2 more than him. How many does the son have?)` — use it verbatim for the EN lesson payload). Segments switch by **mode radio**, not preset. Replace the MCP lines:
+lesson-3 has **no preset string** — the prompt is the reasoning panel's HTML prefill. Use it verbatim, **Chinese-only, IDENTICAL in both language files**: `爸爸有3顆蘋果,兒子多他2顆。請問兒子幾顆?` (no spaces — NOT the spaced Hook version). NOTE (review C1): in `frontend/index.html` the English gloss "(Dad has 3 apples…)" lives ONLY in the `placeholder=` attribute (shown when the box is empty); the actual **textarea content that gets submitted is Chinese-only**, same as `index.zh-TW.html:157`. So the EN payload `user` must be the Chinese-only string too (the `/drive` `user` is the model prompt, not UI chrome). If the EN reader benefits from the gloss, put "(Dad has 3 apples, son has 2 more than him…)" in the surrounding EN prose/narration — NEVER in the payload. Segments switch by **mode radio**, not preset. Replace the MCP lines:
 ```
 段落1 (direct):
 - 驅動:`POST /drive {"tab":"3","user":"爸爸有3顆蘋果,兒子多他2顆。請問兒子幾顆?","mode":"direct"}` → 頁面切到 Tab ③ 渲染
@@ -138,7 +140,7 @@ Delete "選 mode「直答」→ 送出頁面預填的蘋果題" style lines (the
 
 - [ ] **Step 3: Grep gate + commit**
 
-`grep -cE "preset|用 MCP|Via MCP|snapshot|選 preset|select preset|點 Tab|click Tab" teaching/lesson-3-reasoning.md teaching/lesson-3-reasoning.zh-TW.md` → 0 both. `grep -c "POST /drive" …` → ≥2 each. Then:
+`grep -ciE "preset|用 MCP|Via MCP|snapshot|選 preset|select preset|點 Tab|click Tab" teaching/lesson-3-reasoning.md teaching/lesson-3-reasoning.zh-TW.md` → 0 both. `grep -c "POST /drive" …` → ≥2 each. Then:
 ```bash
 git add teaching/lesson-3-reasoning.md teaching/lesson-3-reasoning.zh-TW.md
 git commit -m "docs(lesson3): driving recipe MCP → relay, prefill payload (3b)"
@@ -174,11 +176,11 @@ Tab-4 reads the **turn trace**, NOT token probabilities — so NO `/inspect`. �
 
 - [ ] **Step 3: Sweep the preset prose in 學員動手**
 
-學員動手 says "preset 2「讀+寫 摘要」:學員自己送出…". Preset dropdown is gone → "學員在輸入框**打**那句『讀+寫 摘要』的 prompt(plan/實作抓出 preset 3 的確切字串,如『讀 X 寫成 Y』),送出,跑完去開 `~/Desktop/llm-summary.md` — 檔案真的在". Keep the "檔案真的在 → 動手工具 vs 說話工具" teaching point.
+學員動手 says "preset 2「讀+寫 摘要」:學員自己送出…". Preset dropdown is gone → "學員在輸入框**打** `讀 prompts.md,把它總結成 3 點,寫到 ~/Desktop/llm-summary.md`(review I2 — 這是該 preset 的確切字串,存活在 `agent/smoke.py:13`),送出,跑完去開 `~/Desktop/llm-summary.md` — 檔案真的在". (EN file: use the same prompt string — it's a file path + Chinese instruction the model reads; the surrounding EN prose describes it.) Keep the "檔案真的在 → 動手工具 vs 說話工具" teaching point.
 
 - [ ] **Step 4: Grep gate + commit**
 
-`grep -cE "preset|用 MCP|Via MCP|snapshot|選 preset|select preset|點 Tab|click Tab" teaching/lesson-4-agent.md teaching/lesson-4-agent.zh-TW.md` → 0 both. `grep -c "POST /drive" …` → ≥2 each. (Note: `<tool_call>` and `/inspect`-absence are expected — this lesson uses turns, not inspect.) Then:
+`grep -ciE "preset|用 MCP|Via MCP|snapshot|選 preset|select preset|點 Tab|click Tab" teaching/lesson-4-agent.md teaching/lesson-4-agent.zh-TW.md` → 0 both. `grep -c "POST /drive" …` → ≥2 each. (Note: `<tool_call>` and `/inspect`-absence are expected — this lesson uses turns, not inspect.) Then:
 ```bash
 git add teaching/lesson-4-agent.md teaching/lesson-4-agent.zh-TW.md
 git commit -m "docs(lesson4): driving recipe MCP → relay, turn trace + human-expand (3b)"
