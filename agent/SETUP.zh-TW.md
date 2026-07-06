@@ -1,4 +1,4 @@
-# V2 Agent stack setup
+# Agent stack setup (v3 relay)
 
 > English: [SETUP.md](./SETUP.md)
 

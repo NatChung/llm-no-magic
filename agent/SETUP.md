@@ -1,4 +1,4 @@
-# V2 Agent stack setup
+# Agent stack setup (v3 relay)
 
 > 繁體中文版: [SETUP.zh-TW.md](./SETUP.zh-TW.md)
 
