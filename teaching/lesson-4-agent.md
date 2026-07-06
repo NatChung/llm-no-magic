@@ -24,19 +24,16 @@ Read this scenario aloud to participants:
 
 ### Segment 1 — What time is it? (get_time)
 - Preview: "The model has no clock. Guess how it knows the current time? Watch the purple '↑ Tool call' and green '↓ Tool result' blocks."
-- Via MCP: open http://localhost:9000/ → click Tab ④ (Agent) → re-snapshot until the "Loading…" banner is gone (loading the 4B model takes longer — be patient)
-- Select preset `現在幾點?` → click Submit → wait until the Submit button is re-enabled
-- Watch the turn trace (purple tool calls / green tool results) → read the final answer
-- Debrief: Turn 1 — model outputs `<tool_call>{"name":"get_time"…}` → client actually runs Python to get the time → feeds result back into the conversation → Turn 2 can now answer. **The XML tag is just a convention; the client is what executes.**
+- Drive: `POST /drive {"tab":"4","user":"現在幾點?"}` → the page auto-switches to Tab ④ and renders; **the first drive triggers a 0.6B→4B swap — the loading banner runs 3-5 s** (the swap happens inside `/drive`; the page shows the banner on `swap_start`)
+- Read: the turn trace — Turn 1 purple "↑ Tool call get_time" → green "↓ Tool result" → Turn 2's final answer (the current time, HH:MM:SS) → Debrief: Turn 1 — model outputs `<tool_call>{"name":"get_time"…}` → client actually runs Python to get the time → feeds result back into the conversation → Turn 2 can now answer. **The XML tag is just a convention; the client is what executes.**
 
 ### Segment 2 — Count .md files (exec_bash)
 - Preview: "This time it will run a shell command and actually count files in this repo."
-- Via MCP: select preset `數一下這個 repo 底下有幾個 .md 檔` → click Submit → wait until the Submit button is re-enabled
-- Watch the turns accumulate → read the final answer
-- Debrief: Expand the "resend" details in the turn block — see how the conversation accumulates round by round to become the next input.
+- Drive: `POST /drive {"tab":"4","user":"數一下這個 repo 底下有幾個 .md 檔"}` → the page renders the turn trace
+- Read: Turn 1 exec_bash tool call + its result → the final answer (N .md files) → Debrief: narration — student, click to expand that turn's "resend" details, and watch how the conversation accumulates round by round to become the next input.
 
 ## Hands-On
-Preset 2 "Read + Write Summary": participants submit it themselves. When it finishes, open `~/Desktop/llm-summary.md` — **the file is really there.**
+Have participants type this prompt themselves into the input box: `讀 prompts.md,把它總結成 3 點,寫到 ~/Desktop/llm-summary.md` — submit it. When it finishes, open `~/Desktop/llm-summary.md` — **the file is really there.**
 That is the difference between a "doing tool" and a "speaking tool."
 
 ## Reveal and Wrap-Up (whole-course close — compare against Lesson 1 and this lesson's Hook answers)

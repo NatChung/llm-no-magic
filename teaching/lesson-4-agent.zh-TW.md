@@ -24,20 +24,20 @@
 
 ### 段落 1 — 現在幾點?(get_time)
 - 預告:「model 沒有時鐘。猜它怎麼知道現在幾點?看紫色『↑ 工具呼叫』和綠色『↓ 工具結果』。」
-- 用 MCP:開 http://localhost:9000/index.zh-TW.html → 點 Tab ④(Agent)→ 重複 snapshot 到「載入…中」消失(4B 換模載入較久,耐心等)
-- 選 preset「現在幾點?」→ 點「送出」→ 等「送出」鈕回 enabled
-- 看 turn 軌跡(紫色工具呼叫 / 綠色工具結果)→ 讀 final answer
-- debrief:Turn 1 model 吐 `<tool_call>{"name":"get_time"…}` → client 真的跑 Python 拿時間 →
+- 驅動:`POST /drive {"tab":"4","user":"現在幾點?"}` → 頁面自動切到 Tab ④ 並渲染;**第一次會 0.6B→4B swap,banner 等 3-5s**(swap 在 `/drive` 內、頁面收 `swap_start` 顯示 banner)
+- 讀回應:turn 軌跡 — Turn 1 紫「↑ 工具呼叫 get_time」→ 綠「↓ 工具結果」→ Turn 2 final answer(現在是 HH:MM:SS)→
+  旁白:Turn 1 model 吐 `<tool_call>{"name":"get_time"…}` → client 真的跑 Python 拿時間 →
   塞回對話 → Turn 2 才答得出來。**XML 標籤只是約定,執行的是 client**
 
 ### 段落 2 — 數 .md 檔(exec_bash)
 - 預告:「這次它要跑 shell 指令、真的數這個 repo 的檔案。」
-- 用 MCP:選 preset「數一下這個 repo 底下有幾個 .md 檔」→ 點「送出」→ 等「送出」鈕回 enabled
-- 看 turn 累積 → 讀 final answer
-- debrief:展開 turn block 的「再送出」details:看 conversation 怎麼一輪輪累積成下次 input
+- 驅動:`POST /drive {"tab":"4","user":"數一下這個 repo 底下有幾個 .md 檔"}` → 頁面渲染 turn 軌跡
+- 讀回應:Turn 1 exec_bash 工具呼叫 + 結果 → final answer(N 個 .md 檔)→
+  旁白:學員,點一下展開那個 turn 的「再送出」,看 conversation 怎麼一輪輪累積成下次 input
 
 ## 學員動手
-preset 2「讀+寫 摘要」:學員自己送出,跑完去開 `~/Desktop/llm-summary.md` — **檔案真的在**,
+學員在輸入框**打** `讀 prompts.md,把它總結成 3 點,寫到 ~/Desktop/llm-summary.md`,送出,
+跑完去開 `~/Desktop/llm-summary.md` — **檔案真的在**,
 這就是「動手工具」跟「說話工具」的差別。
 
 ## 揭曉與回顧(整課收尾 — 對照 Lesson 1 與本課 Hook 答案)
