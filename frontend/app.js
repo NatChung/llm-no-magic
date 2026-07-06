@@ -388,7 +388,6 @@ function setupPanel(panel) {
 function setupAgent(panel) {
   const systemEl   = panel.querySelector(".system-prompt");
   const promptEl   = panel.querySelector(".prompt");
-  const presetEl   = panel.querySelector(".preset-select");
   const previewEl  = panel.querySelector(".final-prompt-preview");
   const runBtn     = panel.querySelector(".run");
   const stopBtn    = panel.querySelector(".stop");
@@ -601,77 +600,34 @@ function setupAgent(panel) {
     finalEl.appendChild(errBox);
   }
 
-  async function runAgent() {
+  // ── Relay: register so the global /events dispatcher drives this panel ──
+  function beginRun() {
     clearAll();
-    abortCtl = new AbortController();
     runBtn.disabled = true; stopBtn.disabled = false;
+  }
+  function endRun() { runBtn.disabled = false; stopBtn.disabled = true; }
+  PANELS["4"] = {
+    onDriveStart: beginRun,
+    onTurnComplete: (f) =>
+      renderTurnBlock(f.turn, f.message_tokens, f.tool_calls, f.tool_results, f.received_chunk, f.next_prompt),
+    onFinal: (f) => { renderFinal(f.content); endRun(); },
+    onError: (f) => { renderError(f.message); endRun(); },
+  };
 
-    let res;
-    try {
-      res = await fetch(AGENT_BACKEND_URL, {
-        method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body:   JSON.stringify({
-          system: systemEl.value,
-          user:   promptEl.value,
-        }),
-        signal: abortCtl.signal,
-      });
-    } catch (err) {
-      if (err.name !== "AbortError") renderError(`fetch failed: ${err.message}`);
-      runBtn.disabled = false; stopBtn.disabled = true;
-      return;
-    }
-    if (!res.ok) {
-      renderError(`HTTP ${res.status} ${res.statusText}`);
-      runBtn.disabled = false; stopBtn.disabled = true;
-      return;
-    }
-
-    const reader = res.body.getReader();
-    const decoder = new TextDecoder();
-    let buf = "";
-
-    try {
-      while (true) {
-        const {done, value} = await reader.read();
-        if (done) break;
-        buf += decoder.decode(value, {stream: true});
-        const frames = buf.split("\n\n");
-        buf = frames.pop();
-        for (const fr of frames) {
-          if (!fr.startsWith("data: ")) continue;
-          let evt;
-          try { evt = JSON.parse(fr.slice(6)); }
-          catch (e) { console.warn("bad frame", fr); continue; }
-          if (evt.type === "turn_complete") {
-            renderTurnBlock(evt.turn, evt.message_tokens, evt.tool_calls, evt.tool_results, evt.received_chunk, evt.next_prompt);
-          } else if (evt.type === "final") {
-            renderFinal(evt.content);
-          } else if (evt.type === "error") {
-            renderError(evt.message);
-          }
-        }
-      }
-    } catch (err) {
-      if (err.name !== "AbortError") renderError(`stream: ${err.message}`);
-    }
-    runBtn.disabled = false; stopBtn.disabled = true;
+  function driveAgent() {
+    if (!promptEl.value.trim()) return;
+    runBtn.disabled = true;   // immediate, avoid double-fire 409
+    postDrive({ tab: "4", user: promptEl.value, system: systemEl.value })
+      .then((r) => { if (!r || r.status === 409) runBtn.disabled = false; });
   }
 
-  presetEl.addEventListener("change", () => {
-    if (presetEl.value) {
-      promptEl.value = presetEl.value;
-      presetEl.selectedIndex = 0;  // reset so user can pick same preset again
-      refreshPreview();             // programmatic .value 不會 trigger input event,手動 refresh
-    }
+  runBtn.addEventListener("click", driveAgent);
+  stopBtn.addEventListener("click", () => {
+    postStop();
+    // Optimistic re-enable so Stop frees Send instantly; the server also
+    // sends a final on cancel for Tab ④ too (belt-and-suspenders).
+    runBtn.disabled = false; stopBtn.disabled = true;
   });
-
-  runBtn.addEventListener("click", () => {
-    if (!promptEl.value.trim()) return;
-    runAgent();
-  });
-  stopBtn.addEventListener("click", () => abortCtl?.abort());
 }
 
 // On load: subscribe to the relay. No model swap here — the server swaps
