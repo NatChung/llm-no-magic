@@ -49,6 +49,7 @@ def test_handle_swap_resets_model_on_post_kill_failure(monkeypatch):
     import agent.server as server
     monkeypatch.setitem(server.GLOBAL_STATE, "model", "0.6B")   # stale-ish current
     monkeypatch.setattr(server.subprocess, "run", lambda *a, **k: None)  # pkill no-op
+    monkeypatch.setattr(server.time, "sleep", lambda x: None)   # skip the ~5s port-free wait
     monkeypatch.setattr(server, "_is_port_free", lambda port: False)     # port never frees
     result = server.handle_swap("4B")   # wants 4B, ≠ current → real swap attempt
     assert result["status"] == "error"
@@ -114,7 +115,7 @@ Expected: **2 passed**.
 
 - [ ] **Step 6: Write the failing test for `/swap` route removal**
 
-Find the existing `/swap`-route test(s) in `agent/tests/test_server.py` (search for `"/swap"` — there is a success/409 test around line 463 that POSTs `/swap` and asserts `handle_swap` was routed). Replace the whole set of `/swap`-route HTTP tests with a single removal test:
+There are **three** HTTP route tests that POST `/swap` (verified): `test_post_swap_returns_200_on_ready`, `test_post_swap_returns_409_on_concurrent`, `test_post_swap_returns_500_on_other_error`. **Delete all three** (the leftover 500-test would POST `/swap` and assert 500 → after removal `/swap` returns 404 → green-gate red). Do NOT touch the seven `test_handle_swap_*` unit tests — they call `handle_swap` directly, which survives. Replace the three deleted route tests with a single removal test:
 
 ```python
 def test_post_swap_route_removed_returns_404():
@@ -153,7 +154,7 @@ In `agent/server.py` `do_POST`, delete the branch:
             self._handle_swap_route()
 ```
 
-And delete the entire `_handle_swap_route` method (the `def _handle_swap_route(self) -> None:` block, currently ~lines 638-658). Leave `handle_swap` itself (still used internally by `drive`).
+And delete the entire `_handle_swap_route` method (the `def _handle_swap_route(self) -> None:` block, currently ~lines 638-658). Leave `handle_swap` itself (still used internally by `drive`). Also trim the now-stale `/swap` references in the module docstring (`server.py:5,7` mention `/swap` in the endpoint list + "JSON for `/swap`") and the `── /swap orchestrator state ──` comment (`:86` → retitle to `── model swap state (used by drive) ──`) so the file's own docs don't advertise a removed route.
 
 - [ ] **Step 9: Run the full server suite**
 
@@ -323,6 +324,7 @@ At the top of `teaching/demos/_common.py`, add stdlib imports and the tab map:
 import json
 import time
 import urllib.request
+import urllib.error   # for HTTPError in _post (explicit; don't rely on urllib.request re-export)
 
 TAB_TO_PANEL = {"1": "basic", "2": "advanced", "3": "reasoning", "4": "agent"}
 ```
@@ -396,8 +398,10 @@ def run_segment(page, panel_unused, args, k: int):
     c.log(f"[{k}.1] AI drive tab1:{prompt}({expect})")
     result = c.drive("1", prompt)
     panel = c.activate_and_assert(page, "1")
-    top1 = result["tokens"][0]["prob"] if result.get("tokens") else None
-    c.log(f"[{k}.2] 首 token「{result['tokens'][0]['token']}」prob={top1:.3f}")
+    toks = result.get("tokens") or []
+    if not toks:
+        c.die(f"tab1 drive 沒回 tokens:{result}")
+    c.log(f"[{k}.2] 首 token「{toks[0]['token']}」prob={toks[0]['prob']:.3f}")
     c.pause(page, args, 800)
     c.log(f"[{k}.3] /inspect token {nth} → 頁面彈機率圖")
     c.inspect("1", nth)
@@ -421,7 +425,11 @@ def main():
 
 - [ ] **Step 3: Retarget `demo_tab2.py` and `demo_tab3.py`**
 
-Same pattern. `demo_tab2.py` drives `c.drive("2", prompt, system=SYS, mode=<"raw"|"chat">)` per its presets and asserts the panel reflects (generated-text non-empty; raw vs chat visibly differ). `demo_tab3.py` drives `c.drive("3", prompt, mode=<"direct"|"thinking">)`; for `thinking`, assert the `.thinking-content` fills and the `.final-content` (post-`</think>`) populates. Read each file's existing `PRESETS`/`SYS` and keep the same prompts/segments — only swap the driving mechanism (`pick_preset`+`run_and_wait` → `drive`+`activate_and_assert`). Preserve each demo's existing `--segment`/`--lang`/`--smoke` args via `c.add_args`.
+Same pattern; read each file first for its actual constants (names differ from tab1):
+- **`demo_tab2.py`** uses top-level `PROMPT` (`:13`) and `SYSTEM` (`:14`) constants (NOT `PRESETS`/`SYS`) and two segment fns. Drive chat as `c.drive("2", PROMPT, system=SYSTEM, mode="chat")` and raw as `c.drive("2", PROMPT, mode="raw")` (raw ignores the template — no system needed). Assert via `c.activate_and_assert(page, "2")` that `.generated-text` is non-empty; the chat result is a tidy list vs raw is rambling (visibly differ — log both, no strict assertion on wording).
+- **`demo_tab3.py`** has no `PRESETS`/`SYSTEM`; it relies on the page's pre-filled apple prompt and only picks the mode. Drive as `c.drive("3", prompt, mode="direct")` and `c.drive("3", prompt, mode="thinking")` (send NO `system`; reuse the demo's existing prompt string). For `thinking`, assert `.thinking-content` fills **and** `.generated-text` populates (the post-`</think>` answer routes to `.generated-text` — **NOT** `.final-content`, which exists only in the agent panel). For `direct`, assert `.generated-text` non-empty and no thinking area.
+
+Only swap the driving mechanism (`pick_preset`+`run_and_wait` → `drive`+`activate_and_assert`); preserve each demo's existing `--segment`/`--lang`/`--smoke` args via `c.add_args` and its `wait_subscribed()` before the first drive (as in tab1's `main`).
 
 - [ ] **Step 4: Retarget `demo_tab4.py`**
 
@@ -505,7 +513,7 @@ In `teaching/README.md` + `.zh-TW.md`, update ONLY the onboarding + division-of-
 Run each and confirm:
 - `grep -rin "browser MCP\|Playwright MCP\|/mcp\|Pending approval\|\.mcp\.json\|mcp_servers\|trust the folder" AGENTS.md AGENTS.zh-TW.md README.md README.en.md teaching/README.md teaching/README.zh-TW.md` → **nothing** (all onboarding MCP references gone).
 - `grep -rin "npx\|Node/npx\|Node\.js" AGENTS.md AGENTS.zh-TW.md README.md README.en.md` → **nothing** (Node no longer a student dep).
-- Spot-check lockstep: each EN file and its language sibling changed the same sections (diff the two `git diff --stat` line counts are comparable; structurally the same edits).
+- Spot-check lockstep **structurally** (NOT by line count — the file pairs already differ in length, e.g. `teaching/README.md` 52 vs `.zh-TW.md` 39): confirm each language sibling had the same sections edited (the MCP-approval step removed in both, the "Driving the page" subsection retitled+rewritten in both). The residue greps above are the real lockstep gate.
 - `POST /drive` (or `/drive`) now appears in AGENTS.md, AGENTS.zh-TW.md, and both teaching/README files.
 
 - [ ] **Step 5: Commit**
