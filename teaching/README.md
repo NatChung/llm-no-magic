@@ -28,25 +28,34 @@ wrap-up — do not skip ahead).
 3. **Don't correct the learner directly when they're wrong** — let the demo show them
 4. **Match the learner's language**; materials are bilingual — pick the lesson file in the
    matching language
-5. **Three-beat demo**: announce (say what they're about to see) → operate the page with browser
-   MCP → debrief on what they saw. One browser, you drive, the learner watches
-6. Always drive demos with **browser MCP** live — **do not** ask the learner to open the URL
-   themselves, and do not run Python scripts as the learner demo (those are the creator's
-   `--smoke` regression harness)
+5. **Three-beat demo**: announce (say what they're about to see) → drive the page via
+   `POST /drive` → debrief on what they saw. One browser (already open, subscribed via
+   `/events`), you drive over HTTP, the learner watches
+6. Always drive demos through the **relay** (`POST /drive`) live — confirm the learner's
+   browser is open and subscribed first (`GET /health` → `subscribers >= 1`, else ask them
+   to open http://localhost:9000/), and do not run Python scripts as the learner demo
+   (those are the creator's `--smoke` regression harness)
 
-## Running demos (browser MCP)
+## Running demos (the relay)
 
-You (AI) open http://localhost:9000/ via browser MCP and follow the lesson playbook. Leave the
-browser open after the demo so the learner can try it themselves. Wait / failure signals:
+You (AI) drive http://localhost:9000/ by calling `POST /drive` and follow the lesson
+playbook — each call runs one action and the page reflects it live through its `/events`
+subscription. Leave the browser open after the demo so the learner can try it themselves.
+Wait / failure signals:
 
-- Switching tabs triggers a model swap → keep snapshotting until the "Loading…" banner text
-  disappears before continuing
-- While generating, the Send button is disabled; it re-enables on completion; token probability
-  values appear directly in the snapshot text after clicking a token
-- A swap failure shows a dialog "Model swap failed…" → handle the dialog, tell the learner what
-  happened, and follow AGENTS.md Troubleshooting (port 8080)
+- Driving a tab that changes the model triggers a swap inside `/drive`; the page shows a
+  "Loading…" banner (from the `swap_start` frame) until the call returns — no
+  snapshot-polling needed
+- `/drive` returns the aggregate (tokens/turns/final) when generation completes; the page's
+  Send button re-enables on the terminal `final`
+- A swap failure returns `/drive` 5xx `{error}` and the page shows the error and recovers →
+  tell the learner what happened, and follow AGENTS.md Troubleshooting (port 8080)
 
-Prerequisites: `python3 init.py` all green (Node/npx + MCP config in place), server running,
-browser MCP approved.
+Prerequisites: `python3 init.py` all green, server running, the learner's browser open at
+http://localhost:9000/ (check with `GET /health` → `subscribers >= 1`).
 
 > Creator regression testing (not for live teaching): `python3 teaching/demos/demo_tab*.py --smoke` (requires pip playwright).
+
+> Note: the per-lesson playbooks below (`lesson-*.md`) still describe the old
+> browser-automation driving style in places — they're being rewritten to the relay flow
+> separately; follow what the AI actually does live over what the lesson text says.

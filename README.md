@@ -63,9 +63,11 @@ LISTEN_HOST=0.0.0.0 nohup python3 -u -m agent.server > /tmp/agent-server.log 2>&
 不想自己摸?用 AI coding agent 打開這個 repo,它會讀 [AGENTS.md](./AGENTS.md)、
 問你是老師還是學員,然後:
 
-- 跑 `python3 init.py` 幫你檢查環境(llama.cpp、模型、Node/npx + browser MCP),缺什麼帶你裝
-- 照 [teaching/](./teaching/) 課綱帶課:AI **自己用 browser MCP 開並操作**那一個瀏覽器、邊做邊解說,demo 完留著讓你接手試
-- 你只要看那個畫面、聽解說、偶爾自己動手(不用自己開網址)
+- 跑 `python3 init.py` 幫你檢查環境(llama.cpp、模型),缺什麼帶你裝 — 教學只需要一個能發
+  HTTP 請求的 AI,加上你自己開一次的瀏覽器,不需要 Node、不需要 MCP
+- 照 [teaching/](./teaching/) 課綱帶課:AI **透過 HTTP 打 `POST /drive` 驅動頁面**,頁面
+  透過 SSE(`/events`)即時反映每個動作,邊做邊解說,demo 完留著讓你接手試
+- 你自己開一次網址(http://localhost:9000/)後留著就好,之後只要看那個畫面、聽解說、偶爾自己動手 — 其餘由 AI 透過 HTTP 驅動
 
 學員用法:clone 後在 repo 資料夾開 Claude Code,打聲「hi」就會開始。
 

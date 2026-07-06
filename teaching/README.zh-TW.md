@@ -22,18 +22,29 @@
 2. **先問預測再 demo** — 每課的 Hook 問答永遠在 demo 之前;把學員的回答記住(lesson 4 收尾要對照)
 3. **學員答錯不直接糾正** — 用 demo 讓他自己看到
 4. **對話語言跟學員**;教材雙語,取對應語言的 lesson 檔
-5. **Demo 三拍**:預告(說等下會看到什麼)→ 用 browser MCP 操作頁面 → 看結果 debrief。一個瀏覽器、你操作、學員看
-6. demo 一律用 **browser MCP** 即時驅動,**不要**叫學生自己開網址、也不要跑 Python script 當學生 demo(那是 creator 跑 `--smoke` 回歸用)
+5. **Demo 三拍**:預告(說等下會看到什麼)→ 打 `POST /drive` 驅動頁面 → 看結果 debrief。
+   一個瀏覽器(已開好、已訂閱 `/events`)、你透過 HTTP 操作、學員看
+6. demo 一律用 **relay**(`POST /drive`)即時驅動 — 先確認學員的瀏覽器已開好並訂閱
+   (`GET /health` → `subscribers >= 1`,不然請學生自己開 http://localhost:9000/),
+   也不要跑 Python script 當學生 demo(那是 creator 跑 `--smoke` 回歸用)
 
-## 帶 demo(用 browser MCP)
+## 帶 demo(用 relay)
 
-你(AI)用 browser MCP 開 http://localhost:9000/index.zh-TW.html(英文用 `/`)、照 lesson 的
-playbook 操作,demo 完**不要關**、留著讓學生試。等待 / 失敗訊號:
+你(AI)打 `POST /drive` 驅動 http://localhost:9000/index.zh-TW.html(英文用 `/`)、照 lesson 的
+playbook 操作 — 每次呼叫執行一個動作,頁面會透過它的 `/events` 訂閱即時反映。demo 完
+**不要關**、留著讓學生試。等待 / 失敗訊號:
 
-- 切 tab 會觸發 model swap → 重複 snapshot 到「載入…中」banner 文字消失再往下
-- 生成中「送出」鈕 disabled、完成回 enabled;點 token 後機率值直接在 snapshot 文字裡
-- swap 失敗會跳 dialog「Model swap failed…」→ 處理 dialog + 跟學生說失敗,照 AGENTS.md Troubleshooting(port 8080)
+- 驅動會換 model 的分頁時,`/drive` 內部會觸發 swap;頁面會顯示「載入…中」banner
+  (來自 `swap_start` frame),直到呼叫回傳為止 — 不需要輪詢
+- `/drive` 完成生成時會回傳整體結果(tokens/turns/final);頁面的「送出」鈕會在收到
+  最終的 `final` 時重新啟用
+- swap 失敗時 `/drive` 會回傳 5xx `{error}`,頁面會顯示錯誤並自行復原 → 跟學生說失敗,
+  照 AGENTS.md Troubleshooting(port 8080)
 
-前置:`python3 init.py` 全綠(Node/npx + MCP 設定就位)、server 在跑、browser MCP 已核准。
+前置:`python3 init.py` 全綠、server 在跑、學生的瀏覽器已開在 http://localhost:9000/
+(用 `GET /health` → `subscribers >= 1` 確認)。
 
 > creator 回歸驗證(非帶課):`python3 teaching/demos/demo_tab*.py --smoke`(需 pip playwright)。
+
+> 備註:下方各課 playbook(`lesson-*.zh-TW.md`)部分內容還沿用舊的瀏覽器自動化驅動說法 —
+> 之後會另外改寫成 relay 流程;帶課時以 AI 實際操作為準,而非 lesson 文字本身。
