@@ -14,27 +14,26 @@ PROMPT = "一年有幾個月?"
 SYSTEM = "你是行銷顧問,用條列式回答,只給 3 點。"
 
 
-def seg1(page, panel, args):
-    c.log("[1.1] 裸 prompt 模式(raw):只把問題原樣丟給 model")
-    panel.locator('input[name="mode-advanced"][value="raw"]').check()
-    c.pick_preset(panel, PROMPT)
-    c.pause(page, args, 800)
-    c.log("[1.2] 送出")
-    c.run_and_wait(panel)
-    c.log(f"[1.3] raw 輸出:「{panel.locator('.generated-text').inner_text()[:80]}…」(預期:散開、可能像接龍)")
+def seg1(page, panel_unused, args):
+    c.log("[1.1] AI drive tab2 raw:只把問題原樣丟給 model(不經 chat template)")
+    c.drive("2", PROMPT, mode="raw")
+    panel = c.activate_and_assert(page, "2")
+    text = panel.locator(".generated-text").inner_text()
+    if not text.strip():
+        c.die("tab2 raw drive 後 .generated-text 是空的")
+    c.log(f"[1.2] raw 輸出:「{text[:80]}…」(預期:散開、可能像接龍)")
+    c.pause(page, args, 1500)
 
 
-def seg2(page, panel, args):
-    c.log(f"[2.1] 填 system prompt:「{SYSTEM}」+ 切到產品加工(chat)模式")
-    panel.locator(".system-prompt").fill(SYSTEM)
-    panel.locator('input[name="mode-advanced"][value="chat"]').check()
-    c.pick_preset(panel, PROMPT)
-    c.log("[2.2] 展開「實際送進 model 的 final prompt」preview — 看 <|im_start|> marker 怎麼包")
-    panel.locator(".preview-details summary").click()
-    c.pause(page, args, 2500)
-    c.log("[2.3] 送出")
-    c.run_and_wait(panel)
-    c.log(f"[2.4] 加工後輸出:「{panel.locator('.generated-text').inner_text()[:80]}…」(預期:整齊條列)")
+def seg2(page, panel_unused, args):
+    c.log(f"[2.1] AI drive tab2 chat:system=「{SYSTEM}」+ 產品加工(chat)模式")
+    c.drive("2", PROMPT, system=SYSTEM, mode="chat")
+    panel = c.activate_and_assert(page, "2")
+    text = panel.locator(".generated-text").inner_text()
+    if not text.strip():
+        c.die("tab2 chat drive 後 .generated-text 是空的")
+    c.log(f"[2.2] 加工後輸出:「{text[:80]}…」(預期:整齊條列)")
+    c.pause(page, args, 1500)
 
 
 def main():
@@ -43,8 +42,8 @@ def main():
     args = ap.parse_args()
     with sync_playwright() as p:
         browser, page, state = c.launch(p, args)
-        panel = c.switch_tab(page, state, "advanced")
-        c.run_segments(page, panel, args, 2,
+        c.wait_subscribed()
+        c.run_segments(page, None, args, 2,
                        lambda pg, pn, a, k: {1: seg1, 2: seg2}[k](pg, pn, a))
         c.pause(page, args, 2000)
         browser.close()

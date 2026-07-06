@@ -16,16 +16,14 @@ PRESETS = {
 }
 
 
-def run_segment(page, panel, args, k: int):
+def run_segment(page, panel_unused, args, k: int):
     prompt, tool = PRESETS[k]
-    c.log(f"[{k}.1] 選 preset:{prompt}(預期 model 吐 <tool_call> 呼叫 {tool})")
-    c.pick_preset(panel, prompt)
-    c.pause(page, args, 800)
-    c.log(f"[{k}.2] 送出 — 看 turn 軌跡:紫色「↑ 工具呼叫」→ 綠色「↓ 工具結果」→ 下一 turn")
-    c.run_and_wait(panel)
+    c.log(f"[{k}.1] AI drive tab4:{prompt}(預期 <tool_call> {tool};首次含 0.6B→4B swap)")
+    result = c.drive("4", prompt)   # drive() timeout covers swap + multi-turn
+    panel = c.activate_and_assert(page, "4")
     turns = panel.locator(".turns .turn-block").count()
     final = panel.locator(".final-content").inner_text()
-    c.log(f"[{k}.3] 共 {turns} 個 turn;final answer:「{final[:80]}」")
+    c.log(f"[{k}.2] 共 {turns} 個 turn;final answer:「{final[:80]}」")
     c.pause(page, args, 2000)
 
 
@@ -35,8 +33,8 @@ def main():
     args = ap.parse_args()
     with sync_playwright() as p:
         browser, page, state = c.launch(p, args)
-        panel = c.switch_tab(page, state, "agent")   # 觸發 0.6B→4B swap
-        c.run_segments(page, panel, args, 2, run_segment)
+        c.wait_subscribed()
+        c.run_segments(page, None, args, 2, run_segment)
         browser.close()
     c.log("DONE")
 

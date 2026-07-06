@@ -12,11 +12,17 @@ Shared Playwright helpers for the demo smoke harness.
 """
 from __future__ import annotations
 
+import json
 import sys
+import time
+import urllib.request
+import urllib.error   # for HTTPError in _post (explicit; don't rely on urllib.request re-export)
 
 BASE = "http://localhost:9000/"
 SWAP_TIMEOUT_MS = 120_000   # 第一次 swap 含 model 載入,放寬
 GEN_TIMEOUT_MS = 300_000    # 4B agent 多 turn 可能慢
+
+TAB_TO_PANEL = {"1": "basic", "2": "advanced", "3": "reasoning", "4": "agent"}
 
 
 def log(msg: str) -> None:
@@ -55,47 +61,58 @@ def launch(p, args):
     return browser, page, state
 
 
-def switch_tab(page, state, tab_id: str):
-    """點 tab、等 swap 完成 + panel active;swap 失敗就 die。"""
-    state["dialog"] = None
-    page.click(f'.tab[data-tab="{tab_id}"]')
+def _post(path: str, payload: dict, timeout: float = 60.0):
+    req = urllib.request.Request(
+        BASE.rstrip("/") + path,
+        data=json.dumps(payload).encode("utf-8"),
+        headers={"Content-Type": "application/json"}, method="POST")
     try:
-        page.wait_for_selector(f'main.tab-panel.active[data-panel="{tab_id}"]',
-                               timeout=SWAP_TIMEOUT_MS)
-    except Exception:
-        if state["dialog"]:
-            die(f"model swap 失敗: {state['dialog']} — 看 AGENTS.md Troubleshooting(port 8080)")
-        die(f"切到 tab {tab_id} 逾時 — server / llama-server 狀態請用 init.py 檢查")
-    page.wait_for_selector("body:not(.swapping)", timeout=SWAP_TIMEOUT_MS)
-    return page.locator(f'main[data-panel="{tab_id}"]')
+        with urllib.request.urlopen(req, timeout=timeout) as r:
+            return r.status, json.loads(r.read().decode("utf-8"))
+    except urllib.error.HTTPError as e:
+        return e.code, json.loads(e.read().decode("utf-8") or "{}")
 
 
-def pick_preset(panel, value: str):
-    panel.locator(".preset-select").select_option(value)
+def wait_subscribed(timeout_s: float = 10.0) -> None:
+    """Poll GET /health until the page's EventSource has subscribed (else the
+    drive fans out to nobody). die() on timeout."""
+    deadline = time.time() + timeout_s
+    while time.time() < deadline:
+        try:
+            with urllib.request.urlopen(BASE.rstrip("/") + "/health", timeout=2) as r:
+                if json.loads(r.read().decode("utf-8")).get("subscribers", 0) >= 1:
+                    return
+        except Exception:
+            pass
+        time.sleep(0.2)
+    die("頁面沒訂閱 /events(subscribers 一直是 0)— 頁面有開嗎?server 起了嗎?")
 
 
-def run_and_wait(panel):
-    """按送出、等生成結束(.run 回到 enabled)。
+def drive(tab: str, user: str, system: str = "", mode: str = "") -> dict:
+    """POST /drive; return the aggregate JSON the AI would read. die() on 5xx."""
+    payload = {"tab": tab, "user": user}
+    if system:
+        payload["system"] = system
+    if mode:
+        payload["mode"] = mode
+    status, body = _post("/drive", payload, timeout=GEN_TIMEOUT_MS / 1000)
+    if status != 200:
+        die(f"/drive 回 {status}: {body.get('error', body)}")
+    return body
 
-    生成「啟動」用 MutationObserver latch 抓,不直接 wait 那個瞬態 .run[disabled]:
-    短生成(如 chat 模式條列答)的 disabled 視窗只有 ~300ms,可能比 click 後、wait 前
-    的 slow_mo 延遲還短 → 直接 wait 會間歇性錯過瞬態而逾時。latch 是單調旗標,設了就不會
-    被錯過。空 prompt → app.js guard 不送 → 旗標永不為真 → wait_for_function 逾時(預期)。
-    """
-    page = panel.page
-    page.evaluate(
-        """() => {
-            const el = document.querySelector('main.tab-panel.active .run');
-            window.__genStarted = el.disabled;
-            window.__genObs = new MutationObserver(
-                () => { if (el.disabled) window.__genStarted = true; });
-            window.__genObs.observe(el, {attributes: true, attributeFilter: ['disabled']});
-        }"""
-    )
-    panel.locator(".run").click()
-    page.wait_for_function("() => window.__genStarted === true", timeout=10_000)  # 生成已啟動
-    panel.locator(".run:not([disabled])").wait_for(timeout=GEN_TIMEOUT_MS)        # 生成結束
-    page.evaluate("() => { if (window.__genObs) window.__genObs.disconnect(); }")
+
+def activate_and_assert(page, tab: str, timeout_ms: int = SWAP_TIMEOUT_MS):
+    """drive_start auto-switches the visible tab (spec §3.6); wait for the driven
+    panel to be active + swap banner gone, return its locator."""
+    panel_name = TAB_TO_PANEL[tab]
+    page.wait_for_selector(f'main.tab-panel.active[data-panel="{panel_name}"]',
+                           timeout=timeout_ms)
+    page.wait_for_selector("body:not(.swapping)", timeout=timeout_ms)
+    return page.locator(f'main[data-panel="{panel_name}"]')
+
+
+def inspect(tab: str, token_index: int) -> None:
+    _post("/inspect", {"tokenIndex": token_index}, timeout=5)
 
 
 def pause(page, args, ms: int):
