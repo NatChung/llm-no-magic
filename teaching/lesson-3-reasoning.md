@@ -15,7 +15,7 @@
 
 ### Segment 1 — Direct answer (often wrong)
 - Preview: "Direct-answer mode = we force-inject an empty `<think></think>`, leaving the model no room to think — it just blurts out an answer. Guess what number it gives?"
-- Drive: `POST /drive {"tab":"3","user":"爸爸有3顆蘋果,兒子多他2顆。請問兒子幾顆?","mode":"direct"}` → the page auto-switches to Tab ③ and renders (Dad has 3 apples, son has 2 more than him — how many does the son have?)
+- Drive: `POST /drive {"tab":"3","user":"爸爸有3顆蘋果,兒子多他2顆。請問兒子幾顆?","mode":"direct"}` → the page auto-switches to Tab ③ and renders (the prompt reads: "Dad has 3 apples, son has 2 more than him — how many does the son have?")
 - Read: small models answering directly often get it wrong (saying 3 apples, or some random number) → Narrate: they're just completing "the most plausible next number"
 
 ### Segment 2 — With thinking (usually correct)

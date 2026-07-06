@@ -20,7 +20,7 @@ Read this scenario aloud to participants:
   (I know / Roughly / Feels like magic)
 - **Q3.** (Optional) If you were going to do this, what would you use?
 
-## Demo Segments (the first time you switch to Tab ④ it loads the 4B model — banner waits 3-5 s — warn participants in advance)
+## Demo Segments (the first time you drive Tab ④ it loads the 4B model — banner waits 3-5 s — warn participants in advance)
 
 ### Segment 1 — What time is it? (get_time)
 - Preview: "The model has no clock. Guess how it knows the current time? Watch the purple '↑ Tool call' and green '↓ Tool result' blocks."
