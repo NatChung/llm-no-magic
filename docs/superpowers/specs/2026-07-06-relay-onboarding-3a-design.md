@@ -37,15 +37,16 @@
 - `run_checks()` 移除 `check_node()`、`check_mcp_config()` 兩項。
 
 **新增** `check_health()`:
-- 語意:**server 若在跑(port 9000 是本專案),`GET http://localhost:9000/health` 必須立即回 200 且 body 含 `"status": "ok"`**。
-- **關鍵**:timeout 設短(如 1–2s)。不可探 `/events`(SSE 不結束 → `_http_get` 的 `r.read` 會 block 到 timeout 誤判)或 `/drive`(POST 會觸發生成)。用既有 `_http_get()`(GET + 短 timeout,已符合)。
-- server 未起時(port 9000 空)→ 此項 `ok=True`、detail 註「server 之後再起」(與 `check_port_9000` 的空-port 行為一致),**不當失敗**。避免「還沒起 server 就被 init.py 判 down」。
-- 定位:核心項(非 warn-only);但只有在「server 在跑卻 `/health` 不回 200/hang」時才失敗。
-- 放進 `run_checks()`(建議排在 `check_port_9000` 之後,語意相鄰)。
+- **必須先判「server 是否在跑」再決定 `/health` 缺席算 pass 還是 fail**(review C1):`_http_get` 把「連不上(port 空)」與「連上但 timeout/hang」**都**收斂成 `(None, b"")`——兩者無法只靠 `/health` 一次呼叫區分。所以 `check_health` 用「server-up 訊號」當前提:
+  1. 先 `GET http://localhost:9000/`(短 timeout),body 含 `SERVER_MARKER`(`b"LLM, no magic"`)= **本專案 server 在跑**(與 `check_port_9000` 同一判定;plan 可共用該結果或各自 GET,擇一)。
+  2. **server 在跑** → `GET /health`(短 timeout 1–2s)**必須回 200 且 body 含 `"status": "ok"`**;若回 `(None,…)`(hang/timeout)或非 200 或 body 無 `status:ok` → **`ok=False`**(這正是本檢查的目的:抓「server 起來了但 `/health` 壞了/hang」)。
+  3. **server 未在跑**(GET `/` 也是 `(None,…)` 或非本專案)→ `ok=True`、detail 註「server 之後再起」,**不當失敗**(避免「還沒起 server 就被判 down」)。
+- **關鍵**:不可探 `/events`(SSE 不結束 → `r.read` block 到 timeout 誤判)或 `/drive`(POST 觸發生成)。只 GET `/` 與 `/health`,都用既有 `_http_get()`(GET + 短 timeout,已符合)。
+- 定位:核心項(非 warn-only)。放進 `run_checks()`(建議排在 `check_port_9000` 之後,語意相鄰;若共用 server-up 判定,注意兩者對 GET `/` 的呼叫可合併或各自獨立,plan 決定)。
 
 **保留不動**:`check_python` / `check_llama` / `check_hf` / `check_model` ×2 / `check_requests` / `check_port_9000` / `check_port_8080` / `check_playwright`(creator warn-only)/ `apply_fixes` / `summarize` 的 warn 分組機制(`teaching`/`creator` label 仍有意義——`creator` 給 playwright)。
 
-**docstring / `--fix` help 文字**:更新頂部 docstring 與 `--fix` 說明,移除「MCP 設定」字樣;`--fix` 現在只做 pip 類補裝(hf/requests/playwright),不再寫任何設定檔。`summarize` 的 `WARN teaching:` 分組在 Node/MCP 移除後只剩……實際上 `teaching` label 將無成員(playwright 是 `creator`),可保留機制(未來可能再用)或註明;plan 階段確認 summary 文案不誤導。
+**docstring / `--fix` help 文字**:更新頂部 docstring 與 `--fix` 說明,移除「MCP 設定」字樣;`--fix` 現在只做 pip 類補裝(hf/requests/playwright),不再寫任何設定檔。`summarize` 的 `WARN teaching:` 分組在 Node/MCP 移除後**無成員**(playwright 是 `creator`)。可保留機制(未來可能再用)。**另**(review M1):`Check` dataclass 的 `warn_label` 預設值是 `"teaching"`(`init.py:36`);既然 `teaching` 群已空,建議把預設翻成 `"creator"` 或**拿掉預設**(強制每個 warn-only check 明講 label),免得未來新增 warn check 忘了設 label 就默默掉進無意義的空群。plan 階段確認 summary 文案不誤導。
 
 ## §2 刪 v2 MCP 設定檔
 
@@ -53,7 +54,7 @@
 
 ## §3 `agent/tests/test_init.py` 改寫
 
-- **移除**:測 `check_node` / `check_mcp_config` / `restore_mcp_config` / `_detect_agents` 的 case 與其 mock。
+- **移除**:測 `check_node` / `check_mcp_config` / `restore_mcp_config` / `_detect_agents` 的 case 與其 mock。**另外**(review I2):`test_fix_mode_reruns_checks_twice`(`test_init.py:107`)有一行 `monkeypatch.setattr(init, "restore_mcp_config", lambda: None)`——`setattr` 預設 `raising=True`,`restore_mcp_config` 一旦不存在這行會 `AttributeError` 讓 test 爆。移除該 monkeypatch 行(`--fix` 路徑不再呼叫 `restore_mcp_config`),否則 §7「pytest 全綠」不成立。
 - **新增**:`check_health()` 的 case ——
   - server 未起(`_http_get` 回 `(None, b"")`)→ `ok=True`。
   - server 在跑且 `/health` 回 `(200, b'{"status":"ok",...}')`→ `ok=True`。
@@ -84,13 +85,13 @@
 ## §5 進場文件更新(只動進場、不動 lesson 播放腳本)
 
 - **`AGENTS.md` / `AGENTS.zh-TW.md`**「Student → teaching mode」:步驟改為 (1) `python3 init.py`(READY 判讀改用新 `/health` 語意)、(2) **刪掉「approve browser MCP / `/mcp` approve playwright / Codex trust folder」整步**、(3) 起 server、(4) 開 `teaching/README`。移除「browser MCP(Playwright MCP,shipped as `.mcp.json`/`.codex/config.toml`)」「approve the browser MCP once」等敘述與 Troubleshooting 裡的 MCP 相關項。保留 port 8080 / server-not-up 的 Troubleshooting。
-- **`README.md`(zh)/ `README.en.md`**:setup 段移除 Node/MCP 前置,改述「HTTP-capable AI(Claude Code/Codex 用 Bash curl)+ 開一次頁面」。
+- **`README.md`(zh)/ `README.en.md`**:兩處都要改(review I3,`README.md:66-67` / `README.en.md:66-67`)——不只 setup 前置(「checks … Node/npx + a browser MCP」),**還有描述教學機制那句**(「the AI drives one browser itself via a browser MCP」)。後者是**承重的機制敘述**,不改會留 stale 核心宣稱;改成 `/drive`→`/events` 模型(HTTP-capable AI 用 Bash curl 遙控、頁面靠 SSE 反映)。
 - **`teaching/README.md` / `.zh-TW.md`**:只改**進場/分工**敘述(「你(AI)用 browser MCP 驅動頁面」→「你用 `POST /drive` 驅動、頁面靠 `/events` 反映」);**lesson 逐段播放腳本留給 3b**。
 - **母 spec 依賴表(§11)**已寫明 v3 移除 Node/MCP,本輪讓文件與之一致。
 
 ## §6 後端 harden(折進 3a)
 
-1. **swap 失敗後 reset 模型狀態**:在 `handle_swap()` 的**失敗 return 路徑**(`status != "ready"`,涵蓋 port-busy / load-timeout 等)把 `GLOBAL_STATE["model"] = None`(放 `handle_swap` 內最靠近失敗處、涵蓋所有呼叫者;非放各 caller)。理由:swap 失敗代表舊 llama 已被 `pkill`、新的沒起來 → `:8080` 現狀未知;若保留 stale `"0.6B"`,下次同-model drive 會**跳過 swap 直接打死掉的 llama → 500**(實測於「llama 被外部殺掉」情境重現)。reset 成 `None` 讓下次任何 drive 都強制重新 swap(`_detect_model` 亦可重新探測)。補一個 pytest:模擬 swap 失敗 → 斷言 `GLOBAL_STATE["model"] is None`。
+1. **swap 失敗後 reset 模型狀態**:把 `GLOBAL_STATE["model"] = None` 放在 `handle_swap()` **`pkill` 舊 llama 之後那一行**(review I1),**不是**放「每個 `status != "ready"` return」。理由:`handle_swap` 有五個非-ready return,其中 `unknown model` 與 409 `another swap in progress` 發生在 **pkill 之前**——尤其 409 這條**沒拿到 `SWAP_LOCK`**、另一個 swap 正在跑並會設對 model,在這裡 reset 會 clobber 有效狀態並 race。只有 pkill **之後**的三種失敗(port-busy、binary-missing、load-timeout)才是「舊 llama 已死、狀態未知」的目標情境;放在 pkill 後一行天然只涵蓋這三種、跳過兩個 pre-kill guard。理由:swap 失敗代表舊 llama 已被 `pkill`、新的沒起來 → `:8080` 現狀未知;若保留 stale `"0.6B"`,下次同-model drive 會**跳過 swap 直接打死掉的 llama → 500**(實測於「llama 被外部殺掉」情境重現)。reset 成 `None` 讓下次任何 drive 都強制重新 swap(`_detect_model` 亦可重新探測)。補一個 pytest:模擬 swap 失敗 → 斷言 `GLOBAL_STATE["model"] is None`。
 2. **legacy `POST /swap` route**(母 spec §7 已知限制):v3 頁面不再呼叫。**gate 或移除** `_handle_swap_route`(`do_POST` 的 `/swap` 分支)。plan 決定「移除」還是「保留但回 410/註明 legacy」;若移除,確認無其他呼叫者(前端已驗證不呼叫;demos retarget 後也不呼叫)。補/改對應 pytest。
 
 ## §7 測試與驗證
