@@ -96,14 +96,6 @@
   <main class="tab-panel max-w-6xl mx-auto px-4 md:px-8 py-6 md:py-10" data-panel="basic">
     <section class="prompt-area lg:col-span-2 space-y-3">
       <label for="prompt-basic" class="block text-sm font-medium text-ink-soft">Prompt</label>
-      <div class="preset-row">
-        <select class="preset-select w-full max-w-md rounded-md border border-edge bg-surface px-3 py-2 text-sm focus:outline-none focus:border-final focus:ring-1 focus:ring-final">
-          <option value="">(Pick a preset to prefill, or type your own)</option>
-          <option value="床前明月光,疑是地上">1. `床前明月光,疑是地上` — model has the whole poem memorized → "霜", top-1 94%+ (peaked)</option>
-          <option value="祖樹星上最高的山叫做">2. `祖樹星上最高的山叫做` — fictional planet, model still confidently makes it up → peaked ≠ true</option>
-          <option value="他打開冰箱,拿出">3. `他打開冰箱,拿出` — model has no idea what comes next → flat, top-K spread out</option>
-        </select>
-      </div>
       <textarea class="prompt w-full max-w-2xl rounded-md border border-edge bg-surface px-3 py-2 text-sm md:text-base font-mono focus:outline-none focus:border-final focus:ring-1 focus:ring-final" id="prompt-basic" rows="3" placeholder="Type a prompt..."></textarea>
       <div class="flex gap-2 pt-1">
         <button class="run inline-flex items-center px-4 py-2 rounded-md bg-ink text-surface text-sm font-medium hover:bg-ink-soft disabled:bg-faint transition-colors">Send</button>
@@ -126,98 +118,15 @@
   <main class="tab-panel max-w-6xl mx-auto px-4 md:px-8 py-6 md:py-10" data-panel="advanced">
     <section class="prompt-area lg:col-span-2 space-y-3">
       <label for="system-prompt-advanced" class="block text-sm font-medium text-ink-soft">System prompt (optional, simulates the product layer)</label>
-      <details class="info-tag">
-        <summary class="cursor-pointer text-xs text-final hover:underline list-none [&::-webkit-details-marker]:hidden select-none inline-block py-0.5">(?) What is a System prompt</summary>
-        <div class="mt-1.5 p-3 rounded-md bg-final-tint text-sm text-ink-soft max-w-2xl leading-relaxed space-y-2">
-          <p>The hidden instruction that's <strong>silently prefilled</strong> before your message when you chat with ChatGPT / Claude. For example: "You are a friendly support agent, answer in bullets, max 3 points."</p>
-          <p>The "product layer" of a SaaS product is exactly this — you type "help me", the product quietly prepends instructions before sending to the model.</p>
-          <p>This tab lets you see: <strong>how much the model's output changes with vs. without a system prompt</strong>.</p>
-        </div>
-      </details>
       <textarea class="system-prompt w-full max-w-2xl rounded-md border border-edge bg-surface px-3 py-2 text-sm font-mono focus:outline-none focus:border-final focus:ring-1 focus:ring-final" id="system-prompt-advanced" rows="2" placeholder="e.g. You are a marketing consultant, answer in bullets, only 3 points"></textarea>
 
       <label for="prompt-advanced" class="block text-sm font-medium text-ink-soft pt-2">User prompt</label>
-      <div class="preset-row">
-        <select class="preset-select w-full max-w-md rounded-md border border-edge bg-surface px-3 py-2 text-sm focus:outline-none focus:border-final focus:ring-1 focus:ring-final">
-          <option value="">(Pick a preset to prefill the user prompt, or type your own)</option>
-          <option value="一年有幾個月?">1. `一年有幾個月?` (How many months in a year?) — short answer (add system prompt to see bullet style)</option>
-          <option value="寫一個夏季冰飲的促銷文案">2. `寫一個夏季冰飲的促銷文案` (Write a summer iced-drink promo) — creative (add "marketing consultant, 3 points" system to see structure)</option>
-          <option value="請寫一首關於月亮的五言絕句">3. `請寫一首關於月亮的五言絕句` (Write a 5-character quatrain about the moon) — literary (add system to see format constraints)</option>
-        </select>
-      </div>
       <textarea class="prompt w-full max-w-2xl rounded-md border border-edge bg-surface px-3 py-2 text-sm md:text-base font-mono focus:outline-none focus:border-final focus:ring-1 focus:ring-final" id="prompt-advanced" rows="3" placeholder="Type a prompt..."></textarea>
 
       <div class="mode-row flex flex-wrap gap-x-5 gap-y-2 pt-1">
         <label class="inline-flex items-center gap-2 text-sm text-ink-soft"><input type="radio" name="mode-advanced" value="raw" checked class="accent-final"> Raw prompt (completion mode)</label>
         <label class="inline-flex items-center gap-2 text-sm text-ink-soft"><input type="radio" name="mode-advanced" value="chat" class="accent-final"> Product layer (Qwen3 chat template)</label>
       </div>
-      <details class="info-tag">
-        <summary class="cursor-pointer text-xs text-final hover:underline list-none [&::-webkit-details-marker]:hidden select-none inline-block py-0.5">(?) Raw prompt vs Chat template — what's the difference</summary>
-        <div class="mt-1.5 p-3 rounded-md bg-final-tint text-sm text-ink-soft max-w-2xl leading-relaxed space-y-2">
-          <p><strong>Raw prompt</strong>: feeds your text <strong>directly</strong> to the model for continuation. The model has no idea who's speaking or who's asking whom (same as Tab ①).</p>
-          <p><strong>Product layer (chat template)</strong>: wraps your text with Qwen3's agreed markers before sending. The markers look like this:</p>
-          <pre class="text-xs bg-surface-2 rounded p-2 whitespace-pre-wrap break-all">&lt;|im_start|&gt;system
-You are X
-&lt;|im_end|&gt;
-&lt;|im_start|&gt;user
-help me
-&lt;|im_end|&gt;</pre>
-          <p>This tells the model "<strong>this part is system, this part is user</strong>". Expand the "Final prompt actually sent to the model" preview below to see exactly how the markers wrap it.</p>
-        </div>
-      </details>
-      <details class="info-tag">
-        <summary class="cursor-pointer text-xs text-final hover:underline list-none [&::-webkit-details-marker]:hidden select-none inline-block py-0.5">(?) But what IS <code>&lt;|im_start|&gt;</code> exactly?</summary>
-        <div class="mt-1.5 p-3 rounded-md bg-final-tint text-sm text-ink-soft max-w-2xl leading-relaxed space-y-3">
-          <div>
-            <p class="font-semibold mb-1">It's not a string — it's a single token.</p>
-            <p>Looks like 12 characters, but to the model it's <strong>1 token</strong> (Qwen3 vocab id 151644). The tokenizer recognises it atomically — won't split into <code>&lt;</code>/<code>|</code>/<code>i</code>/<code>m</code>/...</p>
-            <pre class="text-xs bg-surface-2 rounded p-2 whitespace-pre-wrap break-all mt-1">"&lt;|im_start|&gt;"  ← what you see (12 chars)
-[151644]        ← what the model sees (1 token id)</pre>
-            <p class="mt-1">Lives in the same vocab list as <code class="bg-surface-2 px-1 rounded text-xs">一</code> / <code class="bg-surface-2 px-1 rounded text-xs">年</code> / <code class="bg-surface-2 px-1 rounded text-xs">月</code> — entry #151644.</p>
-          </div>
-
-          <div>
-            <p class="font-semibold mb-1">Why does this token exist?</p>
-            <p>The model essentially only does "continue the token sequence" — give it text, it predicts the next token.</p>
-            <p class="mt-1">Problem: feed it <code class="bg-surface-2 px-1 rounded text-xs">一年有幾個月?</code> — how does it know to <strong>answer</strong>, vs <strong>essay-continue</strong> (like "一年有幾個月? 答案是...")?</p>
-            <p class="mt-1"><code class="bg-surface-2 px-1 rounded text-xs">&lt;|im_start|&gt;</code> / <code class="bg-surface-2 px-1 rounded text-xs">&lt;|im_end|&gt;</code> are <strong>role-boundary markers</strong>:</p>
-            <pre class="text-xs bg-surface-2 rounded p-2 whitespace-pre-wrap break-all mt-1">&lt;|im_start|&gt;user        ← "user starts speaking"
-一年有幾個月?
-&lt;|im_end|&gt;              ← "user is done"
-
-&lt;|im_start|&gt;assistant   ← "now you (assistant) speak"</pre>
-            <p class="mt-1">During training, the model saw billions of conversations in this format and learned: <em>"after <code class="bg-surface-2 px-1 rounded text-xs">&lt;|im_start|&gt;assistant\n</code>, generate a reply, stop at <code class="bg-surface-2 px-1 rounded text-xs">&lt;|im_end|&gt;</code>"</em>.</p>
-          </div>
-
-          <div>
-            <p class="font-semibold mb-1">Reading the prompt line-by-line</p>
-            <pre class="text-xs bg-surface-2 rounded p-2 whitespace-pre-wrap break-all">&lt;|im_start|&gt;user
-一年有幾個月?&lt;|im_end|&gt;
-&lt;|im_start|&gt;assistant
-&lt;think&gt;
-
-&lt;/think&gt;</pre>
-            <table class="text-xs w-full mt-2 border border-edge-soft">
-              <thead>
-                <tr class="bg-surface-2 border-b border-edge-soft">
-                  <th class="text-left p-1.5 font-medium">Literal</th>
-                  <th class="text-left p-1.5 font-medium">Model's reading</th>
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-edge-soft">
-                <tr><td class="p-1.5 font-mono"><code>&lt;|im_start|&gt;user\n</code></td><td class="p-1.5">"user starts speaking"</td></tr>
-                <tr><td class="p-1.5 font-mono">一年有幾個月?</td><td class="p-1.5">user's question content</td></tr>
-                <tr><td class="p-1.5 font-mono"><code>&lt;|im_end|&gt;</code></td><td class="p-1.5">"user is done"</td></tr>
-                <tr><td class="p-1.5 font-mono"><code>&lt;|im_start|&gt;assistant\n</code></td><td class="p-1.5">"now assistant speaks"</td></tr>
-                <tr><td class="p-1.5 font-mono"><code>&lt;think&gt;\n\n&lt;/think&gt;</code></td><td class="p-1.5">Qwen3 reasoning marker — see Tab ③</td></tr>
-                <tr><td class="p-1.5 font-mono text-faint">(prompt ends)</td><td class="p-1.5">model starts generating reply from here</td></tr>
-              </tbody>
-            </table>
-          </div>
-
-          <p class="text-faint text-xs">No magic — just a convention the model was trained to follow.</p>
-        </div>
-      </details>
 
       <details class="preview-details pt-2">
         <summary class="cursor-pointer text-sm text-muted hover:text-ink-soft">Final prompt actually sent to the model (preview)</summary>
@@ -251,18 +160,6 @@ help me
         <label class="inline-flex items-center gap-2 text-sm text-ink-soft"><input type="radio" name="mode-reasoning" value="direct" checked class="accent-final"> Direct answer (skip thinking) — model answers immediately</label>
         <label class="inline-flex items-center gap-2 text-sm text-ink-soft"><input type="radio" name="mode-reasoning" value="thinking" class="accent-final"> With thinking — model writes its reasoning out as tokens</label>
       </div>
-      <details class="info-tag">
-        <summary class="cursor-pointer text-xs text-final hover:underline list-none [&::-webkit-details-marker]:hidden select-none inline-block py-0.5">(?) What is Thinking mode / the &lt;think&gt; block</summary>
-        <div class="mt-1.5 p-3 rounded-md bg-final-tint text-sm text-ink-soft max-w-2xl leading-relaxed space-y-2">
-          <p>Reasoning models like Qwen3 can <strong>"think in their head" before answering</strong>. They emit reasoning tokens wrapped in <code class="bg-surface-2 px-1 rounded text-xs">&lt;think&gt;...&lt;/think&gt;</code>, and only then emit the answer.</p>
-          <ul class="list-disc list-inside space-y-1">
-            <li><strong>Direct answer (skip thinking)</strong>: the client force-injects an empty <code class="bg-surface-2 px-1 rounded text-xs">&lt;think&gt;&lt;/think&gt;</code>, so the model has no room to think → it answers directly. <strong>Fast, but easy to get wrong on hard problems.</strong></li>
-            <li><strong>With thinking</strong>: leaves room for the model to think → you see it actually write the reasoning out as tokens. <strong>Slower, but usually correct.</strong></li>
-          </ul>
-          <p>The apple problem (Dad has 3 apples, son has 2 more than him — how many does the son have?) is designed to show this difference — direct answers often miscalculate, thinking gets it right.</p>
-        </div>
-      </details>
-
       <details class="preview-details pt-2">
         <summary class="cursor-pointer text-sm text-muted hover:text-ink-soft">Final prompt actually sent to the model (preview)</summary>
         <pre class="final-prompt-preview mt-2 rounded-md bg-surface-2 border border-edge-soft p-3 text-xs font-mono whitespace-pre-wrap break-all max-h-80 overflow-auto text-ink-soft"></pre>
@@ -295,25 +192,9 @@ help me
   <main class="tab-panel max-w-6xl mx-auto px-4 md:px-8 py-6 md:py-10" data-panel="agent">
     <section class="prompt-area space-y-3">
       <label for="system-prompt-agent" class="block text-sm font-medium text-ink-soft">System Prompt (prefilled, editable)</label>
-      <details class="info-tag">
-        <summary class="cursor-pointer text-xs text-final hover:underline list-none [&::-webkit-details-marker]:hidden select-none inline-block py-0.5">(?) Why does the Agent also have a System Prompt — how is it different from Tab ②</summary>
-        <div class="mt-1.5 p-3 rounded-md bg-final-tint text-sm text-ink-soft max-w-2xl leading-relaxed space-y-2">
-          <p>Same as Tab ② — "speaking to the model up front" — but this time the content includes "<strong>you have these tools available: get_time / read_file / write_file / exec_bash</strong>" plus a JSON schema describing each tool.</p>
-          <p>Once the model sees this, when it hits a question that needs a tool (e.g. "What time is it?") it emits a <code class="bg-surface-2 px-1 rounded text-xs">&lt;tool_call&gt;</code> tag to invoke the matching tool.</p>
-          <p>Expand the "Actual prompt sent to the model" preview below to see the full system + tools schema string after it's all wrapped up.</p>
-        </div>
-      </details>
       <textarea class="system-prompt w-full rounded-md border border-edge bg-surface px-3 py-2 text-sm font-mono focus:outline-none focus:border-final focus:ring-1 focus:ring-final" id="system-prompt-agent" rows="4"></textarea>
 
       <label for="prompt-agent" class="block text-sm font-medium text-ink-soft pt-2">Question</label>
-      <div class="preset-row">
-        <select class="preset-select w-full max-w-md rounded-md border border-edge bg-surface px-3 py-2 text-sm focus:outline-none focus:border-final focus:ring-1 focus:ring-final">
-          <option value="">(Pick a preset to prefill, or type your own)</option>
-          <option value="現在幾點?">1. 現在幾點? (What time is it?)</option>
-          <option value="讀 prompts.md,把它總結成 3 點,寫到 ~/Desktop/llm-summary.md">2. Read + write (summarize prompts.md into 3 points, save to ~/Desktop/llm-summary.md)</option>
-          <option value="數一下這個 repo 底下有幾個 .md 檔">3. Count the .md files in this repo</option>
-        </select>
-      </div>
       <textarea class="prompt w-full rounded-md border border-edge bg-surface px-3 py-2 text-sm md:text-base font-mono focus:outline-none focus:border-final focus:ring-1 focus:ring-final" id="prompt-agent" rows="3" placeholder="Question..."></textarea>
 
       <details class="preview-details pt-1">
@@ -329,28 +210,6 @@ help me
 
     <section class="turns-area mt-8 md:mt-10 space-y-3">
       <h2 class="text-xs uppercase tracking-wider text-muted font-medium">Agent trace</h2>
-      <p class="text-sm text-muted">Each turn accumulates into messages and feeds the next. Details from the AI.</p>
-      <details class="info-tag">
-        <summary class="cursor-pointer text-xs text-final hover:underline list-none [&::-webkit-details-marker]:hidden select-none inline-block py-0.5">(?) What are Agent / Tool / &lt;tool_call&gt; / Turn</summary>
-        <div class="mt-1.5 p-3 rounded-md bg-final-tint text-sm text-ink-soft max-w-2xl leading-relaxed space-y-3">
-          <div>
-            <p><strong>Agent</strong>: a chatbot answers what you ask. An agent <strong>calls tools on its own</strong> (read files, write files, run shell...) to get things done, then answers. Underneath it's still token prediction — just with a trigger pattern the client knows how to recognize.</p>
-          </div>
-          <div>
-            <p><strong>Tool</strong>: a ready-made Python function (this repo ships 4: <code class="bg-surface-2 px-1 rounded text-xs">get_time</code> / <code class="bg-surface-2 px-1 rounded text-xs">read_file</code> / <code class="bg-surface-2 px-1 rounded text-xs">write_file</code> / <code class="bg-surface-2 px-1 rounded text-xs">exec_bash</code>) plus a JSON schema describing it.</p>
-          </div>
-          <div>
-            <p><strong><code class="bg-surface-2 px-1 rounded text-xs">&lt;tool_call&gt; ... &lt;/tool_call&gt;</code></strong>: Qwen3's agreed XML tag. When the model wants to call a tool, it emits this string:</p>
-            <pre class="text-xs bg-surface-2 rounded p-2 mt-1 whitespace-pre-wrap break-all">&lt;tool_call&gt;
-{"name": "get_time", "arguments": {}}
-&lt;/tool_call&gt;</pre>
-            <p class="mt-1">The backend sees it, parses the JSON, calls the matching Python function, then injects the result (e.g. a timestamp) back into the conversation and feeds it to the model again.</p>
-          </div>
-          <div>
-            <p><strong>Turn</strong>: one cycle of the multi-turn loop. Turn 1 = model emits text for the first time (possibly a tool_call). Turn 2 = model sees Turn 1's tool result and emits text again. <strong>Repeat until the model stops emitting tool_call → final answer.</strong></p>
-          </div>
-        </div>
-      </details>
       <div class="turns space-y-3"></div>
     </section>
 
@@ -772,6 +631,6 @@ AI  → git push
     </div>
   </main>
 
-  <script src="app.js?v=58"></script>
+  <script src="app.js?v=59"></script>
 </body>
 </html>

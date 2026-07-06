@@ -56,28 +56,6 @@ function t(key, vars = {}) {
   return s;
 }
 
-// llama-server is a separate C++ process, fixed at :8080. Frontend HTML
-// + API are now the same Python server (default :9000 served by
-// agent/server.py), so API endpoints are same-origin relative paths.
-// _HOST stays for llama-server URL (host taken from page → LAN-friendly).
-const _HOST = window.location.hostname;
-
-const LLAMA_URL = `http://${_HOST}:8080/completion`;
-
-const AGENT_BACKEND_URL = "/agent";
-
-// ── /swap orchestrator(spec §5)──────────────────────────────────────
-const SWAP_URL = "/swap";
-const TAB_TO_MODEL = {
-  basic:     "0.6B",
-  advanced:  "0.6B",
-  reasoning: "0.6B",
-  agent:     "4B",
-  // commands tab is pure static article (no model swap needed)
-  skill:     "4B",  // ⑥ Skill preview — function calling needs 4B
-};
-let currentLLMModel = null;
-
 function showSwapBanner(modelName) {
   const banner = document.getElementById("swap-banner");
   const label  = document.getElementById("swap-banner-model");
@@ -91,30 +69,6 @@ function hideSwapBanner() {
   const banner = document.getElementById("swap-banner");
   if (banner) banner.classList.add("hidden");
   document.body.classList.remove("swapping");
-}
-
-async function ensureModel(wanted) {
-  if (currentLLMModel === wanted) return;
-  showSwapBanner(wanted);
-  try {
-    const r = await fetch(SWAP_URL, {
-      method: "POST",
-      headers: {"Content-Type": "application/json"},
-      body:   JSON.stringify({model: wanted}),
-    });
-    const d = await r.json().catch(() => ({status: "error", message: "non-JSON response"}));
-    if (!r.ok || d.status !== "ready") {
-      throw new Error(d.message || `swap failed (HTTP ${r.status})`);
-    }
-    currentLLMModel = d.model;
-    console.log(`[swap] ready: ${d.model} (${d.took_ms}ms, skipped=${d.skipped})`);
-  } catch (err) {
-    console.error("[swap] failed", err);
-    alert(t('swap_failed', {err: err.message}));
-    throw err;
-  } finally {
-    hideSwapBanner();
-  }
 }
 
 // 預填的 system prompt — 跟 agent.py SYSTEM_PROMPT 逐字相符(canonical 源 = agent.py)
@@ -238,7 +192,6 @@ function setupPanel(panel) {
   const panelType = panel.dataset.panel;  // 'basic' | 'advanced' | 'reasoning'
 
   let tokenSteps = [];
-  let abortCtl = null;
   // phase state for reasoning mode: "pre_think" → "in_think" → "in_answer"
   // tokens route to thinking-content while "in_think", else to generated-text
   let phase = "pre_think";
@@ -263,12 +216,6 @@ function setupPanel(panel) {
     }
     return user;
   }
-
-  // Reasoning mode 需要更多 token 給 model 想 + 答
-  // reasoning: Qwen3 thinking can be 600-1500 tokens before </think>; was 300 too small
-  // (with 300 the model never closed </think> on the apple problem,
-  //  phase stuck in "in_think", final answer area stayed empty)
-  const nPredict = panelType === "reasoning" ? 1500 : 80;
 
   function refreshPreview() {
     if (previewEl) previewEl.textContent = buildFinalPrompt();
@@ -433,7 +380,6 @@ function setupAgent(panel) {
   // Per-turn token storage(避免不同 turn 的 token index 衝突)
   // turns[i] = { tokenSteps: [{token, top_logprobs}, ...], el: HTMLElement }
   let turns = [];
-  let abortCtl = null;
 
   function clearAll() {
     turns = [];
