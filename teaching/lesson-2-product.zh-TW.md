@@ -16,21 +16,19 @@
 
 ### 段落 1 — 裸 prompt(對照組)
 - 預告:「先看不加工:問題原樣丟進去,沒有任何結構。」
-- 用 MCP:開 http://localhost:9000/index.zh-TW.html → 點 Tab ②(產品層加工)→ 重複 snapshot 到「載入…中」消失
-- 確認 mode radio 選「裸 prompt」→ 選 preset「一年有幾個月?」→ 點「送出」→ 等「送出」鈕回 enabled
-- debrief:輸出散開、像接續不像回答(甚至 loop)— model 不知道你在「**問**」,把「一年有幾個月?」當題目接龍。沒有「問:答:」結構,它分不出誰問、誰答
+- 驅動:`POST /drive {"tab":"2","user":"一年有幾個月?","mode":"raw"}` → 頁面自動切到 Tab ② 並渲染
+- 讀回應:輸出散開、像接續不像回答(甚至 loop)→ 旁白:model 不知道你在「**問**」,把「一年有幾個月?」當題目接龍。沒有「問:答:」結構,它分不出誰問、誰答
 
 ### 段落 2 — 加 chat template(問:答:)+ system(怎麼答)
-- 預告:「同一題,這次用 Qwen3 chat template 包成『問:答:』結構,再加一句 system 交代風格。會先展開『實際送進 model 的 final prompt』給你看真面目。」
-- 用 MCP:填 system 欄「你是行銷顧問,用條列式回答,只給 3 點。」→ 切 mode「產品加工(chat)」→ 選 preset「一年有幾個月?」→ 點開「實際送進 model 的 final prompt」preview
-- 點「送出」→ 等「送出」鈕回 enabled → 讀輸出(整齊條列)
-- debrief:變整齊條列。兩件事疊起來:
+- 預告:「同一題,這次用 Qwen3 chat template 包成『問:答:』結構,再加一句 system 交代風格。」
+- 驅動:`POST /drive {"tab":"2","user":"一年有幾個月?","system":"你是行銷顧問,用條列式回答,只給 3 點。","mode":"chat"}` → 頁面渲染整齊條列
+- 旁白:學員,點一下把『實際送進 model 的 final prompt』展開,看它被包成 `<|im_start|>…` 的樣子 — 看起來 12 個字元,model 眼裡是 1 個 token(vocab id 151644)
+- 讀回應:整齊條列(如「1. 一年有12個月…」)→ 旁白:變整齊條列。兩件事疊起來:
   1. **「問:答:」結構**(主因)— marker 跟 model 說「`<|im_start|>user` 這段是問、`<|im_start|>assistant` 換你答」,所以它「答」而不是接龍
   2. **system 那句**(你是行銷顧問…)疊在最前面,只負責「**怎麼**答」(條列、3 點)
-- 指 preview 的 `<|im_start|>` marker:看起來 12 個字元,model 眼裡是 1 個 token(vocab id 151644)
 
 ## 學員動手
-preset 2「夏季冰飲文案」:讓學員自己 raw 跑一次、再加 system 跑一次,對比結構化程度;
+讓學員在輸入框**打**『寫一個夏季冰飲的促銷文案』(或自訂),raw 跑一次、再加 system 跑一次,對比結構化程度;
 鼓勵他改 system prompt 內容(例:「用台語腔」「只回 1 句」)看輸出跟著變。
 
 ## 揭曉與回顧
