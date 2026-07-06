@@ -5,7 +5,7 @@ Usage:
     python3 init.py          # 只檢查,一項一行 + 最後一行 summary
     python3 init.py --fix    # pip 類自動補裝;brew / 模型下載印指令請人跑
 
-Exit: 0 = 核心項全過(Node/npx、MCP 設定、playwright 都是 warn-only:缺只 WARN 不影響 exit)、1 = 有核心項缺。
+Exit: 0 = 核心項全過(playwright 是 warn-only:缺只 WARN 不影響 exit)、1 = 有核心項缺。
 """
 from __future__ import annotations
 
@@ -33,7 +33,7 @@ class Check:
     fix: str = ""                                  # 修復指令(印給 user / AI)
     auto_fix: list = field(default_factory=list)   # --fix 可跑的 cmd list(每項一個 argv list)
     warn_only: bool = False                        # 缺了不影響 exit code
-    warn_label: str = "teaching"               # warn 分組標籤(teaching / creator)
+    warn_label: str = "creator"                # warn 分組標籤(teaching / creator)
 
 
 def check_python() -> Check:
@@ -52,48 +52,6 @@ def check_hf() -> Check:
     return Check("hf CLI", p is not None, p or "",
                  'pip install -U "huggingface_hub[cli]"',
                  auto_fix=[[sys.executable, "-m", "pip", "install", "-U", "huggingface_hub[cli]"]])
-
-
-def check_node() -> Check:
-    p = shutil.which("npx")
-    return Check("Node/npx(教學用)", p is not None, p or "",
-                 "裝 Node.js 18+(brew install node 或 nodejs.org);npx 隨 Node 附帶",
-                 warn_only=True, warn_label="teaching")
-
-
-def _detect_agents() -> list[str]:
-    out = []
-    if (Path.home() / ".claude.json").exists():
-        out.append("claude")
-    if (Path.home() / ".codex").is_dir():
-        out.append("codex")
-    return out
-
-
-def _read_safe(path) -> str:
-    """讀檔內容;不存在 / 不可讀都回 ""(OSError 涵蓋 FileNotFoundError/PermissionError)。"""
-    try:
-        return path.read_text()
-    except OSError:
-        return ""
-
-
-def check_mcp_config() -> Check:
-    """設定檔隨 repo 附帶;這裡是 sanity check(stdlib-only,Codex toml 用字串掃描)。"""
-    agents = _detect_agents()
-    missing = []
-    if "claude" in agents:
-        f = REPO_ROOT / ".mcp.json"
-        if "playwright" not in _read_safe(f):
-            missing.append(".mcp.json")
-    if "codex" in agents:
-        f = REPO_ROOT / ".codex" / "config.toml"
-        if "[mcp_servers.playwright]" not in _read_safe(f):
-            missing.append(".codex/config.toml")
-    detail = ("偵測到:" + ",".join(agents)) if agents else "未偵測到 Claude Code / Codex"
-    return Check("browser MCP 設定(教學用)", not missing, detail,
-                 "缺 " + ",".join(missing) + " — 跑 init.py --fix 還原" if missing else "",
-                 warn_only=True, warn_label="teaching")
 
 
 def check_model(size: str, models_dir: Path = MODELS_DIR) -> Check:
@@ -158,6 +116,22 @@ def check_port_9000() -> Check:
                  "停掉佔用者再重試:\n   " + _lsof(9000))
 
 
+def check_health() -> Check:
+    """server 若在跑,GET /health 必須立即回 200 + status:ok。
+    server-up 用 GET / 的 SERVER_MARKER 判定(與 check_port_9000 同訊號),
+    以區分「port 空」(pass) vs「server 起了但 /health 壞/hang」(fail)——
+    _http_get 把 refused 與 timeout 都收斂成 (None,b'')、無法只靠 /health 分辨。
+    不可探 /events(SSE 不結束會 hang)或 /drive(POST 觸發生成)。"""
+    _, root_body = _http_get("http://localhost:9000/")
+    if SERVER_MARKER not in root_body:
+        return Check("Health /health", True, "server 之後再起(/health 屆時檢查)")
+    status, body = _http_get("http://localhost:9000/health")
+    ok = status == 200 and b'"status": "ok"' in body
+    return Check("Health /health", ok,
+                 "server 在跑、/health 立即回 200" if ok else "server 在跑但 /health 沒立即回 200",
+                 "server 起了但 /health 壞了 — 看 /tmp/agent-server.log")
+
+
 def check_port_8080() -> Check:
     status, _ = _http_get("http://localhost:8080/v1/models")
     if status is None:
@@ -171,8 +145,9 @@ def check_port_8080() -> Check:
 def run_checks() -> list[Check]:
     return [check_python(), check_llama(), check_hf(),
             *[check_model(size) for size in MODEL_FILES],
-            check_requests(), check_node(), check_mcp_config(),
-            check_port_9000(), check_port_8080(), check_playwright()]
+            check_requests(),
+            check_port_9000(), check_health(), check_port_8080(),
+            check_playwright()]
 
 
 def apply_fixes(checks: list[Check]) -> None:
@@ -203,33 +178,6 @@ def summarize(checks: list[Check]) -> tuple[str, int]:
     return "READY", 0
 
 
-MCP_JSON = '''{
-  "mcpServers": {
-    "playwright": {
-      "type": "stdio",
-      "command": "npx",
-      "args": ["-y", "@playwright/mcp@0.0.76"]
-    }
-  }
-}
-'''
-CODEX_TOML = '[mcp_servers.playwright]\ncommand = "npx"\nargs = ["-y", "@playwright/mcp@0.0.76"]\n'
-# 注意:版本 0.0.76 出現在 3 處(.mcp.json、.codex/config.toml、這裡)。升版三處一起改。
-
-
-def restore_mcp_config() -> None:
-    agents = _detect_agents()
-    if "claude" in agents:
-        f = REPO_ROOT / ".mcp.json"
-        if "playwright" not in _read_safe(f):
-            f.write_text(MCP_JSON); print("→ wrote .mcp.json")
-    if "codex" in agents:
-        d = REPO_ROOT / ".codex"; d.mkdir(exist_ok=True)
-        f = d / "config.toml"
-        if "[mcp_servers.playwright]" not in _read_safe(f):
-            f.write_text(CODEX_TOML); print("→ wrote .codex/config.toml")
-
-
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--fix", action="store_true", help="pip 類缺項自動補裝")
@@ -237,7 +185,6 @@ def main(argv=None) -> int:
 
     checks = run_checks()
     if args.fix:
-        restore_mcp_config()
         apply_fixes(checks)
         checks = run_checks()  # 補裝後重查
 

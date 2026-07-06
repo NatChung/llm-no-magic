@@ -59,11 +59,11 @@ def test_summarize_missing_core_is_exit_1():
 def test_summarize_playwright_warn_only_is_exit_0():
     checks = [
         init.Check("Python ≥ 3.10", True),
-        init.Check("playwright(教學用)", False, warn_only=True),
+        init.Check("playwright(creator 驗證用)", False, warn_only=True),
     ]
     line, code = init.summarize(checks)
     assert code == 0
-    assert "WARN teaching" in line
+    assert "WARN creator" in line
 
 
 def test_summarize_all_ok():
@@ -104,56 +104,9 @@ def test_fix_mode_reruns_checks_twice(monkeypatch):
 
     monkeypatch.setattr(init, "run_checks", fake_run_checks)
     monkeypatch.setattr(init, "apply_fixes", lambda checks: None)
-    monkeypatch.setattr(init, "restore_mcp_config", lambda: None)
     code = init.main(["--fix"])
     assert code == 0
     assert calls["n"] == 2  # once before fixes, once after
-
-
-def test_check_node_missing(monkeypatch):
-    monkeypatch.setattr(init.shutil, "which", lambda _: None)
-    c = init.check_node()
-    assert not c.ok and c.warn_only and c.warn_label == "teaching"
-
-
-def test_check_node_present(monkeypatch):
-    monkeypatch.setattr(init.shutil, "which", lambda name: "/usr/bin/npx" if name == "npx" else None)
-    assert init.check_node().ok
-
-
-def test_detect_agents_claude_only(monkeypatch, tmp_path):
-    monkeypatch.setattr(init.Path, "home", classmethod(lambda cls: tmp_path))
-    (tmp_path / ".claude.json").write_text("{}")
-    assert init._detect_agents() == ["claude"]
-
-
-def test_detect_agents_both(monkeypatch, tmp_path):
-    monkeypatch.setattr(init.Path, "home", classmethod(lambda cls: tmp_path))
-    (tmp_path / ".claude.json").write_text("{}")
-    (tmp_path / ".codex").mkdir()
-    assert set(init._detect_agents()) == {"claude", "codex"}
-
-
-def test_mcp_config_ok_for_claude(monkeypatch, tmp_path):
-    monkeypatch.setattr(init, "_detect_agents", lambda: ["claude"])
-    monkeypatch.setattr(init, "REPO_ROOT", tmp_path)
-    (tmp_path / ".mcp.json").write_text('{"mcpServers":{"playwright":{}}}')
-    assert init.check_mcp_config().ok
-
-
-def test_mcp_config_missing_codex_toml(monkeypatch, tmp_path):
-    monkeypatch.setattr(init, "_detect_agents", lambda: ["codex"])
-    monkeypatch.setattr(init, "REPO_ROOT", tmp_path)
-    c = init.check_mcp_config()
-    assert not c.ok and c.warn_label == "teaching"
-
-
-def test_mcp_config_codex_string_scan(monkeypatch, tmp_path):
-    monkeypatch.setattr(init, "_detect_agents", lambda: ["codex"])
-    monkeypatch.setattr(init, "REPO_ROOT", tmp_path)
-    cdir = tmp_path / ".codex"; cdir.mkdir()
-    (cdir / "config.toml").write_text("[mcp_servers.playwright]\ncommand='npx'\n")
-    assert init.check_mcp_config().ok
 
 
 def test_playwright_warn_label_is_creator():
@@ -173,17 +126,29 @@ def test_summarize_groups_warn_by_label():
     assert "WARN creator: playwright(creator 驗證用) missing" in line
 
 
-def test_mcp_config_no_agents(monkeypatch):
-    monkeypatch.setattr(init, "_detect_agents", lambda: [])
-    assert init.check_mcp_config().ok
+def test_health_server_not_up_passes(monkeypatch):
+    # GET / returns (None, b"") → server not up → pass with note
+    monkeypatch.setattr(init, "_http_get", lambda url, timeout=1.0: (None, b""))
+    c = init.check_health()
+    assert c.ok
+    assert not c.warn_only
 
 
-def test_restore_mcp_config_writes_when_missing(monkeypatch, tmp_path):
-    monkeypatch.setattr(init, "_detect_agents", lambda: ["claude"])
-    monkeypatch.setattr(init, "REPO_ROOT", tmp_path)
-    init.restore_mcp_config()
-    f = tmp_path / ".mcp.json"
-    assert f.exists() and "playwright" in f.read_text()
-    before = f.read_text()
-    init.restore_mcp_config()  # idempotent
-    assert f.read_text() == before
+def test_health_server_up_and_healthy_passes(monkeypatch):
+    def fake_get(url, timeout=1.0):
+        if url.rstrip("/").endswith(":9000") or url.endswith(":9000/"):
+            return (200, b"<title>LLM, no magic</title>")
+        return (200, b'{"status": "ok", "model": null, "subscribers": 0}')
+    monkeypatch.setattr(init, "_http_get", fake_get)
+    assert init.check_health().ok
+
+
+def test_health_server_up_but_health_broken_fails(monkeypatch):
+    def fake_get(url, timeout=1.0):
+        if "/health" in url:
+            return (None, b"")          # /health hangs/refused while server IS up
+        return (200, b"<title>LLM, no magic</title>")
+    monkeypatch.setattr(init, "_http_get", fake_get)
+    c = init.check_health()
+    assert not c.ok
+    assert not c.warn_only            # core failure
