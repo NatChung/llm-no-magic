@@ -22,7 +22,7 @@ use the `.zh-TW` files and reply in 繁體中文).
 ## Creator → development mode
 
 - Architecture: `agent/server.py` (single-port stdlib server :9000 — static frontend
-  + `/agent` `/skill-agent` `/swap` `/preview` APIs, auto-launches llama-server :8080),
+  + `/agent` `/skill-agent` `/preview` `/drive` `/inspect` `/stop` APIs, auto-launches llama-server :8080),
   `frontend/app.js` (zero-build Tailwind Play CDN UI), `agent/agent.py` (CLI agent loop
   + 4 tools), `teaching/` (AI-led course material), `init.py` (env checker).
 - Tests: `pytest agent/tests -q` (plain pytest functions + mocks; keep that style).

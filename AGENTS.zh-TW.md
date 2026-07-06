@@ -23,7 +23,7 @@ llama.cpp + Qwen3 GGUF 模型。分頁 ①–④ 是互動式的(tokens/機率�
 
 - 架構:
   `agent/server.py`(單埠標準庫伺服器 :9000 — 靜態前端
-  + `/agent` `/skill-agent` `/swap` `/preview` API,自動啟動 llama-server :8080)、
+  + `/agent` `/skill-agent` `/preview` `/drive` `/inspect` `/stop` API,自動啟動 llama-server :8080)、
   `frontend/app.js`(零建置 Tailwind Play CDN UI)、`agent/agent.py`(CLI agent 迴圈
   + 4 個工具)、`teaching/`(AI 帶領教學素材)、`init.py`(環境檢查工具)。
 - 測試:`pytest agent/tests -q`(純 pytest 函式 + mocks;維持這個風格)。

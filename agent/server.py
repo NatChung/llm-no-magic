@@ -473,7 +473,7 @@ def drive(tab: str, user: str, system: str = "", mode: str = "") -> dict:
 class AgentHandler(SimpleHTTPRequestHandler):
     """One handler:
       - GET → SimpleHTTPRequestHandler serves static files from STATIC_ROOT
-      - POST → /agent / /skill-agent / /swap / /preview API endpoints (below)
+      - POST → /agent / /skill-agent / /preview / /drive / /inspect / /stop API endpoints (below)
       - OPTIONS → CORS preflight
     """
 
