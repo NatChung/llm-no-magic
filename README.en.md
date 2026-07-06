@@ -43,7 +43,7 @@ nohup python3 -u -m agent.server > /tmp/agent-server.log 2>&1 &
 open http://localhost:9000/
 ```
 
-When you switch tabs, the server auto-swaps models (Tabs 1-3 → 0.6B, Tabs ④/⑥ → 4B; Tabs ⑤/⑦ are static articles). The first switch shows a "Loading X..." banner for ~3-5 seconds.
+When you drive a tab, the server auto-swaps models (tab-switching itself is UI-only) (Tabs 1-3 → 0.6B, Tabs ④/⑥ → 4B; Tabs ⑤/⑦ are static articles). The first swap shows a "Loading X..." banner for ~3-5 seconds.
 
 **Classroom LAN demo** (students on the same WiFi join your Mac):
 
@@ -113,27 +113,28 @@ Three Tab ④ presets:
 
 ```
 Browser
-    ↓ GET / (HTML)    ↓ POST /agent /skill-agent /swap /preview (SSE/JSON)
+    ↓ GET / (HTML)    ↓ POST /drive /inspect /stop /agent /skill-agent /preview
+    ↓ GET /events (SSE)
 Server :9000 (agent/server.py — static + API in one process)
     ↓ POST /v1/chat/completions  (non-stream + logprobs + tools)
-llama-server :8080 (Qwen3 model — auto-swap by /swap)
+llama-server :8080 (Qwen3 model — auto-swap inside /drive)
 ```
 
 **Core points**:
-- Tabs 1-3: frontend talks directly to llama `/completion` (stream + n_probs). Tabs 2-3 assemble chat template tags themselves.
-- Tab ④ Agent: frontend → `/agent` (SSE) → server runs multi-turn agent loop, OpenAI chat completions API + tools schema, real-executes tools, results back into messages, until model stops emitting tool_call.
+- Tabs 1-3: Send → `POST /drive` → server calls llama `/completion` (stream + n_probs) → publishes each token to `/events`, page renders live.
+- Tab ④ Agent: `POST /drive {tab:4}` → server runs a multi-turn agent loop (OpenAI chat completions + tools, real-executes tools, results back into messages) → publishes each turn/final to `/events`.
 - Tab ⑥ Skill: frontend → `/skill-agent` (SSE) → server runs 3-layer progressive disclosure simulator (lazy-loads SKILL.md body + bundled scripts/).
 - Tabs ⑤/⑦: static article only, no model interaction.
-- Tab switch: `ensureModel(wanted)` POSTs `/swap?model=X` → server's `SWAP_LOCK` serializes calls → `pkill llama-server` + wait for port to free + `subprocess.Popen` to start the new model + poll `/v1/models` until ready (~3-5s).
+- On send, the server compares `GLOBAL_STATE['model']` inside `/drive` and calls `handle_swap` only if needed (`SWAP_LOCK` serializes calls → `pkill` + wait for port to free + `Popen` + poll `/v1/models` until ready ~3-5s); tab-switching itself is UI-only and does not trigger a swap.
 
 ---
 
 ## Code tour
 
 - `frontend/index.html` + `app.js` + `styles.css` — Tailwind Play CDN (zero build), 7-tab UI
-- `agent/server.py` — single-port stdlib http.server (no FastAPI): static frontend files + API endpoints (agent loop, skill simulator, `/swap` orchestrator, `/preview` apply-template proxy). `LISTEN_HOST=0.0.0.0` opt-in for LAN demo.
+- `agent/server.py` — single-port stdlib http.server (no FastAPI): static frontend files + API endpoints (agent loop, skill simulator, swap orchestrator (`handle_swap`, called by `/drive`), `/preview` apply-template proxy). `LISTEN_HOST=0.0.0.0` opt-in for LAN demo.
 - `agent/agent.py` — CLI fallback REPL + 4 tools (`get_time` / `read_file` / `write_file` / `exec_bash`) + `dispatch_tool_call` + `AgentLoop`
-- `agent/tests/` — 43 tests (mocked subprocess + requests + socket; run with `pytest agent/tests -q`)
+- `agent/tests/` — pytest suite (mocked subprocess + requests + socket; run with `pytest agent/tests -q`)
 - `agent/SETUP.md` — port layout / Fri morning check / fallback ops notes
 - `prompts.md` — teaching prompt material (token-level demo inputs)
 

@@ -704,9 +704,9 @@ def main() -> None:
 
     Serves both static frontend files and API endpoints. For classroom
     LAN demo, launch with `LISTEN_HOST=0.0.0.0` so students on the same
-    WiFi can hit http://<mac-lan-ip>:9000/ . The /swap orchestrator also
-    propagates LISTEN_HOST to llama-server's --host flag so llama-server
-    binds the same interface.
+    WiFi can hit http://<mac-lan-ip>:9000/ . The swap orchestrator
+    (`handle_swap`) also propagates LISTEN_HOST to llama-server's --host
+    flag so llama-server binds the same interface.
     """
     listen_host = os.environ.get("LISTEN_HOST", "127.0.0.1")
     # Startup sync: detect any model currently alive on :8080, sync GLOBAL_STATE

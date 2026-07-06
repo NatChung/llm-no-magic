@@ -22,7 +22,6 @@ from pathlib import Path
 MODELS_DIR = Path.home() / "models"
 MODEL_FILES = {"0.6B": "Qwen3-0.6B-Q4_K_M.gguf", "4B": "Qwen3-4B-Q4_K_M.gguf"}
 SERVER_MARKER = b"LLM, no magic"  # GET :9000/ 的 <title> 識別字串
-REPO_ROOT = Path(__file__).resolve().parent
 
 
 @dataclass

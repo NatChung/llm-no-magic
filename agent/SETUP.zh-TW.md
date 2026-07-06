@@ -2,18 +2,18 @@
 
 > English: [SETUP.md](./SETUP.md)
 
-Verified 2026-05-29。**Two-port setup** — `:9000` 一個 Python server 同時吐 HTML + API + SSE;`:8080` llama-server 跑 model(0.6B 或 4B,`/swap` 切換)。原 `:8082` backend 已合進 `:9000`。
+Verified 2026-05-29。**Two-port setup** — `:9000` 一個 Python server 同時吐 HTML + API + SSE;`:8080` llama-server 跑 model(0.6B 或 4B,在 `/drive` 內自動切換)。原 `:8082` backend 已合進 `:9000`。
 
 | Port | 用途 | 何時起 |
 |------|------|--------|
-| **:8080** | llama-server(0.6B 或 4B,by `/swap`)| auto-managed |
+| **:8080** | llama-server(0.6B 或 4B,swapped inside `/drive`)| auto-managed |
 | **:9000** | 單一 server(靜態 HTML + API endpoints)| always |
 
 - **Launch server**: `cd ~/projects/llm-no-magic && nohup python3 -u -m agent.server > /tmp/agent-server.log 2>&1 &`
-- **llama 不用手動起!** server startup `_detect_model()` 偵測 :8080;若 down,frontend 第一次 tab click → `/swap` → 自動 launch(會帶 `--host $LISTEN_HOST`)
+- **llama 不用手動起!** server startup `_detect_model()` 偵測 :8080;若 down,第一次 `/drive` → trigger swap → 自動 launch(tab-switching 在 v3 是 UI-only)(會帶 `--host $LISTEN_HOST`)
 - **Model source**(若 GGUF 不存在): `hf download Qwen/Qwen3-4B-GGUF Qwen3-4B-Q4_K_M.gguf --local-dir ~/models`(0.6B 同樣語法、換名)
-- **Endpoint**: `/`、`/index.zh-TW.html`、`/app.js`、`/styles.css`(靜態) + `/agent`、`/skill-agent`、`/swap`、`/preview`(API)— 全在 `:9000`。舊 `/frontend/*` URL 會 301 redirect 到 `/*`。llama 直接 endpoint 是 `http://localhost:8080/v1/chat/completions`(只有 CLI agent.py 直接打)
-- **Function calling**: 仰賴 4B(0.6B 不穩);Tab ④/⑥ frontend 切到時 trigger swap to 4B
+- **Endpoint**: `/`、`/index.zh-TW.html`、`/app.js`、`/styles.css`(靜態) + `/agent`、`/skill-agent`、`/preview`、`/drive`、`/inspect`、`/stop`(API)+ `/events`、`/health`— 全在 `:9000`。舊 `/frontend/*` URL 會 301 redirect 到 `/*`。llama 直接 endpoint 是 `http://localhost:8080/v1/chat/completions`(只有 CLI agent.py 直接打)
+- **Function calling**: 仰賴 4B(0.6B 不穩);Driving Tab ④(或 ⑥)在 `/drive` 內 trigger swap to 4B
 - **GPU 負擔**: ~3GB max(同時間只一個 model 在 GPU 上;swap 期間舊 process kill 後新 process launch ~5s)
 
 ## 課堂 LAN demo
@@ -88,9 +88,9 @@ curl -s -o /dev/null -w "/agent OPTIONS = %{http_code}\n" -X OPTIONS http://loca
 | Port | 服務 | 何時起 |
 |------|------|--------|
 | :9000 | 單一 server:HTML + API endpoints(server.py)| always |
-| :8080 | llama-server(0.6B 或 4B 可 swap)| always(by `/swap` 控制)|
+| :8080 | llama-server(0.6B 或 4B,swapped inside `/drive`)| always(by `/drive` 控制)|
 
-Tab ④ 完整 flow:browser → `:9000` HTML/JS → fetch `/agent`(同 origin)→ `:8080` llama-server(0.6B 預設,/swap 切 4B)。
+Tab ④ 完整 flow:browser page → `POST /drive {tab:4}` → server 跑 agent loop、需要就在 `/drive` 內 swap 到 4B → `:8080` llama-server;頁面透過 `/events` 訂閱渲染。
 
 ## Fri AM 課前 30 秒 check
 
@@ -107,6 +107,6 @@ curl -s http://localhost:8080/v1/models | grep -qE "Qwen3-0\.6B|Qwen3-4B" && ech
 ## Fri AM 出包 fallback
 
 如果 server 或 Tab ④ 在課堂上出包:
-- **退回 CLI agent.py**:先確認 :8080 跑 4B(`curl -s http://localhost:8080/v1/models | grep -q "Qwen3-4B"`),否則先 swap:`curl -X POST http://localhost:9000/swap -H "Content-Type: application/json" -d '{"model":"4B"}'`。然後 `python3 -m agent.agent`。
+- **退回 CLI agent.py**:先確認 :8080 跑 4B(`curl -s http://localhost:8080/v1/models | grep -q "Qwen3-4B"`),否則手動 launch 4B(見下一條:pkill + nohup llama-server 帶 4B GGUF)。然後 `python3 -m agent.agent`。
 - **手動 swap 0.6B**(若 backend 出包但 frontend 還能 demo):`pkill -f llama-server` && `nohup llama-server -m ~/models/Qwen3-0.6B-Q4_K_M.gguf --port 8080 -ngl 99 > /tmp/llama-0.6b.log 2>&1 &`
 - **手動 swap 4B**:同上但 model file 換 `Qwen3-4B-Q4_K_M.gguf`

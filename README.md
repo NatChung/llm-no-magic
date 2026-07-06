@@ -43,7 +43,7 @@ nohup python3 -u -m agent.server > /tmp/agent-server.log 2>&1 &
 open http://localhost:9000/
 ```
 
-切 tab 時 server 自動 swap model(Tab 1-3 → 0.6B、Tab ④/⑥ → 4B,Tab ⑤/⑦ 是純 article 不切)。第一次切會看「載入 X 中…」banner 等 3-5 秒。
+送出(drive)時 server 自動 swap model(tab 切換本身是 UI-only)(Tab 1-3 → 0.6B、Tab ④/⑥ → 4B,Tab ⑤/⑦ 是純 article 不切)。第一次會看「載入 X 中…」banner 等 3-5 秒。
 
 **課堂 LAN demo**(同 WiFi 學員可連你 Mac):
 
@@ -111,27 +111,28 @@ LISTEN_HOST=0.0.0.0 nohup python3 -u -m agent.server > /tmp/agent-server.log 2>&
 
 ```
 Browser
-    ↓ GET / (HTML)    ↓ POST /agent /skill-agent /swap /preview (SSE/JSON)
+    ↓ GET / (HTML)    ↓ POST /drive /inspect /stop /agent /skill-agent /preview
+    ↓ GET /events (SSE)
 Server :9000 (agent/server.py — 同個 process 吐靜態 + API)
     ↓ POST /v1/chat/completions  (non-stream + logprobs + tools)
-llama-server :8080 (Qwen3 model — auto-swap by /swap)
+llama-server :8080 (Qwen3 model — auto-swap inside /drive)
 ```
 
 **核心**:
-- Tab 1-3 frontend 直接打 llama `/completion`(stream + n_probs)— Tab 2-3 自己拼 chat template tag
-- Tab ④ Agent:frontend → `/agent`(SSE)→ server 跑 multi-turn agent loop、OpenAI chat completions API + tools schema、real execute tool、結果塞回 messages、直到 model 不再 tool_call
+- Tab 1-3:送出 → `POST /drive` → server 打 llama `/completion`(stream + n_probs)→ 逐 token publish 到 `/events`,頁面渲染
+- Tab ④ Agent:`POST /drive {tab:4}` → server 跑 multi-turn agent loop(OpenAI chat completions + tools、real execute、結果塞回 messages)→ turn/final publish 到 `/events`
 - Tab ⑥ Skill:frontend → `/skill-agent`(SSE)→ server 跑 3-layer progressive disclosure simulator(lazy 載 SKILL.md body + bundled scripts/)
 - Tab ⑤/⑦:純 article、不跟 model 互動
-- Tab 切換時 `ensureModel(wanted)` POST `/swap?model=X` → server `SWAP_LOCK` 守單 flight → `pkill llama-server` + 等 port free + `subprocess.Popen` 起新 model + poll /v1/models 直到 ready(~3-5s)
+- 送出時 server 在 `/drive` 內比對 `GLOBAL_STATE['model']`、需要才 `handle_swap`(`SWAP_LOCK` 守單 flight → `pkill` + 等 port free + `Popen` + poll `/v1/models` 直到 ready ~3-5s);tab 切換是 UI-only,不觸發 swap
 
 ---
 
 ## Code tour
 
 - `frontend/index.html` + `app.js` + `styles.css` — Tailwind Play CDN(零 build),7 tab UI
-- `agent/server.py` — 單 port stdlib http.server(no FastAPI):同時 serve 靜態 frontend + API endpoints(agent loop、skill simulator、`/swap` orchestrator、`/preview` apply-template proxy)。`LISTEN_HOST=0.0.0.0` opt-in 給 LAN demo。
+- `agent/server.py` — 單 port stdlib http.server(no FastAPI):同時 serve 靜態 frontend + API endpoints(agent loop、skill simulator、swap orchestrator(`handle_swap`,由 `/drive` 呼叫)、`/preview` apply-template proxy)。`LISTEN_HOST=0.0.0.0` opt-in 給 LAN demo。
 - `agent/agent.py` — CLI fallback REPL + 4 tools(`get_time` / `read_file` / `write_file` / `exec_bash`)+ `dispatch_tool_call` + `AgentLoop`
-- `agent/tests/` — 43 tests(mocked subprocess + requests + socket;`pytest agent/tests -q`)
+- `agent/tests/` — pytest suite(mocked subprocess + requests + socket;`pytest agent/tests -q`)
 - `agent/SETUP.md` — port / Fri AM check / fallback 操作備忘
 - `prompts.md` — 教學用 prompt 素材(token-level demo 的 input)
 
