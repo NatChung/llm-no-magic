@@ -15,15 +15,13 @@
 
 ### Segment 1 — Direct answer (often wrong)
 - Preview: "Direct-answer mode = we force-inject an empty `<think></think>`, leaving the model no room to think — it just blurts out an answer. Guess what number it gives?"
-- Via MCP: open http://localhost:9000/ → click Tab ③ (Reasoning) → re-snapshot until the "Loading…" banner is gone
-- Select mode "Direct answer (skip thinking)" → submit the pre-filled apple question → wait until the Submit button is re-enabled
-- Debrief: Small models answering directly often get it wrong (saying 3 apples, or some random number); they're just completing "the most plausible next number"
+- Drive: `POST /drive {"tab":"3","user":"爸爸有3顆蘋果,兒子多他2顆。請問兒子幾顆?","mode":"direct"}` → the page auto-switches to Tab ③ and renders (Dad has 3 apples, son has 2 more than him — how many does the son have?)
+- Read: small models answering directly often get it wrong (saying 3 apples, or some random number) → Narrate: they're just completing "the most plausible next number"
 
 ### Segment 2 — With thinking (usually correct)
 - Preview: "Same question, but this time we let it write out its reasoning. Notice the screen gains a 'full reply (including `<think>`)' section."
-- Via MCP: select mode "With thinking" → submit the same question → wait until the Submit button is re-enabled
-- Read the "Full reply (including `<think>`)" section and the final answer
-- Debrief: Look at the thinking section — the reasoning is genuinely written out one token at a time, not invisible magic; only after `</think>` does the final answer appear, and it's usually correct
+- Drive: `POST /drive {"tab":"3","user":"爸爸有3顆蘋果,兒子多他2顆。請問兒子幾顆?","mode":"thinking"}` → the page renders the thinking section + final answer
+- Read: the thinking-content fills with `<think>…</think>`; the generated-text after `</think>` is the final answer (often correctly 5) → Narrate: Look at the thinking section — the reasoning is genuinely written out one token at a time, not invisible magic — only after `</think>` does the final answer appear, and it's usually correct
 
 ## Learner practice
 Have learners change the numbers (dad has 7 apples, son has 3 fewer…) and run both modes; experience how thinking is slower but more reliable.

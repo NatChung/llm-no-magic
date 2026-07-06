@@ -15,16 +15,13 @@
 
 ### 段落 1 — 直答(常錯)
 - 預告:「直答模式 = 我們強塞一個空的 <think></think>,model 沒空間想、直接吐答案。猜它答幾顆?」
-- 用 MCP:開 http://localhost:9000/index.zh-TW.html → 點 Tab ③(推理)→ 重複 snapshot 到「載入…中」消失
-- 選 mode「直答(跳過 thinking)」→ 送出頁面預填的蘋果題 → 等「送出」鈕回 enabled
-- debrief:小 model 直答常錯(說 3 顆或亂答);它只是在接龍「最順的數字」
+- 驅動:`POST /drive {"tab":"3","user":"爸爸有3顆蘋果,兒子多他2顆。請問兒子幾顆?","mode":"direct"}` → 頁面自動切到 Tab ③ 渲染
+- 讀回應:小 model 直答常錯(說 3 顆或亂答)→ 旁白:它只是在接龍「最順的數字」
 
 ### 段落 2 — 用 thinking(通常對)
 - 預告:「同一題,這次讓它把推理寫出來。注意畫面會多一個『完整回覆(含 <think>)』區。」
-- 用 MCP:選 mode「用 thinking」→ 送出同題 → 等「送出」鈕回 enabled
-- 讀「完整回覆(含 <think>)」區 + 最終答案
-- debrief:看 thinking 區 — 推理真的是一個一個 token 寫出來的,不是隱形魔法;
-  寫完 `</think>` 後才出最終答案,而且通常對了
+- 驅動:`POST /drive {"tab":"3","user":"爸爸有3顆蘋果,兒子多他2顆。請問兒子幾顆?","mode":"thinking"}` → 頁面渲染 thinking 區 + 最終答案
+- 讀回應:thinking-content 填入 `<think>…</think>`、`</think>` 後的 generated-text 是最終答案(常對出 5)→ 旁白:看 thinking 區 — 推理真的是一個一個 token 寫出來的,不是隱形魔法;寫完 `</think>` 後才出最終答案,而且通常對了
 
 ## 學員動手
 讓學員改數字(爸爸 7 顆、兒子少他 3 顆…)兩種模式各跑一次;體會 thinking 慢但穩。
