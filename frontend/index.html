@@ -62,8 +62,7 @@
   <nav class="border-b border-edge bg-surface sticky top-0 z-10">
     <div class="max-w-6xl mx-auto px-2 md:px-8">
       <div class="tabs flex gap-0.5 md:gap-1 overflow-x-auto -mb-px">
-        <button class="tab active whitespace-nowrap px-3 md:px-5 py-3 md:py-4 text-sm md:text-base text-muted border-b-2 border-transparent hover:text-ink transition-colors" data-tab="intro">⓪ Start here</button>
-        <button class="tab whitespace-nowrap px-3 md:px-5 py-3 md:py-4 text-sm md:text-base text-muted border-b-2 border-transparent hover:text-ink transition-colors" data-tab="basic">① Basics</button>
+        <button class="tab active whitespace-nowrap px-3 md:px-5 py-3 md:py-4 text-sm md:text-base text-muted border-b-2 border-transparent hover:text-ink transition-colors" data-tab="basic">① Basics</button>
         <button class="tab whitespace-nowrap px-3 md:px-5 py-3 md:py-4 text-sm md:text-base text-muted border-b-2 border-transparent hover:text-ink transition-colors" data-tab="advanced">② Product Layer</button>
         <button class="tab whitespace-nowrap px-3 md:px-5 py-3 md:py-4 text-sm md:text-base text-muted border-b-2 border-transparent hover:text-ink transition-colors" data-tab="reasoning">③ Reasoning</button>
         <button class="tab whitespace-nowrap px-3 md:px-5 py-3 md:py-4 text-sm md:text-base text-muted border-b-2 border-transparent hover:text-ink transition-colors" data-tab="agent">④ Agent</button>
@@ -78,22 +77,7 @@
   <!-- ─────────────────────────────────────────────────────────────────
        Tab 1: Basics — prompt + token + probability
        ───────────────────────────────────────────────────────────────── -->
-  <main class="tab-panel active max-w-6xl mx-auto px-4 md:px-8 py-8 md:py-12" data-panel="intro">
-    <article class="max-w-3xl mx-auto space-y-6 text-ink-soft leading-relaxed">
-      <header class="space-y-2">
-        <h2 class="text-2xl font-semibold text-ink">⓪ Start here</h2>
-        <p class="text-muted">What this is, and the problem it's here to answer.</p>
-      </header>
-      <p><strong>This is a hands-on tour of what's actually happening inside an LLM</strong> — running locally on this machine, no cloud. You'll watch a model emit one token at a time, see the probabilities behind each choice, then climb up the layers: prompting, reasoning, tool-calling agents, skills and MCP.</p>
-      <div class="rounded border border-final/30 bg-final-tint p-4 space-y-2">
-        <p class="font-medium text-ink">The question this course answers:</p>
-        <p>You already use AI. But <em>which</em> tool for <em>which</em> job — and why does it sometimes confidently make things up? By the end you'll know when to reach for a <strong>speaking tool</strong> (ChatGPT / Gemini) vs a <strong>doing tool</strong> (Claude Code / Codex), and what each is really doing under the hood.</p>
-      </div>
-      <p>Open this repo with Claude Code / Codex and the AI will read the docs and run this course with you: at the start and at half-time it asks you a real-work-scenario question first, and once you understand the mechanics it shows you how your own judgement has shifted. <strong>No magic — just tokens, conventions, and tool calls you can verify.</strong></p>
-    </article>
-  </main>
-
-  <main class="tab-panel max-w-6xl mx-auto px-4 md:px-8 py-6 md:py-10" data-panel="basic">
+  <main class="tab-panel active max-w-6xl mx-auto px-4 md:px-8 py-6 md:py-10" data-panel="basic">
     <section class="prompt-area lg:col-span-2 space-y-3">
       <label for="prompt-basic" class="block text-sm font-medium text-ink-soft">Prompt</label>
       <textarea class="prompt w-full max-w-2xl rounded-md border border-edge bg-surface px-3 py-2 text-sm md:text-base font-mono focus:outline-none focus:border-final focus:ring-1 focus:ring-final" id="prompt-basic" rows="3" placeholder="Type a prompt..."></textarea>
@@ -631,6 +615,6 @@ AI  → git push
     </div>
   </main>
 
-  <script src="app.js?v=61"></script>
+  <script src="app.js?v=62"></script>
 </body>
 </html>

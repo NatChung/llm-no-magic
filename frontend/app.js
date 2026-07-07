@@ -617,7 +617,7 @@ window.addEventListener("DOMContentLoaded", connectEvents);
 // - commands: full article (⑤ Commands, Scripts & APIs)
 // - mcp: full article (⑦ MCP)
 // - recap: series-finale article (⑧ Put it all together)
-const PLACEHOLDER_PANELS = new Set(["intro", "commands", "mcp", "recap"]);
+const PLACEHOLDER_PANELS = new Set(["commands", "mcp", "recap"]);
 document.querySelectorAll(".tab-panel").forEach((panel) => {
   const id = panel.dataset.panel;
   if (PLACEHOLDER_PANELS.has(id)) return;
