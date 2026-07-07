@@ -23,11 +23,15 @@
 ## Demo 段落(第一次 drive Tab ④ 會載 4B model,banner 等 3-5 秒 — 先跟學員預告)
 
 ### 段落 1 — 現在幾點?(get_time)
+- **接上一課(整條接龍的收線)**:輸入框裡的「現在幾點?」就是 Lesson 3 收尾那句 — 切過來時
+  自動帶進來了。上一課連 thinking 都只能憑空編一個時間;這一課同一句、同一個 model,它會**真的
+  去呼叫 get_time 拿到真實時間** — 這就是①→②→③→④整條接龍要收的線
 - 預告:「model 沒有時鐘。猜它怎麼知道現在幾點?看紫色『↑ 工具呼叫』和綠色『↓ 工具結果』。」
 - 驅動:`POST /drive {"tab":"4","user":"現在幾點?"}` → 頁面自動切到 Tab ④ 並渲染;**第一次會 0.6B→4B swap,banner 等 3-5s**(swap 在 `/drive` 內、頁面收 `swap_start` 顯示 banner)
 - 讀回應:turn 軌跡 — Turn 1 紫「↑ 工具呼叫 get_time」→ 綠「↓ 工具結果」→ Turn 2 final answer(現在是 HH:MM:SS)→
   旁白:Turn 1 model 吐 `<tool_call>{"name":"get_time"…}` → client 真的跑 Python 拿時間 →
-  塞回對話 → Turn 2 才答得出來。**XML 標籤只是約定,執行的是 client**
+  塞回對話 → Turn 2 才答得出來。**XML 標籤只是約定,執行的是 client**;跟上一課對照:同一句
+  「現在幾點?」,thinking 只能編,這裡真的拿到了 — 差別就是有沒有工具
 
 ### 段落 2 — 數 .md 檔(exec_bash)
 - 預告:「這次它要跑 shell 指令、真的數這個 repo 的檔案。」

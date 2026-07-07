@@ -14,6 +14,7 @@
 ## Demo segments
 
 ### Segment 1 — Direct answer (often wrong)
+- **Picks up from last lesson**: the input box already holds `爸爸有3顆蘋果,兒子多他2顆。請問兒子幾顆?` — the exact question Lesson 2 closed on, auto-carried when you switched tabs. Last lesson it *answered* but got it wrong (computing son = 1); this lesson we'll see how to make it answer correctly
 - Preview: "Direct-answer mode = we force-inject an empty `<think></think>`, leaving the model no room to think — it just blurts out an answer. Guess what number it gives?"
 - Drive: `POST /drive {"tab":"3","user":"爸爸有3顆蘋果,兒子多他2顆。請問兒子幾顆?","mode":"direct"}` → the page auto-switches to Tab ③ and renders (the prompt reads: "Dad has 3 apples, son has 2 more than him — how many does the son have?")
 - Read: small models answering directly often get it wrong (saying 3 apples, or some random number) → Narrate: they're just completing "the most plausible next number"
@@ -29,6 +30,7 @@ Have learners change the numbers (dad has 7 apples, son has 3 fewer…) and run 
 ## Reveal & recap
 - Compare against the Hook prediction: did you guess right? The difference isn't that the model became smarter — it's that **it was given room to write its reasoning as tokens**
 - Connect back to Hook A: for judgment-heavy tasks like legal or liability questions, enabling thinking is more reliable; hard legal constraints should be written explicitly (e.g. "must not violate Article XX") — but the necessary knowledge (SOPs) still needs to be provided; thinking cannot fill a knowledge gap
+- **Closing chain (sets up the next lesson):** with thinking still on, hand it a different question — `POST /drive {"tab":"3","user":"現在幾點?","mode":"thinking"}` ("What time is it now?"). Watch the thinking section: the model reasons carefully, but partway through it literally says to itself "I don't have a physical clock here… how would I know the current time?" and ends up **assuming / inventing a time out of thin air**. Tell the learner: **even thinking can't get the real time — it needs a tool.** Remember this line, `現在幾點?` — next lesson the same one auto-carries to the next tab, where it will really go and fetch the time → Lesson 4
 
 ## Common questions
 - "Can we trust what's in the thinking section?" — It genuinely influences the answer token by token, but it can still reason incorrectly; important conclusions should still be verified

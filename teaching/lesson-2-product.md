@@ -32,6 +32,10 @@ Don't answer yet. Let the demo show it.
 - Set-up: "First, zero processing: `一年有幾個月?` ('How many months in a year?') goes to the
   model exactly as-is, treated as pure chaining." (Collect a prediction: will it answer
   directly?)
+- **Picks up from last lesson**: notice `一年有幾個月?` is already sitting in the input box — it's
+  the exact line Lesson 1 closed on, auto-carried when you switched tabs. **The same line, and
+  switching tabs it still just loops** — we'll use this very line to watch it go from "looping"
+  to "answering."
 - Drive: `POST /drive {"tab":"2","user":"一年有幾個月?","mode":"raw"}` → the page
   auto-switches to Tab ② and renders
 - Read (measured): it loops on "有沒有其他月份的特殊性?" ("anything else special about the
@@ -95,6 +99,14 @@ no loop" against the hand-typed version spiraling into more questions.
   products use a chat template instead of hand-typed "Q:"/"A:"
 - Back to the Hook: so what the model sees was never literally the string you typed — before
   you hit send, the product layer already wrapped it into text carrying boundary tokens
+- **Closing chain (sets up the next lesson):** hand it a different question —
+  `POST /drive {"tab":"2","user":"爸爸有3顆蘋果,兒子多他2顆。請問兒子幾顆?","mode":"chat"}`
+  ("Dad has 3 apples, son has 2 more than him — how many does the son have?"). This time it
+  **actually answers** (unlike Lesson 1, which only looped) — but watch closely: it starts
+  laying out algebra and sets the relationship backwards (letting son = x, dad = x+2 = 3, heading
+  toward son = 1; the correct answer is 5), and runs out at the token cap before finishing. Tell
+  the learner: **it answers now — but is it right?** Remember this question — next lesson the same
+  one auto-carries to the next tab, and we'll see how to make it answer correctly → Lesson 3
 
 ## Common Learner Questions
 - "So is typing my own 'Q:...A:' just as good as a real chat template?" — Similar effect, but
