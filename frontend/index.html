@@ -189,145 +189,24 @@
        Tab 6: placeholder — MCP (coming soon)
        ───────────────────────────────────────────────────────────────── -->
   <main class="tab-panel max-w-6xl mx-auto px-4 md:px-8 py-8 md:py-12" data-panel="mcp">
-    <article class="max-w-3xl mx-auto space-y-10 text-ink-soft leading-relaxed">
-      <header class="space-y-2">
-        <h2 class="text-2xl font-semibold text-ink">⑥ MCP</h2>
-        <p class="text-muted">When tools aren't fixed in advance, the AI picks them at runtime.</p>
-      </header>
-
-      <section class="space-y-3">
-        <h3 class="text-lg font-medium text-ink">§1. Recap — what's still missing</h3>
-        <p>By chapter ⑥ you know:</p>
-        <ul class="space-y-1 list-disc list-inside text-muted">
-          <li><strong class="text-ink-soft">Commands / scripts / APIs</strong> (⑤) — how to make a computer do things</li>
-          <li><strong class="text-ink-soft">Skills</strong> (⑥) — how to bundle the above into selectable capabilities the AI loads on demand</li>
-        </ul>
-        <p>Both assume one thing: <strong>tools are fixed, decided up front</strong>. You wrote <code class="bg-surface-2 px-1 rounded text-sm">weather.py</code> into a skill, so the AI can only check weather that way.</p>
-        <p>So what if tools <em>aren't</em> fixed?</p>
-      </section>
-
-      <section class="space-y-3">
-        <h3 class="text-lg font-medium text-ink">§2. Main scenario: controlling web pages</h3>
-        <p>Example: "grab the price of this product on eBay."</p>
-        <p>Write a script? Amazon's HTML structure is nothing like eBay's — a script works for one site only.</p>
-        <p>Use APIs? Some sites have one, many don't. You can't keep writing wrappers forever.</p>
-        <p>Worse: sites redesign regularly. The script that works today may break next week.</p>
-        <p><strong>So how does AI handle this?</strong></p>
-        <p>It just <strong>"looks at what's there"</strong>: read the current page, then decide which button to click or which text to grab.</p>
-        <p>But the AI can't see the page on its own — something has to <strong>look and act on its behalf</strong>. That's the problem MCP solves.</p>
-      </section>
-
-      <section class="space-y-3">
-        <h3 class="text-lg font-medium text-ink">§3. What MCP is</h3>
-        <p><strong>MCP</strong> = Model Context Protocol. Anthropic published it in November 2024 as an open spec — anyone can implement it.</p>
-        <p>What it solves: <strong>AI is too tightly bound to a fixed set of tools</strong>.</p>
-        <p>Analogy: <strong>USB-C for AI applications</strong> (Anthropic's own framing).</p>
-        <table class="text-sm w-full border border-edge-soft my-2">
-          <thead>
-            <tr class="bg-surface-2 border-b border-edge-soft">
-              <th class="text-left p-2 font-medium">Scene</th>
-              <th class="text-left p-2 font-medium">Before</th>
-              <th class="text-left p-2 font-medium">Now</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-edge-soft">
-            <tr><td class="p-2 font-medium">Charging cables</td><td class="p-2">Proprietary plugs / mini-USB / micro-USB / Lightning...</td><td class="p-2">One USB-C cable for every phone and tablet</td></tr>
-            <tr><td class="p-2 font-medium">AI ↔ tools</td><td class="p-2">Every AI app writes its own integrations (Claude one way, ChatGPT another)</td><td class="p-2">One MCP protocol — any AI connects to any tool</td></tr>
-          </tbody>
-        </table>
-        <p><strong>How it runs:</strong> a client (the AI side) and a server (the tool side) talk over JSON-RPC. The client asks the server what tools it offers, then calls them on demand. Full trace in §4.</p>
-        <p>The key point: <strong>tools aren't hard-coded — they're queried at runtime</strong>. Swap servers, get a new toolset, without changing a line of AI-side code.</p>
-      </section>
-
-      <section class="space-y-3">
-        <h3 class="text-lg font-medium text-ink">§4. A real trace</h3>
-        <p>Using Playwright MCP server (a Microsoft open-source server purpose-built to let AI drive a browser) for a simple task.</p>
-        <p>Task: "screenshot example.com for me."</p>
-        <pre class="bg-surface-2 rounded p-3 text-xs leading-relaxed font-mono overflow-auto">→ tools/list                            <span class="text-muted">← AI starts up, asks the server: what can you do?</span>
-← [browser_navigate, browser_click, browser_screenshot, ...]
-                                        <span class="text-muted">← server lists what it offers</span>
-
-→ browser_navigate(url="example.com")   <span class="text-muted">← AI picks "open page"</span>
-← {success: true, title: "Example Domain"}
-                                        <span class="text-muted">← server really opens the browser</span>
-
-→ browser_screenshot()                  <span class="text-muted">← AI picks "screenshot"</span>
-← {image: "data:image/png;base64,..."}  <span class="text-muted">← returns the screenshot bytes</span>
-
-→ "Screenshot of example.com is above" <span class="text-muted">← AI wraps up the reply</span></pre>
-        <p>Things to notice:</p>
-        <ul class="space-y-1.5 list-disc list-inside text-muted">
-          <li>The AI <strong class="text-ink-soft">doesn't know the tools up front</strong> — it asks at startup</li>
-          <li>The toolset <strong class="text-ink-soft">changes when you change servers</strong> — want database access? Switch to a DB MCP server, the tools become <code class="bg-surface-2 px-1 rounded text-sm">db_query</code> / <code class="bg-surface-2 px-1 rounded text-sm">db_insert</code></li>
-          <li>The AI-side code <strong class="text-ink-soft">doesn't change</strong> — only the partner changes</li>
-          <li><strong class="text-ink-soft">Installing an MCP server is granting it the matching permission</strong> — Playwright MCP can drive your browser, Filesystem MCP can read your files. Read what each server does and decide whether you trust it (community-maintained servers carry different trust than ones you wrote yourself)</li>
-        </ul>
-        <p>That's the payoff of "<strong>one protocol, every tool</strong>".</p>
-      </section>
-    </article>
+    <div class="max-w-3xl mx-auto py-16 md:py-24 text-center space-y-3">
+      <h2 class="text-2xl font-semibold text-ink">⑥ MCP</h2>
+      <p class="text-muted">Coming soon</p>
+      <p class="text-sm text-faint">This unit is still being polished — stay tuned.</p>
+    </div>
   </main>
 
   <!-- ─────────────────────────────────────────────────────────────────
        Tab 5: Skill (preview) — lazy-loaded skill body + bundled tools
        ───────────────────────────────────────────────────────────────── -->
   <main class="tab-panel max-w-6xl mx-auto px-4 md:px-8 py-6 md:py-10" data-panel="skill">
-    <div class="mb-6 p-4 rounded-lg bg-final-tint border border-final/20">
-      <h2 class="text-base font-semibold text-final mb-1">⑤ Skill — Preview (P1 spike artifact)</h2>
-      <p class="text-sm text-ink-soft leading-relaxed">
-        Faithful to Claude Code's <strong>3-layer progressive disclosure</strong>:
-        <strong>L1</strong> metadata (always in system prompt, ~100 tokens/skill) ·
-        <strong>L2</strong> SKILL.md body (load on demand via <code>load_skill</code>, &lt;5k tokens) ·
-        <strong>L3</strong> reference docs + bundled scripts (read on demand; script <em>code</em> never enters context).
-        Toggle <strong>Naive</strong> ↔ <strong>Proper</strong> to see token-explosion vs lazy disclosure.
-      </p>
-    </div>
-
-    <div class="lg:grid lg:grid-cols-[1fr_2fr] lg:gap-6">
-      <!-- LEFT: controls + skill index -->
-      <section class="space-y-4">
-        <div>
-          <label class="block text-sm font-medium text-ink-soft mb-1.5">Preset query</label>
-          <select class="skill-preset w-full rounded-md border border-edge bg-surface px-3 py-2 text-sm focus:outline-none focus:border-final focus:ring-1 focus:ring-final">
-            <option value="">(Pick a preset or type your own)</option>
-            <option value="幫我整理 ~/Downloads 的檔案,分類一下">1. 整理檔案 → should load organize_files skill</option>
-            <option value="台北今天天氣怎樣?">2. 台北天氣 → should load check_weather skill</option>
-            <option value="1 加 1 等於多少?">3. 1+1 → no skill matches, model answers directly</option>
-          </select>
-        </div>
-
-        <div>
-          <label for="prompt-skill" class="block text-sm font-medium text-ink-soft mb-1.5">Query</label>
-          <div class="relative">
-            <textarea class="skill-prompt w-full rounded-md border border-edge bg-surface px-3 py-2 pr-12 text-sm font-mono resize-none focus:outline-none focus:border-final focus:ring-1 focus:ring-final" id="prompt-skill" rows="3" placeholder="Ask something..."></textarea>
-            <button class="skill-run absolute bottom-2.5 right-2.5 w-8 h-8 rounded-full bg-ink text-surface flex items-center justify-center hover:bg-ink-soft disabled:bg-faint transition-colors" aria-label="Send / Stop"><svg class="icon-send" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 13V3M4 7l4-4 4 4"/></svg><svg class="icon-stop" width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><rect x="1" y="1" width="10" height="10" rx="2"/></svg></button>
-          </div>
-        </div>
-
-
-        <div class="pt-2">
-          <h3 class="text-xs uppercase tracking-wider text-muted font-medium mb-2">Skill index</h3>
-          <div class="skill-index space-y-2"></div>
-        </div>
-
-        <div>
-          <h3 class="text-xs uppercase tracking-wider text-muted font-medium mb-2">Tools currently exposed</h3>
-          <div class="skill-tools rounded-md bg-surface-2 border border-edge-soft p-3 text-xs font-mono text-ink-soft">(not yet started)</div>
-        </div>
-      </section>
-
-      <!-- RIGHT: turn-by-turn output -->
-      <section class="mt-8 lg:mt-0 space-y-3">
-        <h3 class="text-xs uppercase tracking-wider text-muted font-medium">Agent trace</h3>
-        <div class="skill-turns space-y-3"></div>
-
-        <div class="skill-final-area hidden mt-6 rounded-lg bg-final-tint p-5 space-y-2">
-          <h3 class="text-sm font-semibold text-final uppercase tracking-wider">Final answer</h3>
-          <div class="skill-final text-base leading-relaxed text-ink"></div>
-        </div>
-      </section>
+    <div class="max-w-3xl mx-auto py-16 md:py-24 text-center space-y-3">
+      <h2 class="text-2xl font-semibold text-ink">⑤ Skill</h2>
+      <p class="text-muted">Coming soon</p>
+      <p class="text-sm text-faint">This unit is still being polished — stay tuned.</p>
     </div>
   </main>
 
-  <script src="app.js?v=79"></script>
+  <script src="app.js?v=80"></script>
 </body>
 </html>
