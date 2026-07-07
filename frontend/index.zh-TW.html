@@ -42,33 +42,24 @@
       },
     };
   </script>
-  <link rel="stylesheet" href="styles.css?v=62">
+  <link rel="stylesheet" href="styles.css?v=63">
 </head>
 <body class="min-h-screen bg-surface text-ink antialiased">
   <div id="swap-banner" class="hidden fixed top-16 left-1/2 -translate-x-1/2 rounded-md bg-final-tint px-4 py-2 text-sm text-final shadow-md z-50">
     <span class="inline-block w-1.5 h-1.5 rounded-full bg-final animate-pulse mr-2 align-middle"></span>
     載入 <span id="swap-banner-model" class="font-semibold"></span> 中…
   </div>
-  <header class="border-b border-edge">
-    <div class="max-w-6xl mx-auto px-4 md:px-8 py-5 md:py-7 flex justify-between items-start gap-4">
-      <div>
-        <h1 class="text-xl md:text-3xl font-semibold tracking-tight text-ink">LLM 沒有魔法</h1>
-        <p class="mt-1.5 text-xs md:text-sm text-muted">只有 token 跟約定。Token / 機率 / chat template / Agent 流程,逐層可見</p>
-      </div>
-      <a href="index.html" class="text-xs text-muted hover:text-ink-soft mt-1 flex-shrink-0" lang="en">English</a>
-    </div>
-  </header>
-
   <nav class="border-b border-edge bg-surface sticky top-0 z-10">
-    <div class="max-w-6xl mx-auto px-2 md:px-8">
-      <div class="tabs flex gap-0.5 md:gap-1 overflow-x-auto -mb-px">
-        <button class="tab active whitespace-nowrap px-3 md:px-5 py-3 md:py-4 text-sm md:text-base text-muted border-b-2 border-transparent hover:text-ink transition-colors" data-tab="basic">① 接龍</button>
-        <button class="tab whitespace-nowrap px-3 md:px-5 py-3 md:py-4 text-sm md:text-base text-muted border-b-2 border-transparent hover:text-ink transition-colors" data-tab="advanced">② 問答</button>
-        <button class="tab whitespace-nowrap px-3 md:px-5 py-3 md:py-4 text-sm md:text-base text-muted border-b-2 border-transparent hover:text-ink transition-colors" data-tab="reasoning">③ 推理</button>
-        <button class="tab whitespace-nowrap px-3 md:px-5 py-3 md:py-4 text-sm md:text-base text-muted border-b-2 border-transparent hover:text-ink transition-colors" data-tab="agent">④ 代理</button>
-        <button class="tab whitespace-nowrap px-3 md:px-5 py-3 md:py-4 text-sm md:text-base text-muted border-b-2 border-transparent hover:text-ink transition-colors" data-tab="skill">⑤ Skill</button>
-        <button class="tab whitespace-nowrap px-3 md:px-5 py-3 md:py-4 text-sm md:text-base text-muted border-b-2 border-transparent hover:text-ink transition-colors" data-tab="mcp">⑥ MCP</button>
-      </div>
+    <div class="max-w-6xl mx-auto px-4 md:px-8 py-3 flex items-center justify-between gap-4">
+      <a href="index.html" class="text-xs text-muted hover:text-ink-soft" lang="en">English</a>
+      <select class="tab-select text-sm text-ink-soft bg-transparent cursor-pointer focus:outline-none" aria-label="切換分頁">
+        <option value="basic" selected>① 接龍</option>
+        <option value="advanced">② 問答</option>
+        <option value="reasoning">③ 推理</option>
+        <option value="agent">④ 代理</option>
+        <option value="skill">⑤ Skill</option>
+        <option value="mcp">⑥ MCP</option>
+      </select>
     </div>
   </nav>
 
@@ -86,7 +77,6 @@
       <textarea class="prompt w-full max-w-2xl rounded-lg shadow-[0_1px_3px_oklch(20%_0.012_280_/_0.06)] border border-edge bg-surface px-3 py-2 text-sm md:text-base font-mono focus:outline-none focus:border-final focus:ring-1 focus:ring-final" id="prompt-basic" rows="3" placeholder="輸入 prompt..."></textarea>
       <div class="flex gap-2 pt-1">
         <button class="run inline-flex items-center px-4 py-2 rounded-md bg-ink text-surface text-sm font-medium hover:bg-ink-soft disabled:bg-faint transition-colors">送出</button>
-        <button class="stop inline-flex items-center px-4 py-2 rounded-md border border-edge text-ink-soft text-sm hover:bg-surface-2 disabled:text-faint disabled:hover:bg-transparent transition-colors" disabled>停</button>
       </div>
     </section>
     <section class="output-area mt-8 lg:mt-0 space-y-2">
@@ -120,7 +110,6 @@
 
       <div class="flex gap-2 pt-1">
         <button class="run inline-flex items-center px-4 py-2 rounded-md bg-ink text-surface text-sm font-medium hover:bg-ink-soft disabled:bg-faint transition-colors">送出</button>
-        <button class="stop inline-flex items-center px-4 py-2 rounded-md border border-edge text-ink-soft text-sm hover:bg-surface-2 disabled:text-faint disabled:hover:bg-transparent transition-colors" disabled>停</button>
       </div>
     </section>
     <section class="output-area mt-8 lg:mt-0 space-y-2">
@@ -152,7 +141,6 @@
 
       <div class="flex gap-2 pt-1">
         <button class="run inline-flex items-center px-4 py-2 rounded-md bg-ink text-surface text-sm font-medium hover:bg-ink-soft disabled:bg-faint transition-colors">送出</button>
-        <button class="stop inline-flex items-center px-4 py-2 rounded-md border border-edge text-ink-soft text-sm hover:bg-surface-2 disabled:text-faint disabled:hover:bg-transparent transition-colors" disabled>停</button>
       </div>
     </section>
     <div class="mt-8 space-y-6">
@@ -185,7 +173,6 @@
 
       <div class="flex gap-2 pt-1">
         <button class="run inline-flex items-center px-4 py-2 rounded-md bg-ink text-surface text-sm font-medium hover:bg-ink-soft disabled:bg-faint transition-colors">送出</button>
-        <button class="stop inline-flex items-center px-4 py-2 rounded-md border border-edge text-ink-soft text-sm hover:bg-surface-2 disabled:text-faint disabled:hover:bg-transparent transition-colors" disabled>停</button>
       </div>
     </section>
 
@@ -319,7 +306,6 @@
 
         <div class="flex gap-2">
           <button class="skill-run inline-flex items-center px-4 py-2 rounded-md bg-ink text-surface text-sm font-medium hover:bg-ink-soft disabled:bg-faint transition-colors">送出</button>
-          <button class="skill-stop inline-flex items-center px-4 py-2 rounded-md border border-edge text-ink-soft text-sm hover:bg-surface-2 disabled:text-faint disabled:hover:bg-transparent transition-colors" disabled>停止</button>
         </div>
 
         <div class="pt-2">
@@ -346,6 +332,6 @@
     </div>
   </main>
 
-  <script src="app.js?v=71"></script>
+  <script src="app.js?v=72"></script>
 </body>
 </html>

@@ -26,12 +26,6 @@
   }
 }
 
-/* Tab 切換按鈕的「active」underline(對應 .tab.active in JS) */
-.tab.active {
-  color: oklch(20% 0.012 280);                  /* ink */
-  border-bottom-color: oklch(55% 0.20 255);     /* final 藍 */
-}
-
 /* §5.1.3 — bar chart 結構(renderProbs 在 JS createElement 不 set Tailwind class
    的 module-level 元件;這幾條 styles 是視覺契約)*/
 .bar-row {
@@ -106,11 +100,10 @@
   }
 }
 
-/* spec §5 swap banner — body.swapping 期間 disable tab + Run + Stop,
+/* spec §5 swap banner — body.swapping 期間 disable 分頁下拉 + Run,
    避免 race condition / 多重觸發 */
-body.swapping .tab,
-body.swapping .run,
-body.swapping .stop {
+body.swapping .tab-select,
+body.swapping .run {
   pointer-events: none;
   opacity: 0.5;
 }

@@ -179,14 +179,14 @@ Mostly flat, with a restrained modern lift: surfaces still separate with a 1px H
 ### Buttons
 
 - **Shape:** rounded-md (6px).
-- **Primary ("送出/Send"):** Near-Black Graphite background, Chalk White text, 8px/16px padding. Hover darkens to Soft Graphite. Disabled drops to Faint Ash background.
-- **Secondary ("停/Stop"):** Chalk White background, Hairline Gray border, Soft Graphite text. Disabled: Faint Ash text, no hover.
+- **Primary ("送出/Send"):** Near-Black Graphite background, Chalk White text, 8px/16px padding. Hover darkens to Soft Graphite. Disabled drops to Faint Ash background. It is the only action button — there is no Stop button; canceling a generation is the AI driver's job (`POST /stop`), not a learner control.
 - **Feel:** plain but present — states are functional signage (disabled looks visibly inert, hover visibly responds), never decorative.
 
-### Tabs
+### Tab selector (nav dropdown)
 
-- **Style:** flat text buttons in a row, no pill/card wrapper. Inactive tabs sit in Quiet Slate; the active tab turns Near-Black Graphite and gains a 2px Signal Blue underline.
-- **State:** during a model swap, all tabs (plus Send/Stop) drop to 50% opacity and become non-interactive — a whole-row "disabled" signal, not a spinner.
+- **Style:** a slim sticky top bar (no page title, no tab row) — language link on the left, a quiet native `<select>` on the right showing the current tab ("① 接龍 … ⑥ MCP"). Soft Graphite text, transparent background, no border: it reads as unobtrusive signage, exactly like the mockup's top-right corner.
+- **Sync:** the dropdown and the visible panel stay in sync both ways — picking an option switches the panel (and carries the last prompt), and a driven `drive_start` switches both.
+- **State:** during a model swap, the dropdown and Send drop to 50% opacity and become non-interactive.
 
 ### Token chips (`.tok`)
 

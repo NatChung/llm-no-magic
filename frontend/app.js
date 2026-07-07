@@ -114,13 +114,14 @@ const PANEL_TO_TAB = { basic: "1", advanced: "2", reasoning: "3", agent: "4" };
 const TAB_TO_PANEL = { "1": "basic", "2": "advanced", "3": "reasoning", "4": "agent" };
 const PANELS = {};   // tab id "1".."4" → render callbacks (registered in setup*)
 
-// Switch the visible tab + panel by panel-name (HTML data-tab/data-panel value).
-// Shared by the tab buttons AND drive_start (spec §3.6: drive_start → switch tab UI).
+// Switch the visible panel by panel-name (HTML data-panel value), and keep
+// the nav dropdown in sync. Shared by the dropdown AND drive_start
+// (spec §3.6: drive_start → switch tab UI).
 function activateTabUI(panelName) {
-  document.querySelectorAll(".tab").forEach((b) =>
-    b.classList.toggle("active", b.dataset.tab === panelName));
   document.querySelectorAll(".tab-panel").forEach((p) =>
     p.classList.toggle("active", p.dataset.panel === panelName));
+  const sel = document.querySelector(".tab-select");
+  if (sel && sel.value !== panelName) sel.value = panelName;
 }
 
 // ── Lesson bridge: carry the last-used prompt across tab switches ──
@@ -174,16 +175,6 @@ async function postDrive(payload) {
   }
 }
 
-async function postStop() {
-  try {
-    await fetch("/stop", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: "{}",
-    });
-  } catch (err) { console.error("[stop] failed", err); }
-}
-
 function connectEvents() {
   let active = null;   // the PANELS[tab] entry currently being driven
   const es = new EventSource("/events");
@@ -222,20 +213,17 @@ function connectEvents() {
   es.onerror = () => { /* EventSource auto-reconnects; banner stays as-is */ };
 }
 
-// ── Tab switching — UI only. The server swaps the model inside /drive;
-//    the page reacts to the swap_start frame (banner). No /swap from here. ──
-document.querySelectorAll(".tab").forEach((btn) => {
-  btn.addEventListener("click", () => {
-    activateTabUI(btn.dataset.tab);
-    carryPromptInto(btn.dataset.tab);
-  });
+// ── Tab switching — UI only, via the nav dropdown. The server swaps the
+//    model inside /drive; the page reacts to swap_start (banner). ──
+document.querySelector(".tab-select")?.addEventListener("change", (e) => {
+  activateTabUI(e.target.value);
+  carryPromptInto(e.target.value);
 });
 
 // ── Per-panel setup (closure pattern,每 tab 自己一份 state)──────────
 function setupPanel(panel) {
   const promptEl  = panel.querySelector(".prompt");
   const runBtn    = panel.querySelector(".run");
-  const stopBtn   = panel.querySelector(".stop");
   const textEl    = panel.querySelector(".generated-text");
   const probsEl   = panel.querySelector(".probs");
   const previewEl = panel.querySelector(".final-prompt-preview");    // 只有 advanced / reasoning panel 有
@@ -311,7 +299,7 @@ function setupPanel(panel) {
   // ── Relay render callbacks (replace the old self-fetch runCompletion) ──
   let isThinkingMode = false;
   function beginRun(frame) {
-    runBtn.disabled = true; stopBtn.disabled = false;
+    runBtn.disabled = true;
     textEl.textContent = ""; if (probsEl) probsEl.innerHTML = "";
     if (captionEl) captionEl.classList.add("hidden");
     tokenSteps = [];
@@ -346,7 +334,7 @@ function setupPanel(panel) {
     else if (phase === "in_answer") appendClickableToken(stepIdx, step.token, textEl);
     if (probsEl && stepIdx === 0) { renderProbs(probsEl, step.top_logprobs); highlightStep(0); }
   }
-  function endRun() { runBtn.disabled = false; stopBtn.disabled = true; }
+  function endRun() { runBtn.disabled = false; }
   function onInspect(frame) {
     if (!probsEl) return;                     // reasoning: no probs panel
     const s = tokenSteps[frame.tokenIndex];
@@ -385,12 +373,6 @@ function setupPanel(panel) {
 
   // ── Wire events ────────────────────────────────────────────────────
   runBtn.addEventListener("click", driveThisPanel);
-  stopBtn.addEventListener("click", () => {
-    postStop();
-    // Optimistic re-enable so Stop frees Send instantly; the server also
-    // sends a final on cancel (belt-and-suspenders).
-    runBtn.disabled = false; stopBtn.disabled = true;
-  });
   promptEl.addEventListener("keydown", (e) => {
     if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
       if (!promptEl.value.trim() || runBtn.disabled) return;
@@ -415,7 +397,6 @@ function setupAgent(panel) {
   const promptEl   = panel.querySelector(".prompt");
   const previewEl  = panel.querySelector(".final-prompt-preview");
   const runBtn     = panel.querySelector(".run");
-  const stopBtn    = panel.querySelector(".stop");
   const turnsEl    = panel.querySelector(".turns");
   const finalEl    = panel.querySelector(".final-content");
   // Note: Tab ④ 拿掉 probs-area,token 不再 clickable(教學焦點移到 turn-level
@@ -627,14 +608,14 @@ function setupAgent(panel) {
   // ── Relay: register so the global /events dispatcher drives this panel ──
   function beginRun(frame) {
     clearAll();
-    runBtn.disabled = true; stopBtn.disabled = false;
+    runBtn.disabled = true;
     // §3.6 顯示輸入 — reflect the driven user/system into the panel's own
     // input fields so the student sees the question that was actually asked.
     if (frame && frame.user != null) { promptEl.value = frame.user; lastPrompt = frame.user; }
     if (frame && frame.system != null) systemEl.value = frame.system;
     refreshPreview();
   }
-  function endRun() { runBtn.disabled = false; stopBtn.disabled = true; }
+  function endRun() { runBtn.disabled = false; }
   PANELS["4"] = {
     onDriveStart: beginRun,
     onTurnComplete: (f) =>
@@ -651,12 +632,6 @@ function setupAgent(panel) {
   }
 
   runBtn.addEventListener("click", driveAgent);
-  stopBtn.addEventListener("click", () => {
-    postStop();
-    // Optimistic re-enable so Stop frees Send instantly; the server also
-    // sends a final on cancel for Tab ④ too (belt-and-suspenders).
-    runBtn.disabled = false; stopBtn.disabled = true;
-  });
 }
 
 // On load: subscribe to the relay. No model swap here — the server swaps
@@ -684,7 +659,6 @@ function setupSkill(panel) {
   const preset = panel.querySelector(".skill-preset");
   const promptEl = panel.querySelector(".skill-prompt");
   const runBtn = panel.querySelector(".skill-run");
-  const stopBtn = panel.querySelector(".skill-stop");
   const indexEl = panel.querySelector(".skill-index");
   const toolsEl = panel.querySelector(".skill-tools");
   const turnsEl = panel.querySelector(".skill-turns");
@@ -809,7 +783,6 @@ function setupSkill(panel) {
     reset();
 
     runBtn.disabled = true;
-    stopBtn.disabled = false;
     abortCtl = new AbortController();
 
     let currentTurn = 0;
@@ -934,13 +907,11 @@ function setupSkill(panel) {
       }
     } finally {
       runBtn.disabled = false;
-      stopBtn.disabled = true;
       abortCtl = null;
     }
   }
 
   runBtn.addEventListener("click", run);
-  stopBtn.addEventListener("click", () => abortCtl?.abort());
   promptEl.addEventListener("keydown", (e) => {
     if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
       e.preventDefault();
