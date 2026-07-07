@@ -98,19 +98,9 @@
 .run.running .icon-stop,
 .skill-run.running .icon-stop { display: block; }
 
-/* §5.1.4 — Tab ④ turn-block 累積 collapse 動畫(JS .classList.toggle("collapsed")) */
-.turn-block {
-  max-height: 9999px;
-  transition: max-height 0.2s cubic-bezier(0.22, 1, 0.36, 1);
-}
-.turn-block.collapsed {
-  max-height: 2.5em;
-  overflow: hidden;
-}
-
 /* Reduced motion 尊重 */
 @media (prefers-reduced-motion: reduce) {
-  .turn-block, .bar-fill, .tok {
+  .bar-fill, .tok {
     transition: none !important;
   }
 }

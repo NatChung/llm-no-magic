@@ -42,29 +42,45 @@ const I18N = {
     'en':    'Thinking: the <think> block is left open — the model writes its reasoning as tokens before answering.',
     'zh-TW': 'thinking:把 <think> 留著開口,model 先把推理寫成 token、再給答案。',
   },
-  turn_subtitle_more: {
-    'en':    'The whole turn (model output plus tool results) accumulates into messages and is sent to the model next turn',
-    'zh-TW': '整個 turn(model 吐的字 加上 tool 結果)累積進 messages,送進下次 model',
+  model_round_label: {
+    'en':    'Model · round {n}',
+    'zh-TW': '模型 · 第 {n} 回合',
   },
-  turn_subtitle_final: {
-    'en':    'This is the final turn — model did not tool_call again, done',
-    'zh-TW': '這是 final turn,model 沒再 tool_call,結束了',
+  tool_bubble_label: {
+    'en':    'Tool · {name}',
+    'zh-TW': '工具 · {name}',
   },
-  tool_call_label: {
-    'en':    'Tool call',
-    'zh-TW': '工具呼叫',
+  calls_tool_caption: {
+    'en':    'calls the tool — your PC runs it →',
+    'zh-TW': '呼叫工具,交給你的電腦跑 →',
   },
-  tool_call_sub: {
-    'en':    'parsed from the tokens the model emitted, handed off to the client to run',
-    'zh-TW': 'model 從吐的 token 解析出來,交給 client 跑',
+  local_exec_badge: {
+    'en':    '💻 runs on your PC',
+    'zh-TW': '💻 在你電腦執行',
   },
-  tool_result_label: {
-    'en':    'Tool result',
-    'zh-TW': '工具結果',
+  feeds_back_caption: {
+    'en':    '↩ result fed back to the model',
+    'zh-TW': '↩ 結果餵回模型',
   },
-  tool_result_sub: {
-    'en':    'the return value the client actually ran, fed back into messages for the next turn',
-    'zh-TW': 'client 真執行的回傳,會塞回 messages 給下次 model',
+  to_user_caption: {
+    'en':    'no tool_call → goes to you',
+    'zh-TW': '沒有 tool_call → 給使用者',
+  },
+  tool_returns: {
+    'en':    'returns',
+    'zh-TW': '回傳',
+  },
+  trace_summary: {
+    'en':    'Model ⇄ tools: {trips} round-trip(s), {rounds} rounds in total — only then your turn',
+    'zh-TW': '模型 ⇄ 工具 來回 {trips} 趟、共 {rounds} 個回合,最後才輪到你',
+  },
+  trace_summary_notool: {
+    'en':    'No tool needed — the model answered you directly in 1 round',
+    'zh-TW': '模型沒呼叫工具,1 個回合直接回答你',
+  },
+  raw_tokens_summary: {
+    'en':    'The raw token stream the model emitted this round',
+    'zh-TW': '這回合 model 吐的原始 token 流',
   },
   received_summary: {
     'en':    'Received: the raw string the model emitted on this turn',
@@ -463,9 +479,9 @@ function setupAgent(panel) {
   const previewEl  = panel.querySelector(".final-prompt-preview");
   const runBtn     = panel.querySelector(".run");
   const turnsEl    = panel.querySelector(".turns");
-  const finalEl    = panel.querySelector(".final-content");
   // Note: Tab ④ 拿掉 probs-area,token 不再 clickable(教學焦點移到 turn-level
   // 累積 prompt,不在 per-token 機率)— renderProbs 仍在 Tab 1-3 用
+  // final answer 不再有獨立 section:綠色「給使用者」泡泡直接渲染在 turns 流裡
 
   // 即時 preview「實際送到 model 的 prompt」— 跟 Tab 2/3 一致(chat template
   // 包好的 text);呼叫 backend /preview,由 llama.cpp /apply-template 算出。
@@ -495,172 +511,200 @@ function setupAgent(panel) {
   promptEl.addEventListener("input", debouncedRefreshPreview);
 
   // Per-turn token storage(避免不同 turn 的 token index 衝突)
-  // turns[i] = { tokenSteps: [{token, top_logprobs}, ...], el: HTMLElement }
+  // turns[i] = { tokenSteps: [{token, top_logprobs}, ...], el: HTMLElement, hadTool: bool }
   let turns = [];
+  let finalRendered = false;   // final turn 的綠色泡泡是否已渲染
 
   function clearAll() {
     turns = [];
+    finalRendered = false;
     turnsEl.innerHTML = "";
-    finalEl.innerHTML = "";
   }
 
-  // ── Tailwind utility class strings,集中管理(spec §5 帶 .turn-block / .tok
-  //     等必留 class 給 CSS,其餘全 utility,no side-stripe border) ──
+  // ── Tailwind utility class strings,集中管理(chat-bubble layout:
+  //     模型=藍(左)、工具=紫(右)、給使用者=綠(全寬);.turn-block / .tok
+  //     等必留 class 給 CSS,其餘全 utility) ──
   const TW = {
-    block:         "turn-block rounded-lg bg-surface-2 border border-edge-soft px-4 py-3 md:px-5 md:py-4",
-    header:        "flex justify-between items-start gap-3 mb-2",
-    titleGroup:    "flex flex-col md:flex-row md:items-baseline md:gap-3 min-w-0",
-    title:         "text-base font-semibold text-ink",
-    subtitle:      "text-xs text-muted font-normal mt-0.5 md:mt-0 leading-snug",
-    collapseBtn:   "text-xs px-2 py-1 rounded border border-edge text-muted hover:text-ink-soft hover:bg-surface transition-colors flex-shrink-0 font-mono",
-    tokensBox:     "rounded-md bg-surface border border-edge-soft p-3 my-3 font-mono text-sm break-all leading-relaxed",
-    toolCallBox:   "rounded-md bg-tool-tint p-3 my-2",
-    toolCallHead:  "text-sm font-semibold text-tool flex items-baseline gap-1.5 flex-wrap",
-    toolCallSub:   "text-muted font-normal text-xs",
-    toolCallBody:  "mt-1.5 font-mono text-sm break-all text-ink",
-    toolResultBox: "rounded-md bg-result-tint p-3 my-2",
-    toolResultHead:"text-sm font-semibold text-result flex items-baseline gap-1.5 flex-wrap",
-    toolResultSub: "text-muted font-normal text-xs",
-    toolResultBody:"mt-1.5 font-mono text-xs bg-surface border border-edge-soft p-2.5 rounded max-h-48 overflow-auto whitespace-pre-wrap break-all text-ink-soft",
-    npDetails:     "mt-2",
-    npSummary:     "cursor-pointer text-xs text-muted hover:text-ink-soft py-1 list-none [&::-webkit-details-marker]:hidden before:content-['▸_'] [&[open]]:before:content-['▾_']",
-    npPre:         "mt-1.5 rounded-md bg-surface border border-edge-soft p-3 text-xs font-mono whitespace-pre-wrap break-all max-h-64 overflow-auto text-ink-soft",
-    errorBox:      "mt-3 rounded-md bg-surface-2 border border-edge p-3 text-sm font-mono text-ink-soft",
+    block:        "turn-block space-y-1",
+    // 模型泡泡(藍,靠左)
+    mRow:         "max-w-[88%] md:max-w-[75%]",
+    mLabel:       "text-xs font-semibold text-final mb-1",
+    mBubble:      "w-fit rounded-2xl rounded-tl-sm bg-final-tint border border-final/15 px-4 py-3 font-mono text-sm break-all leading-relaxed text-ink",
+    mCaption:     "text-xs text-muted mt-1 ml-1",
+    // 工具泡泡(紫,靠右)
+    tRow:         "ml-auto max-w-[88%] md:max-w-[75%] flex flex-col items-end",
+    tLabel:       "text-xs font-semibold text-tool mb-1",
+    tBubble:      "rounded-2xl rounded-tr-sm bg-tool-tint border border-tool/15 px-4 py-3 font-mono text-sm break-all leading-relaxed text-ink text-left",
+    tCaption:     "text-xs text-tool mt-1 mr-1",
+    // 給使用者(綠,全寬置中)
+    fCaption:     "text-center text-xs font-semibold text-result pt-2 mb-2",
+    fBubble:      "rounded-xl bg-result-tint border border-result/15 px-4 py-3.5 text-center text-base md:text-lg leading-relaxed text-ink",
+    // 頂端摘要 banner(final 後 prepend)
+    banner:       "rounded-lg bg-surface-2 border border-edge-soft px-4 py-3 flex items-center gap-3 text-sm text-ink-soft",
+    bannerIcon:   "w-7 h-7 rounded-full bg-final-tint text-final flex items-center justify-center flex-shrink-0",
+    // 泡泡下的小展開(token 流 / 收到 / 再送出)
+    tokensBox:    "mt-1.5 rounded-md bg-surface border border-edge-soft p-3 font-mono text-xs break-all leading-relaxed max-h-48 overflow-auto",
+    npDetails:    "mt-1.5 w-full text-left",
+    npSummary:    "cursor-pointer text-xs text-muted hover:text-ink-soft py-1 list-none [&::-webkit-details-marker]:hidden before:content-['▸_'] [&[open]]:before:content-['▾_']",
+    npPre:        "mt-1.5 rounded-md bg-surface border border-edge-soft p-3 text-xs font-mono whitespace-pre-wrap break-all max-h-64 overflow-auto text-ink-soft",
+    errorBox:     "mt-3 rounded-md bg-surface-2 border border-edge p-3 text-sm font-mono text-ink-soft",
   };
+
+  function makeDetails(summaryText, contentEl) {
+    const details = document.createElement("details");
+    details.className = TW.npDetails;
+    const summary = document.createElement("summary");
+    summary.className = TW.npSummary;
+    summary.textContent = summaryText;
+    details.append(summary, contentEl);
+    return details;
+  }
+
+  function makeTokensBox(turn, message_tokens) {
+    const box = document.createElement("div");
+    box.className = TW.tokensBox;
+    const turnIdx = turns.length;  // 0-based array index for turns[]
+    message_tokens.forEach((step, tokIdx) => {
+      // `.tok` + `.tok-static` 是 styles.css 邏輯依賴(必留)
+      const span = document.createElement("span");
+      span.className = "tok tok-static";
+      span.dataset.turn = String(turnIdx);
+      span.dataset.tokIdx = String(tokIdx);
+      span.textContent = step.token;
+      span.title = `Turn ${turn} / token ${tokIdx + 1}`;
+      box.appendChild(span);
+    });
+    return box;
+  }
 
   function renderTurnBlock(turn, message_tokens, tool_calls, tool_results, received_chunk, next_prompt) {
     const block = document.createElement("div");
     block.className = TW.block;
     block.dataset.turn = String(turn);
+    const hasToolCalls = (tool_calls || []).length > 0;
 
-    // Turn header(title + subtitle 對齊 baseline,collapse btn 在右)
-    const header = document.createElement("div");
-    header.className = TW.header;
-    const titleSpan = document.createElement("span");
-    titleSpan.className = TW.title;
-    titleSpan.textContent = `Turn ${turn}`;
-    const subtitleSpan = document.createElement("span");
-    subtitleSpan.className = TW.subtitle;
-    const hasNextTurn = (tool_calls || []).length > 0;
-    subtitleSpan.textContent = hasNextTurn
-      ? t('turn_subtitle_more')
-      : t('turn_subtitle_final');
-    const collapseBtn = document.createElement("button");
-    collapseBtn.className = TW.collapseBtn;
-    collapseBtn.textContent = "▼ collapse";
-    collapseBtn.addEventListener("click", () => {
-      block.classList.toggle("collapsed");
-      collapseBtn.textContent = block.classList.contains("collapsed") ? "▶ expand" : "▼ collapse";
-    });
-    const titleGroup = document.createElement("div");
-    titleGroup.className = TW.titleGroup;
-    titleGroup.append(titleSpan, subtitleSpan);
-    header.append(titleGroup, collapseBtn);
-    block.appendChild(header);
+    if (hasToolCalls) {
+      // ── 模型泡泡(藍,左):⟨tool_call⟩ name(args) ──
+      const mRow = document.createElement("div");
+      mRow.className = TW.mRow;
+      const mLabel = document.createElement("div");
+      mLabel.className = TW.mLabel;
+      mLabel.textContent = t('model_round_label', { n: turn });
+      const mBubble = document.createElement("div");
+      mBubble.className = TW.mBubble;
+      for (const tc of tool_calls) {
+        const line = document.createElement("div");
+        const argsStr = (tc.args || "").trim();
+        line.textContent = `⟨tool_call⟩ ${tc.name}(${argsStr === "{}" ? "" : argsStr})`;
+        mBubble.appendChild(line);
+      }
+      const mCaption = document.createElement("div");
+      mCaption.className = TW.mCaption;
+      mCaption.textContent = t('calls_tool_caption');
+      mRow.append(mLabel, mBubble, mCaption);
+      if (message_tokens && message_tokens.length) {
+        mRow.appendChild(makeDetails(t('raw_tokens_summary'), makeTokensBox(turn, message_tokens)));
+      }
+      if (received_chunk) {
+        const rcPre = document.createElement("pre");
+        rcPre.className = TW.npPre;
+        rcPre.textContent = received_chunk;
+        mRow.appendChild(makeDetails(t('received_summary'), rcPre));
+      }
+      block.appendChild(mRow);
 
-    // Token sequence — `.tok` + `.tok-static` 是 styles.css 邏輯依賴(必留)
-    if (message_tokens && message_tokens.length) {
-      const tokensBox = document.createElement("div");
-      tokensBox.className = TW.tokensBox;
-      const turnIdx = turns.length;  // 0-based array index for turns[]
-      message_tokens.forEach((step, tokIdx) => {
-        const span = document.createElement("span");
-        span.className = "tok tok-static";
-        span.dataset.turn = String(turnIdx);
-        span.dataset.tokIdx = String(tokIdx);
-        span.textContent = step.token;
-        span.title = `Turn ${turn} / token ${tokIdx + 1}`;
-        tokensBox.appendChild(span);
+      // ── 工具泡泡(紫,右):回傳 + 結果餵回模型 ──
+      (tool_results || []).forEach((tr, i) => {
+        const tRow = document.createElement("div");
+        tRow.className = TW.tRow;
+        const tLabel = document.createElement("div");
+        tLabel.className = TW.tLabel;
+        tLabel.textContent = t('tool_bubble_label', { name: tr.name });
+        const tBadge = document.createElement("span");
+        tBadge.className = "ml-1.5 font-normal text-muted";
+        tBadge.textContent = t('local_exec_badge');
+        tLabel.appendChild(tBadge);
+        const tBubble = document.createElement("div");
+        tBubble.className = TW.tBubble;
+        const raw = (tr.result_text || "").trim();
+        const looksJson = raw.startsWith("{") || raw.startsWith("[");
+        tBubble.textContent = `${t('tool_returns')} ${looksJson ? raw : JSON.stringify(raw)}`;
+        const tCaption = document.createElement("div");
+        tCaption.className = TW.tCaption;
+        tCaption.textContent = t('feeds_back_caption');
+        tRow.append(tLabel, tBubble, tCaption);
+        // 再送出的累積 prompt 掛在「結果餵回模型」下面(最後一個 tool 泡泡)
+        if (next_prompt && i === tool_results.length - 1) {
+          const npPre = document.createElement("pre");
+          npPre.className = TW.npPre;
+          npPre.textContent = next_prompt;
+          tRow.appendChild(makeDetails(t('next_prompt_summary', { turn }), npPre));
+        }
+        block.appendChild(tRow);
       });
-      block.appendChild(tokensBox);
-    }
-
-    // tool_calls — 紫色 bg tint(非 side-stripe),↑ 上行 icon
-    for (const tc of (tool_calls || [])) {
-      const tcBox = document.createElement("div");
-      tcBox.className = TW.toolCallBox;
-      const tcHead = document.createElement("div");
-      tcHead.className = TW.toolCallHead;
-      const tcArrow = document.createElement("span");
-      tcArrow.setAttribute("aria-hidden", "true");
-      tcArrow.textContent = "↑";
-      const tcLabel = document.createElement("span");
-      tcLabel.textContent = t('tool_call_label');
-      const tcSub = document.createElement("span");
-      tcSub.className = TW.toolCallSub;
-      tcSub.textContent = t('tool_call_sub');
-      tcHead.append(tcArrow, tcLabel, tcSub);
-      const tcBody = document.createElement("div");
-      tcBody.className = TW.toolCallBody;
-      tcBody.textContent = `${tc.name}(${tc.args})`;
-      tcBox.append(tcHead, tcBody);
-      block.appendChild(tcBox);
-    }
-
-    // tool_results — 綠色 bg tint(非 side-stripe),↓ 下行 icon
-    for (const tr of (tool_results || [])) {
-      const trBox = document.createElement("div");
-      trBox.className = TW.toolResultBox;
-      const trHead = document.createElement("div");
-      trHead.className = TW.toolResultHead;
-      const trArrow = document.createElement("span");
-      trArrow.setAttribute("aria-hidden", "true");
-      trArrow.textContent = "↓";
-      const trLabel = document.createElement("span");
-      trLabel.textContent = t('tool_result_label');
-      const trSub = document.createElement("span");
-      trSub.className = TW.toolResultSub;
-      trSub.textContent = t('tool_result_sub');
-      trHead.append(trArrow, trLabel, trSub);
-      const trBody = document.createElement("pre");
-      trBody.className = TW.toolResultBody;
-      trBody.textContent = tr.result_text;
-      trBox.append(trHead, trBody);
-      block.appendChild(trBox);
-    }
-
-    // 兩個 details — 收到 / 再送出 (各自獨立 toggle)
-    if (received_chunk) {
-      const rcDetails = document.createElement("details");
-      rcDetails.className = TW.npDetails;
-      const rcSummary = document.createElement("summary");
-      rcSummary.className = TW.npSummary;
-      rcSummary.textContent = t('received_summary');
-      const rcPre = document.createElement("pre");
-      rcPre.className = TW.npPre;
-      rcPre.textContent = received_chunk;
-      rcDetails.append(rcSummary, rcPre);
-      block.appendChild(rcDetails);
-    }
-    if (next_prompt) {
-      const npDetails = document.createElement("details");
-      npDetails.className = TW.npDetails;
-      const npSummary = document.createElement("summary");
-      npSummary.className = TW.npSummary;
-      npSummary.textContent = t('next_prompt_summary', {turn});
-      const npPre = document.createElement("pre");
-      npPre.className = TW.npPre;
-      npPre.textContent = next_prompt;
-      npDetails.append(npSummary, npPre);
-      block.appendChild(npDetails);
+    } else {
+      // ── final 回合:沒有 tool_call → 綠色全寬「給使用者」 ──
+      finalRendered = true;
+      const fCaption = document.createElement("div");
+      fCaption.className = TW.fCaption;
+      fCaption.textContent = t('to_user_caption');
+      const fBubble = document.createElement("div");
+      fBubble.className = TW.fBubble;
+      fBubble.textContent = (message_tokens || []).map((s) => s.token).join("") || "(no final content)";
+      block.append(fCaption, fBubble);
+      if (message_tokens && message_tokens.length) {
+        block.appendChild(makeDetails(t('raw_tokens_summary'), makeTokensBox(turn, message_tokens)));
+      }
     }
 
     turnsEl.appendChild(block);
     turns.push({
       tokenSteps: message_tokens || [],
       el:         block,
+      hadTool:    hasToolCalls,
     });
   }
 
+  // final 後 prepend 頂端摘要:模型 ⇄ 工具 來回 N 趟、共 M 個回合
+  function renderTraceSummary() {
+    const rounds = turns.length;
+    if (!rounds) return;
+    const trips = turns.filter((tn) => tn.hadTool).length;
+    const banner = document.createElement("div");
+    banner.className = TW.banner;
+    const icon = document.createElement("span");
+    icon.className = TW.bannerIcon;
+    icon.setAttribute("aria-hidden", "true");
+    icon.textContent = "⟳";
+    const text = document.createElement("span");
+    text.textContent = trips === 0
+      ? t('trace_summary_notool')
+      : t('trace_summary', { trips, rounds });
+    banner.append(icon, text);
+    turnsEl.prepend(banner);
+  }
+
   function renderFinal(content) {
-    finalEl.textContent = content || "(no final content)";
+    // 正常流程綠色泡泡已在 final turn 的 turn_complete 渲染;這裡只補
+    // 「最後一 turn 仍在 tool_call 就被截停」的 fallback(如 max-turns cap)
+    if (finalRendered || !content) return;
+    const fCaption = document.createElement("div");
+    fCaption.className = TW.fCaption;
+    fCaption.textContent = t('to_user_caption');
+    const fBubble = document.createElement("div");
+    fBubble.className = TW.fBubble;
+    fBubble.textContent = content;
+    const block = document.createElement("div");
+    block.className = TW.block;
+    block.append(fCaption, fBubble);
+    turnsEl.appendChild(block);
   }
 
   function renderError(msg) {
     const errBox = document.createElement("div");
     errBox.className = TW.errorBox;
     errBox.textContent = `[error] ${msg}`;
-    finalEl.appendChild(errBox);
+    turnsEl.appendChild(errBox);
   }
 
   // ── Relay: register so the global /events dispatcher drives this panel ──
@@ -679,7 +723,7 @@ function setupAgent(panel) {
     onDriveStart: beginRun,
     onTurnComplete: (f) =>
       renderTurnBlock(f.turn, f.message_tokens, f.tool_calls, f.tool_results, f.received_chunk, f.next_prompt),
-    onFinal: (f) => { renderFinal(f.content); endRun(); },
+    onFinal: (f) => { renderFinal(f.content); renderTraceSummary(); endRun(); },
     onError: (f) => { renderError(f.message); endRun(); },
   };
 

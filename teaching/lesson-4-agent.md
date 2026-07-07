@@ -18,14 +18,15 @@ has been building toward.
 
 ### Segment 1 — What time is it? (get_time)
 - **Picks up from last lesson (the payoff of the whole chain)**: the input box already holds `現在幾點?` — the exact line Lesson 3 closed on, auto-carried when you switched tabs. Last lesson even thinking could only invent a time out of thin air; this lesson, the same line and the same model **actually calls `get_time` and returns the real time** — this is the line the whole ①→②→③→④ chain has been building toward
-- Preview: "The model has no clock. Guess how it knows the current time? Watch the purple '↑ Tool call' and green '↓ Tool result' blocks."
+- Preview: "The model has no clock. Guess how it knows the current time? Watch the 'Agent trace': blue bubbles on the left are the model, purple bubbles on the right are the tools — it reads like a chat log."
 - Drive: `POST /drive {"tab":"4","user":"現在幾點?"}` → the page auto-switches to Tab ④ and renders; **the first drive triggers a 0.6B→4B swap — the loading banner runs 3-5 s** (the swap happens inside `/drive`; the page shows the banner on `swap_start`)
-- Read: the turn trace — Turn 1 purple "↑ Tool call get_time" → green "↓ Tool result" → Turn 2's final answer (the current time, HH:MM:SS) → Debrief: Turn 1 — model outputs `<tool_call>{"name":"get_time"…}` → client actually runs Python to get the time → feeds result back into the conversation → Turn 2 can now answer. **The XML tag is just a convention; the client is what executes.** Contrast with last lesson: the same line, `現在幾點?` — thinking could only make one up, here it really got it — the difference is simply having a tool.
+- Read: the bubble trace — round 1's blue model bubble `⟨tool_call⟩ get_time()` → the purple tool bubble on the right `returns "HH:MM:SS"` (↩ result fed back to the model) → the full-width green bubble "no tool_call → goes to you" (the current time); the summary on top reads "Model ⇄ tools: 1 round-trip, 2 rounds in total — only then your turn" → Debrief: round 1 — model outputs `<tool_call>{"name":"get_time"…}` → client actually runs Python to get the time → feeds result back into the conversation → round 2 can now answer. **The XML tag is just a convention; the client is what executes.** Contrast with last lesson: the same line, `現在幾點?` — thinking could only make one up, here it really got it — the difference is simply having a tool.
+- For details: each bubble has small ▸ expanders underneath (raw token stream / raw received text / the accumulated prompt sent again) — walk the learner through expanding "Sent again" to see how the conversation accumulates into the next input.
 
 ## Hands-On
 Have participants type **a question that needs no tool** (e.g. `1+1 等於幾?`) into the input box themselves and submit it.
-Watch the turn trace: this time there is **no** purple "↑ Tool call" — Turn 1 goes straight to the final answer.
-Contrast with `現在幾點?` — same model, same prompt: **whether to use a tool is the model's own Turn-1 decision.** This is exactly why watching the "↑ Tool call" block tells you what it did this round.
+Watch the bubble trace: this time there's **no** blue-purple back-and-forth — just one green "goes to you" bubble, and the summary on top reads "No tool needed — the model answered you directly in 1 round".
+Contrast with `現在幾點?` — same model, same prompt: **whether to use a tool is the model's own round-1 decision.** This is exactly why watching for a blue tool_call bubble tells you what it did this round.
 
 ## Reveal and Wrap-Up (whole-course close)
 
@@ -38,6 +39,6 @@ Contrast with `現在幾點?` — same model, same prompt: **whether to use a to
 5. **Post-course reading** (self-study, not covered in class): Tab ⑤ Skill, Tab ⑥ MCP article — covering "how to package today's things into reusable tools."
 
 ## Common Participant Questions
-- "Won't it run rogue commands?" — Tools are defined by a client-side allowlist; this is exactly why you watch the "↑ Tool call" to confirm before it runs.
+- "Won't it run rogue commands?" — Tools are defined by a client-side allowlist; this is exactly why you watch the blue tool_call bubble to confirm what it's calling.
 - "Why can't ChatGPT do this?" — The web app hasn't given it tools that reach your computer. It's not that the model is different — the client is different.
 - "What's the difference between 4B and 0.6B?" — Function calling requires following the format convention precisely; small models often lose track of it. 4B is stable enough.

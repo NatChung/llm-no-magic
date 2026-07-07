@@ -506,6 +506,13 @@ class AgentHandler(SimpleHTTPRequestHandler):
     def do_GET(self) -> None:
         if self._redirect_legacy_frontend_prefix():
             return
+        if self.path == "/":
+            # 預設語言是繁中:根路徑導到 zh-TW 版;英文版仍可從頁面右上的
+            # language switch(/index.html)進入。302 不快取,之後改預設不會卡。
+            self.send_response(302)
+            self.send_header("Location", "/index.zh-TW.html")
+            self.end_headers()
+            return
         if self.path == "/events":
             return self._handle_events()
         if self.path == "/health":
