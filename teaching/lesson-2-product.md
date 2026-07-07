@@ -1,39 +1,106 @@
-# Lesson 2 — Tab ② Product-layer processing: system prompt & chat template
+# Lesson 2 — Tab ② Product Layer: How Chaining Becomes Q&A
 
 > 中文版: [lesson-2-product.zh-TW.md](./lesson-2-product.zh-TW.md)
 
-## Learning objectives
-1. See that the heart of the chat template is the "**Q: / A:**" structure — the markers label "this part is what the user **asked**, now it's the assistant's turn to **answer**", which is why the model *answers* instead of treating your words as a prompt to *continue*
-2. Know that the system prompt is a **second knob** layered on top — it shapes **how** it answers (style/rules), not *whether* it answers
-3. Connect back to Hook A: the "Q:/A:" structure and the system line are, in the model's eyes, both just tokens wrapped by `<|im_start|>…` — which is why pasting an SOP straight into the chat box works just as well
+## Learning Objectives
+1. Understand that a "Q: A:" structure is **just text** — the model learned "switch to answer
+   mode when you see 'A:'" from the mountain of Q&A-formatted text in its training data (FAQs,
+   exam papers, dictionaries), not from some special mechanism that "understands you're asking
+   a question"
+2. See that the real chat template (`<|im_start|>user...<|im_end|>...<|im_start|>assistant`)
+   does the exact same thing, just swapping hand-typed "Q:"/"A:" for **reserved tokens whose
+   boundary meaning was assigned during training** — the payoff is a clean stop signal, so it
+   doesn't spiral into generating the next round of Q&A on its own like the hand-typed version
 
-## Hook questions (ask first, don't reveal answers)
-- "Same question — `一年有幾個月?` (how many months in a year?) — but with a line prepended: `你是行銷顧問,用條列式回答,只給 3 點。` (you are a marketing consultant, reply in bullet points, 3 points only). How different do you think the output will be? What changes?"
-- "When ChatGPT receives your message, do you think the model sees exactly the string you typed?"
+## Entry Question (picks up from Lesson 1)
 
-## Demo segments
+In Lesson 1 you watched the model do pure chaining — confidently continuing even a planet you
+made up. So here's the question:
 
-### Segment 1 — Bare prompt (control group)
-- Preview: "Let's see the unprocessed version first: the question is fed in as-is, with no structure at all."
-- Drive: `POST /drive {"tab":"2","user":"一年有幾個月?","mode":"raw"}` → the page auto-switches to Tab ② and renders
-- Read: Output sprawls out and reads like a continuation, not an answer (it may even loop) → Narration: the model doesn't know you're *asking*; it treats `一年有幾個月?` as text to continue. With no "Q:/A:" structure, it can't tell who's asking and who's answering
+> **It's the same chaining mechanism — so why does ChatGPT look like it's *answering a
+> question*, instead of just continuing your text?**
 
-### Segment 2 — Add chat template (Q:/A:) + system (how to answer)
-- Preview: "Same question, this time wrapped into a 'Q:/A:' structure by the Qwen3 chat template, plus one system line for style."
-- Drive: `POST /drive {"tab":"2","user":"一年有幾個月?","system":"你是行銷顧問,用條列式回答,只給 3 點。","mode":"chat"}` → the page renders a clean bulleted list
-- Narration: student, click to expand the "Final prompt actually sent to the model" preview and look at how it's wrapped as `<|im_start|>…` — each marker looks like 12 characters but the model sees it as 1 token (vocab id `151644`)
-- Read: clean bulleted list (e.g. `1. 一年有12個月…`) → Narration: Output becomes a clean bulleted list. Two things stack up:
-  1. **The "Q:/A:" structure** (the main cause) — the markers tell the model "`<|im_start|>user` is the question, `<|im_start|>assistant` is your turn to answer", so it *answers* instead of continuing
-  2. **The system line** (`你是行銷顧問,用條列式回答,只給 3 點。`) sits at the front and only governs **how** it answers (bullets, 3 points)
+Don't answer yet. Let the demo show it.
 
-## Learner practice
-Have learners type `寫一個夏季冰飲的促銷文案` (write a promotional copy for a summer iced drink) into the input box (or their own prompt), run it raw once, then with the system prompt, and compare how structured the output becomes. Encourage them to edit the system prompt content (e.g. "reply in Taiwanese accent", "reply in exactly 1 sentence") and observe the output change accordingly.
+## Hook Questions (ask first — no answers yet)
+- "Do you think what the model sees, when ChatGPT receives your message, is literally the
+  string of characters you typed?"
 
-## Reveal & recap
-- Keep the two knobs separate: **the "Q:/A:" structure** decides *whether* it answers (vs continues), **the system line** decides *how* it answers (style/rules) — but in the model's eyes **both are just tokens wrapped by `<|im_start|>…`**
-- Back to Hook A Q3: that's why "paste in the SOP + spell out the rules" works — ChatGPT's web interface doesn't expose a system-prompt field, but **it's all just text concatenated into tokens**; typing it into the chat box has the same effect
-- One-liner summary: the product layer has no magic — it "types the 'Q:/A:' and the instructions on your behalf"
+## Demo Segments
 
-## Common questions
-- "Is the system prompt more 'authoritative'?" — Training makes the model follow the system turn more readily, but fundamentally it's still tokens
-- "Can I tell it to ignore the system prompt?" — That's exactly where prompt injection comes from; it's a convention, not enforcement
+### Segment 1 — Raw prompt (the same chaining as Lesson 1)
+- Set-up: "First, zero processing: `一年有幾個月?` ('How many months in a year?') goes to the
+  model exactly as-is, treated as pure chaining." (Collect a prediction: will it answer
+  directly?)
+- Drive: `POST /drive {"tab":"2","user":"一年有幾個月?","mode":"raw"}` → the page
+  auto-switches to Tab ② and renders
+- Read (measured): it loops on "有沒有其他月份的特殊性?" ("anything else special about the
+  other months?") — never answers, treats your question as the opening of an FAQ article and
+  keeps generating the "next question," stuck in a loop
+- Narrate: the exact same mechanism as Lesson 1 — it doesn't know you're "asking," it's just
+  continuing whatever the text looks like it should continue with
+
+### Segment 2 — Hand-typed "Q: A:", still pure chaining (no special tokens)
+- Set-up: "Same 'pure chaining' mode, but this time I'm adding two literal markers to the
+  text myself: `問:` ('Q:') and `答:` ('A:'). Guess whether that changes anything?" (Collect a
+  prediction first!)
+- Drive: `POST /drive {"tab":"2","user":"問:一年有幾個月?\n答:","mode":"raw"}`
+- Read (measured): it opens with "一年有12个月。" ("A year has 12 months.") — **correct!** But
+  then it keeps generating another round on its own: "問:一年有幾個月?\n答:一年有12个月。"
+  repeating, because this is still plain text with no formal "stop here" signal
+- Narrate (the single most important beat of this lesson): **you just typed two extra
+  characters — "Q:" and "A:" — with zero special functionality, and the model flipped from
+  chaining mode into answering mode.** Why? Because its training data is packed with
+  Q&A-formatted text; it's seen "Q: X A: Y" so many times it learned the pattern: when "A:"
+  shows up, continue with something that looks like an answer. **That's the entire secret
+  behind the product layer's "Q&A feel" — no magic, just a text pattern.**
+  But notice the side effect: it keeps looping into the next round, because plain text has no
+  explicit boundary telling it "stop now" — which sets up exactly what the real chat template
+  is for
+
+### Segment 3 — The real chat template (special tokens, still no system prompt)
+- Set-up: "Now let's wrap it in Qwen3's actual chat template, still with no system prompt at
+  all, and see what's different."
+- Drive: `POST /drive {"tab":"2","user":"一年有幾個月?","mode":"chat"}` (system left blank)
+- Read (measured): a clean "一年有**12个月**。" — no runaway loop like Segment 2
+- Narrate: expand "final prompt actually sent to the model" — see
+  `<|im_start|>user\n一年有幾個月?<|im_end|>\n<|im_start|>assistant\n`. It's the same move as
+  Segment 2's "Q:...A:", but this time the boundary isn't ordinary text — it's
+  `<|im_start|>`/`<|im_end|>`, **reserved tokens whose structural meaning was assigned during
+  training** (each is a single unique token id in the vocabulary, e.g. 151644). The model
+  learned that seeing this token means "this is a hard role-switch point," and it can never be
+  confused with ordinary text, so it can cleanly recognize "the answer is done, stop." Segment
+  2's "Q:"/"A:" are ordinary characters the model could just as easily generate as content
+  itself — they can't be trusted as a reliable boundary
+- **Explain this part directly to the learner, in speech, not through the screen**:
+  `<|im_start|>` written out like that is just a human-readable display convention — to the
+  model it's an ordinary token id in the vocabulary, a candidate exactly like "霜" or "12," it
+  just happens to have been assigned "role boundary" meaning during training. **This is what
+  "convention" actually means here — meaning assigned by training, not a grammar rule.**
+  While you're at it, note that this demo never turns thinking mode on (no `<think>` block) —
+  that's deliberately kept out so reasoning text doesn't muddy what this lesson is showing;
+  thinking is next lesson's topic
+
+## Learner Practice
+Have learners try their own question: first raw mode with a hand-typed "Q:"/"A:" to see if it
+gets the same lift; then switch to chat mode with the same sentence and contrast "clean answer,
+no loop" against the hand-typed version spiraling into more questions.
+
+## Reveal & Recap
+- The gap between Segment 1 → 2 comes purely from typing two extra characters, "Q:" and "A:"
+  — this lesson's biggest punchline: **the product layer's "Q&A feel" isn't a new mechanism,
+  it's a text pattern**
+- The gap between Segment 2 → 3 is that text pattern upgrading into a special token whose
+  meaning was assigned by training — gaining a clean stop boundary, which is exactly why real
+  products use a chat template instead of hand-typed "Q:"/"A:"
+- Back to the Hook: so what the model sees was never literally the string you typed — before
+  you hit send, the product layer already wrapped it into text carrying boundary tokens
+
+## Common Learner Questions
+- "So is typing my own 'Q:...A:' just as good as a real chat template?" — Similar effect, but
+  no formal stop boundary, so it can spiral out of control like Segment 2; and if the user's
+  own input happens to contain text like "Q:", roles get confused easily — this is exactly why
+  reserved tokens exist
+- "Where did the 'you are a ...' role setup from ChatGPT go?" — That's a different layer (the
+  system segment), also just text concatenated into the same token stream; this lesson stays
+  focused on 'how chaining becomes Q&A' — role setup isn't the focus of this tab

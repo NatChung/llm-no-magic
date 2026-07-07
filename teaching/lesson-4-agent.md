@@ -43,12 +43,12 @@ That is the difference between a "doing tool" and a "speaking tool."
 2. **Skeleton solution for the 50-transcripts task:** Agent (read_file reads files for real) → apply a summary template → spot-check a sample → if you need to reuse it, wrap it as a tool.
 3. **Speaking tools vs. doing tools (walk participants through this table):**
    - Speaking tools (①②③): ChatGPT / Gemini — feed the right context (SOP/rules) into the chat box, set red lines, check the key claims. Line: context you can paste in full.
-   - Doing tools (④⑤⑥⑦): Claude Code / Codex — read your files, run commands, multi-step. Line: context too big / must auto-read files.
+   - Doing tools (④⑤⑥): Claude Code / Codex — read your files, run commands, multi-step. Line: context too big / must auto-read files.
 4. **The 60→90 framework (replay participants' Lesson 1 Hook answers so they can see how their judgment changed):**
    First, **re-ask the Hook A after question:** "Right now, with 'the same GPT', how would you handle that customer complaint reply?"
    (Still just paste & ask / Paste the refund SOP + rules into the chat box, then check the promise lines / I get it, but I'd rather write this one myself)
    Compare with their Lesson 1 Q1–Q3: before = treat GPT like a wishing well and gamble it's right; after = you feed the material, set the rules, know which sentence to check — same tool, going from 60 to 90. Not learning a bunch of jargon, but knowing which type of tool to hand a task to, how to use it properly, and what it's doing underneath.
-5. **Post-course reading** (self-study, not covered in class): Tab ⑤ Commands/Script/API, Tab ⑥ Skill, Tab ⑦ MCP articles + Tab ⑧ Summary — covering "how to package today's things into reusable tools."
+5. **Post-course reading** (self-study, not covered in class): Tab ⑤ Skill, Tab ⑥ MCP article — covering "how to package today's things into reusable tools."
 
 ## Common Participant Questions
 - "Won't it run rogue commands?" — Tools are defined by a client-side allowlist; this is exactly why you watch the "↑ Tool call" to confirm before it runs.

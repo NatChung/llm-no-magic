@@ -48,7 +48,7 @@ Ask learners to try it themselves: type a different prompt and re-run, then clic
 
 ## Reveal & Recap (cross-reference Hook answers)
 - Pull up each learner's Q2 answer, and connect it to Segment 2: the model doesn't over-promise because it's "bad" — it's because **it doesn't have your company's refund policy**. It can only do probability chaining, and it does so with full confidence. Hallucination isn't "ChatGPT can't be trusted" — it's "ChatGPT is missing that piece of knowledge."
-- Preview next lesson: the fix is to inject that knowledge (system prompt / paste in the SOP) → Lesson 2
+- Preview next lesson: everything today was pure **chaining** (it even chained a planet you made up). Next lesson pulls back the curtain on something else — ChatGPT clearly looks like it's *answering a question*, not just continuing your text. Where does that "Q&A feel" actually come from? → Lesson 2
 
 ## Common Learner Questions
 - "Isn't it looking things up in a database?" — No, pure token chaining. You just watched every candidate at every step.
