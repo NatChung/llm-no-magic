@@ -87,7 +87,7 @@ When you drive a tab, the server auto-swaps models (tab-switching itself is UI-o
 3. Expected:
    - Turn 1: model emits token stream (starts with `<tool_call>`) + purple "↑ Tool call" block showing `get_time({})` + green "↓ Tool result" showing `HH:MM:SS`
    - Turn 2: final "現在是 HH:MM:SS"
-4. Expand the per-turn "Sent again: the prompt sent to the model after accumulating N turn(s)" details → see how the chat template text and conversation accumulate as next input
+4. Expand the turn block's "Sent again: the prompt sent to the model after accumulating N turn(s)" details → see how the chat template text and conversation accumulate as next input
 
 Tab ④ ships exactly one tool: `get_time` (the always-visible "Prompt actually sent to the model" block shows a single-line `<tools>`). Contrast prompt: type a question that needs no tool (e.g. `1+1 等於幾?`) — the model answers directly with **no** tool call; whether to use a tool is the model's own decision.
 
