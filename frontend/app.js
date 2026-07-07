@@ -17,6 +17,14 @@ const I18N = {
     'en':    '└ viewing the distribution at token #{n} "{tok}"',
     'zh-TW': '└ 正在看第 {n} 個 token「{tok}」的分布',
   },
+  mode_note_raw: {
+    'en':    'No processing: your text goes straight into the model (completion mode).',
+    'zh-TW': '沒加工:你打的字直接丟進 model(completion mode)。',
+  },
+  mode_note_chat: {
+    'en':    'Processed: the product layer wraps your text in role markers — the blue parts are the added convention.',
+    'zh-TW': '加工後:產品層用角色 marker 把你的字包起來 —— 藍色的就是被加上去的約定。',
+  },
   turn_subtitle_more: {
     'en':    'The whole turn (model output plus tool results) accumulates into messages and is sent to the model next turn',
     'zh-TW': '整個 turn(model 吐的字 加上 tool 結果)累積進 messages,送進下次 model',
@@ -230,6 +238,7 @@ function setupPanel(panel) {
   const thinkingArea = panel.querySelector(".thinking-area");        // 只有 reasoning panel 有
   const thinkingContentEl = panel.querySelector(".thinking-content");
   const captionEl = panel.querySelector(".probs-caption");           // 只有 basic panel 有
+  const modeNoteEl = panel.querySelector(".mode-note");              // 只有 advanced panel 有
   const panelType = panel.dataset.panel;  // 'basic' | 'advanced' | 'reasoning'
 
   let tokenSteps = [];
@@ -258,6 +267,10 @@ function setupPanel(panel) {
 
   function refreshPreview() {
     if (previewEl) renderPromptPreview(previewEl, buildFinalPrompt());
+    if (modeNoteEl && panelType === "advanced") {
+      const mode = panel.querySelector('input[name="mode-advanced"]:checked')?.value || "raw";
+      modeNoteEl.textContent = t(mode === "raw" ? "mode_note_raw" : "mode_note_chat");
+    }
   }
 
   function appendClickableToken(stepIdx, token, target) {

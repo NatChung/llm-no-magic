@@ -11,7 +11,7 @@
 ## What you'll see
 
 - **① 基礎** — 打字進去 → 看 model 一個一個吐 token + 每個 token 當下 top-10 機率分佈。中文 preset 3 個有完整教學弧:`床前明月光,疑是地上`(peaked,model 背過整首詩 → 接「霜」top-1 94%+)、`祖樹星上最高的山叫做`(peaked,**你瞎掰**的星球 model 照樣自信編 → **peaked ≠ 真實**)、`他打開冰箱,拿出一包`(flat,top-1 只有一成多,model 不知接啥)。3 個對比展示「confidence ≠ correctness」+「分佈形狀反映 model 把握度」
-- **② 產品層加工** — 看「接龍怎麼變問答」:同一句 `一年有幾個月?` 三種送法對比 — 裸 prompt(純接龍、跳針不回答)、手打「問:答:」(單純文字 pattern 就讓它切成回答模式,但會失控續問)、真 Qwen3 chat template(換成 `<|im_start|>` 這種訓練賦予邊界意義的保留 token,才有乾淨的停止訊號)。展開 raw vs chat template 的 final prompt 對照,看產品層到底加了什麼
+- **② 產品層加工** — 看「接龍怎麼變問答」:同一句 `一年有幾個月?` 三種送法對比 — 裸 prompt(純接龍、跳針不回答)、手打「問:答:」(單純文字 pattern 就讓它切成回答模式,但會失控續問)、真 Qwen3 chat template(換成 `<|im_start|>` 這種訓練賦予邊界意義的保留 token,才有乾淨的停止訊號)。畫面常駐顯示 raw vs chat template 的 final prompt 對照(marker 以藍色標示),看產品層到底加了什麼
 - **③ 推理** — thinking 開關。同題目,直答 vs 寫 think block 後再答(reasoning 對精度的影響)
 - **④ Agent** — multi-turn function calling,model 吐 `<tool_call>` token → client parse → **真的執行**(read/write 檔案、跑 bash)→ 結果塞回對話再吐字,直到 final
 
@@ -75,7 +75,7 @@ LISTEN_HOST=0.0.0.0 nohup python3 -u -m agent.server > /tmp/agent-server.log 2>&
 1. 切到 Tab ②(0.6B,banner ~3 秒)
 2. 「`一年有幾個月?`」**raw mode** + 送出 → model 不斷重複反問「有沒有其他月份的特殊性?」,跟 Lesson 1 一樣純接龍,不算回答
 3. 改打「`問:一年有幾個月?\n答:`」,一樣 **raw mode** + 送出 → 開頭直接答對「一年有12个月」,但接著自己循環出下一輪「問:...答:...」——**單純多打兩個字「問:」「答:」就讓它從接龍切成回答模式,但純文字沒有停止邊界**
-4. 同樣「`一年有幾個月?`」切 **chat mode** + 送出 → 乾淨答「一年有12個月」,不會循環;展開「實際送進 model 的 final prompt」details,看 `<|im_start|>user\n...<|im_end|>\n<|im_start|>assistant\n` 怎麼包——跟上一步「問:」「答:」是同一招,只是換成訓練賦予邊界意義的保留 token,才有乾淨的停止訊號
+4. 同樣「`一年有幾個月?`」切 **chat mode** + 送出 → 乾淨答「一年有12個月」,不會循環;看常駐的「實際送進 model 的 prompt」區,看 `<|im_start|>user\n...<|im_end|>\n<|im_start|>assistant\n` 怎麼包——跟上一步「問:」「答:」是同一招,只是換成訓練賦予邊界意義的保留 token,才有乾淨的停止訊號
 
 ### Tab ④ Agent — 真執行 demo
 

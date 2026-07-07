@@ -53,7 +53,7 @@ Lesson 1 你看到的 model 就是純接龍 — 連瞎掰的星球都能自信�
   什麼不同。」
 - 驅動:`POST /drive {"tab":"2","user":"一年有幾個月?","mode":"chat"}`(system 留空)
 - 讀回應(實測):乾淨俐落「一年有**12个月**。」,不會像段落 2 一樣無限循環問下一輪
-- 旁白:點開「實際送進 model 的 final prompt」— 看到
+- 旁白:看畫面上常駐的「實際送進 model 的 prompt」區 — 看到
   `<|im_start|>user\n一年有幾個月?<|im_end|>\n<|im_start|>assistant\n`。跟段落 2 的
   「問:...答:」本質上是同一招,但這次的邊界不是普通文字,是 `<|im_start|>`/`<|im_end|>`
   這種**保留給結構用的特殊 token**(各自是詞表裡唯一的一個 token id,例如 151644)—

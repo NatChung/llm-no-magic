@@ -42,7 +42,7 @@
       },
     };
   </script>
-  <link rel="stylesheet" href="styles.css?v=63">
+  <link rel="stylesheet" href="styles.css?v=64">
 </head>
 <body class="min-h-screen bg-surface text-ink antialiased">
   <div id="swap-banner" class="hidden fixed top-16 left-1/2 -translate-x-1/2 rounded-md bg-final-tint px-4 py-2 text-sm text-final shadow-md z-50">
@@ -98,15 +98,16 @@
       <label for="prompt-advanced" class="block text-sm font-medium text-ink-soft">Prompt</label>
       <textarea class="prompt w-full max-w-2xl rounded-lg shadow-[0_1px_3px_oklch(20%_0.012_280_/_0.06)] border border-edge bg-surface px-3 py-2 text-sm md:text-base font-mono focus:outline-none focus:border-final focus:ring-1 focus:ring-final" id="prompt-advanced" rows="3" placeholder="Type a prompt..."></textarea>
 
-      <div class="mode-row flex flex-wrap gap-x-5 gap-y-2 pt-1">
-        <label class="inline-flex items-center gap-2 text-sm text-ink-soft"><input type="radio" name="mode-advanced" value="raw" checked class="accent-final"> Raw prompt (completion mode)</label>
-        <label class="inline-flex items-center gap-2 text-sm text-ink-soft"><input type="radio" name="mode-advanced" value="chat" class="accent-final"> Product layer (Qwen3 chat template)</label>
+      <div class="mode-switch flex w-full max-w-2xl rounded-lg border border-edge bg-surface-2 p-1 mt-1">
+        <label class="mode-opt flex-1 text-center text-sm py-1.5 rounded-md cursor-pointer text-ink-soft font-mono transition-colors"><input type="radio" name="mode-advanced" value="raw" checked class="sr-only">Raw prompt</label>
+        <label class="mode-opt flex-1 text-center text-sm py-1.5 rounded-md cursor-pointer text-ink-soft font-mono transition-colors"><input type="radio" name="mode-advanced" value="chat" class="sr-only">Product layer</label>
       </div>
 
-      <details class="preview-details pt-2">
-        <summary class="cursor-pointer text-sm text-muted hover:text-ink-soft">Final prompt actually sent to the model (preview)</summary>
-        <pre class="final-prompt-preview mt-2 rounded-lg shadow-[0_1px_3px_oklch(20%_0.012_280_/_0.06)] bg-surface-2 border border-edge-soft p-3 text-xs font-mono whitespace-pre-wrap break-all max-h-80 overflow-auto text-ink-soft"></pre>
-      </details>
+      <div class="pt-3 space-y-2">
+        <h3 class="text-xs uppercase tracking-wider text-muted font-medium">Prompt actually sent to the model</h3>
+        <p class="mode-note text-sm text-muted leading-relaxed"></p>
+        <pre class="final-prompt-preview rounded-lg shadow-[0_1px_3px_oklch(20%_0.012_280_/_0.06)] bg-surface border border-edge p-4 text-xs font-mono whitespace-pre-wrap break-all max-h-80 overflow-auto text-ink-soft"></pre>
+      </div>
 
       <div class="flex gap-2 pt-1">
         <button class="run inline-flex items-center px-4 py-2 rounded-md bg-ink text-surface text-sm font-medium hover:bg-ink-soft disabled:bg-faint transition-colors">Send</button>
@@ -333,6 +334,6 @@
     </div>
   </main>
 
-  <script src="app.js?v=72"></script>
+  <script src="app.js?v=73"></script>
 </body>
 </html>

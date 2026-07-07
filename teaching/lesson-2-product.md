@@ -67,7 +67,7 @@ Don't answer yet. Let the demo show it.
   all, and see what's different."
 - Drive: `POST /drive {"tab":"2","user":"一年有幾個月?","mode":"chat"}` (system left blank)
 - Read (measured): a clean "一年有**12个月**。" — no runaway loop like Segment 2
-- Narrate: expand "final prompt actually sent to the model" — see
+- Narrate: look at the always-visible "prompt actually sent to the model" block — see
   `<|im_start|>user\n一年有幾個月?<|im_end|>\n<|im_start|>assistant\n`. It's the same move as
   Segment 2's "Q:...A:", but this time the boundary isn't ordinary text — it's
   `<|im_start|>`/`<|im_end|>`, **reserved tokens whose structural meaning was assigned during
