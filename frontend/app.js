@@ -119,6 +119,23 @@ function activateTabUI(panelName) {
     p.classList.toggle("active", p.dataset.panel === panelName));
 }
 
+// ── Lesson bridge: carry the last-used prompt across tab switches ──
+// lastPrompt tracks the most recently edited/driven interactive prompt.
+// On a user tab click it is copied into the destination tab's .prompt so
+// each lesson opens where the previous one closed. Only interactive tabs
+// 1-4 have a .prompt; skill (.skill-prompt) and mcp (no prompt) are skipped.
+let lastPrompt = "";
+document.querySelectorAll('[data-panel] .prompt').forEach((el) =>
+  el.addEventListener("input", () => { lastPrompt = el.value; }));
+
+function carryPromptInto(panelName) {
+  if (!PANEL_TO_TAB[panelName] || !lastPrompt) return;   // interactive tabs only
+  const el = document.querySelector(`.tab-panel[data-panel="${panelName}"] .prompt`);
+  if (!el) return;
+  el.value = lastPrompt;
+  el.dispatchEvent(new Event("input", { bubbles: true }));  // refresh preview (advanced/reasoning)
+}
+
 // Returns the fetch Response (or null on network error) so callers can detect
 // a rejected/failed drive (409 busy, or a 5xx e.g. swap failure) and re-enable
 // their Send button — no drive_start/final will arrive for it. On 200 the
@@ -190,7 +207,10 @@ function connectEvents() {
 // ── Tab switching — UI only. The server swaps the model inside /drive;
 //    the page reacts to the swap_start frame (banner). No /swap from here. ──
 document.querySelectorAll(".tab").forEach((btn) => {
-  btn.addEventListener("click", () => activateTabUI(btn.dataset.tab));
+  btn.addEventListener("click", () => {
+    activateTabUI(btn.dataset.tab);
+    carryPromptInto(btn.dataset.tab);
+  });
 });
 
 // ── Per-panel setup (closure pattern,每 tab 自己一份 state)──────────
@@ -272,7 +292,7 @@ function setupPanel(panel) {
     // §3.6 顯示輸入 — drive_start carries the driven user/system/mode; reflect
     // them into this panel's own input fields so the student watches the
     // instrument show the question that was actually asked, not a blank one.
-    if (frame.user != null) promptEl.value = frame.user;
+    if (frame.user != null) { promptEl.value = frame.user; lastPrompt = frame.user; }
     if (frame.mode != null) {
       const radio = panel.querySelector(`input[name="mode-${panelType}"][value="${frame.mode}"]`);
       if (radio) radio.checked = true;
@@ -577,7 +597,7 @@ function setupAgent(panel) {
     runBtn.disabled = true; stopBtn.disabled = false;
     // §3.6 顯示輸入 — reflect the driven user/system into the panel's own
     // input fields so the student sees the question that was actually asked.
-    if (frame && frame.user != null) promptEl.value = frame.user;
+    if (frame && frame.user != null) { promptEl.value = frame.user; lastPrompt = frame.user; }
     if (frame && frame.system != null) systemEl.value = frame.system;
     refreshPreview();
   }
