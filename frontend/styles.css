@@ -27,7 +27,7 @@
 /* Tab 切換按鈕的「active」underline(對應 .tab.active in JS) */
 .tab.active {
   color: oklch(20% 0.012 280);                  /* ink */
-  border-bottom-color: oklch(50% 0.17 250);     /* final 藍 */
+  border-bottom-color: oklch(55% 0.20 255);     /* final 藍 */
 }
 
 /* §5.1.3 — bar chart 結構(renderProbs 在 JS createElement 不 set Tailwind class
@@ -49,13 +49,13 @@
 }
 .bar-track {
   height: 0.7rem;
-  background: oklch(96% 0.006 280);             /* surface-2 */
+  background: oklch(95% 0.011 280);             /* surface-2 */
   border-radius: 999px;
   overflow: hidden;
 }
 .bar-fill {
   height: 100%;
-  background: oklch(50% 0.17 250);              /* final 藍,bar-fill 是視覺主體 */
+  background: oklch(55% 0.20 255);              /* final 藍,bar-fill 是視覺主體 */
   border-radius: 999px;
   transition: width 0.15s ease;                 /* §5.1 必留 transition */
 }
@@ -76,8 +76,8 @@
 }
 .tok:hover { background: oklch(95% 0.012 280); }
 .tok.selected {
-  background: oklch(88% 0.08 250);
-  box-shadow: 0 0 0 1px oklch(50% 0.17 250) inset;
+  background: oklch(88% 0.10 255);
+  box-shadow: 0 0 0 1px oklch(55% 0.20 255) inset;
 }
 /* Tab ④ token 不 clickable */
 .tok.tok-static { cursor: default; padding: 0; }

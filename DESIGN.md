@@ -6,12 +6,12 @@ colors:
   ink-soft: "oklch(34% 0.010 280)"
   muted: "oklch(50% 0.008 280)"
   faint: "oklch(65% 0.006 280)"
-  surface: "oklch(99% 0.005 280)"
-  surface-2: "oklch(96% 0.006 280)"
-  edge: "oklch(90% 0.006 280)"
-  edge-soft: "oklch(94% 0.006 280)"
-  final: "oklch(50% 0.17 250)"
-  final-tint: "oklch(96% 0.038 250)"
+  surface: "oklch(98% 0.008 280)"
+  surface-2: "oklch(95% 0.011 280)"
+  edge: "oklch(89% 0.012 280)"
+  edge-soft: "oklch(91.5% 0.010 280)"
+  final: "oklch(55% 0.20 255)"
+  final-tint: "oklch(96% 0.045 255)"
   tool: "oklch(54% 0.22 320)"
   tool-tint: "oklch(96% 0.030 320)"
   result: "oklch(50% 0.15 145)"
@@ -99,8 +99,8 @@ A single cool-gray family (all tinted toward the same 280° hue, so nothing ever
 
 ### Primary
 
-- **Signal Blue** (`oklch(50% 0.17 250)`): the one primary interactive accent — active tab underline, probability bar fill, selected-token ring, focus states, links. If it's blue, it means "this is the thing currently selected or happening."
-- **Signal Blue Tint** (`oklch(96% 0.038 250)`): the pale wash behind Signal Blue content (e.g. the answer-to-a-question callout on the intro-style copy blocks).
+- **Signal Blue** (`oklch(55% 0.20 255)`): the one primary interactive accent — active tab underline, probability bar fill, selected-token ring, focus states, links. If it's blue, it means "this is the thing currently selected or happening." Now a brighter, more saturated electric blue than the earlier `oklch(50% 0.17 250)` — the goal is a more contemporary interface feel; it stays the **only** interactive accent and the Rarity Rule (combined colored area <10%) is unchanged.
+- **Signal Blue Tint** (`oklch(96% 0.045 255)`): the pale wash behind Signal Blue content (e.g. the answer-to-a-question callout on the intro-style copy blocks).
 
 ### Secondary
 
@@ -118,16 +118,29 @@ A single cool-gray family (all tinted toward the same 280° hue, so nothing ever
 - **Soft Graphite** (`oklch(34% 0.010 280)`) — secondary text, active-tab label (`ink-soft`).
 - **Quiet Slate** (`oklch(50% 0.008 280)`) — tertiary text, section eyebrow labels, percentages (`muted`).
 - **Faint Ash** (`oklch(65% 0.006 280)`) — placeholder text, disabled states (`faint`).
-- **Chalk White** (`oklch(99% 0.005 280)`) — page background (`surface`).
-- **Pale Fog** (`oklch(96% 0.006 280)`) — panel/output-block background, probability-bar track (`surface-2`).
-- **Hairline Gray** (`oklch(90% 0.006 280)`) — default border (`edge`).
-- **Whisper Gray** (`oklch(94% 0.006 280)`) — subtle border, output-block border (`edge-soft`).
+- **Chalk White** (`oklch(98% 0.008 280)`) — page background (`surface`).
+- **Pale Fog** (`oklch(95% 0.011 280)`) — panel/output-block background, probability-bar track (`surface-2`).
+- **Hairline Gray** (`oklch(89% 0.012 280)`) — default border (`edge`).
+- **Whisper Gray** (`oklch(91.5% 0.010 280)`) — subtle border, output-block border (`edge-soft`).
+
+### Base tone
+
+All neutral surfaces share one tone. The default is **cool gray (280°)**; the whole neutral set can be swapped, as a group, for one of the alternatives below to make the tool read warmer or cooler in a given setting. **Use exactly one set at a time** — `ink` and the accents do not change with it.
+
+| Base tone | surface | surface-2 | edge | edge-soft |
+|---|---|---|---|---|
+| Cool gray (default) | `oklch(98% 0.008 280)` | `oklch(95% 0.011 280)` | `oklch(89% 0.012 280)` | `oklch(91.5% 0.010 280)` |
+| Pure white | `oklch(100% 0 0)` | `oklch(96.5% 0.001 280)` | `oklch(90.5% 0.002 280)` | `oklch(93% 0.002 280)` |
+| Warm cream | `oklch(97.5% 0.021 80)` | `oklch(95% 0.028 78)` | `oklch(89% 0.026 78)` | `oklch(92% 0.022 80)` |
+| Slate | `oklch(96.8% 0.017 250)` | `oklch(94.3% 0.022 250)` | `oklch(88% 0.024 250)` | `oklch(91% 0.019 250)` |
 
 ### Named Rules
 
 **The One Meaning Rule.** Signal Blue, Call Violet, and Return Green each mean exactly one thing. None of the three is ever reused as a decorative accent, a "brand" color, or a fourth meaning. If a new UI moment needs color, it needs a new named accent with its own single meaning — not a reuse of these three.
 
 **The Rarity Rule.** Across any given screen, colored surface area (Signal Blue, Call Violet, Return Green combined, tints included) stays under 10%. The whiteboard is the point; color is the exception that proves something is happening.
+
+**The One Base Tone Rule.** The neutral set uses exactly one base tone at a time (default cool gray 280°). Swapping tone means swapping the whole `surface`/`surface-2`/`edge`/`edge-soft` group together — never mixing hues within the neutrals.
 
 ## 3. Typography
 
@@ -150,16 +163,16 @@ A single cool-gray family (all tinted toward the same 280° hue, so nothing ever
 
 ## 4. Elevation
 
-Flat by default: surfaces separate with a 1px Hairline Gray or Whisper Gray border, not shadow. The one existing exception is the model-swap loading toast, which floats over the whole page and needs a shadow to read as "detached from the document flow." Per the latest design direction, a light elevation tier is being introduced for surfaces that should visually detach without going as far as the toast: a hover lift on interactive blocks (turn-blocks, output cards) — still subtle, never "flying."
+Mostly flat, with a restrained modern lift: surfaces still separate with a 1px Hairline Gray or Whisper Gray border, but the **key content blocks — the prompt textarea, the model-output box, and Tab ②'s final-prompt preview — carry `ambient-low` at rest** together with an 8px (rounded-lg) corner, so they read as gently raised panels rather than flat rectangles. The toast tier still floats fully above the page. The lift is deliberately shallow: raised, never "flying."
 
 ### Shadow Vocabulary
 
 - **`toast`** (`box-shadow: 0 4px 12px oklch(20% 0.012 280 / 0.15)`): the swap-banner and any future page-level floating notice. The only tier that fully detaches from the document.
-- **`ambient-low`** (`box-shadow: 0 1px 3px oklch(20% 0.012 280 / 0.08)`): new tier for hover/active states on turn-blocks, output panels, or cards that need to feel "lifted, not just bordered" without competing with the toast tier.
+- **`ambient-low`** (`box-shadow: 0 1px 3px oklch(20% 0.012 280 / 0.06)`): the rest-state lift on key content blocks (prompt textarea, `.generated-text`, `.probs`, Tab ②'s `.final-prompt-preview`) and hover/active states on turn-blocks — "lifted, not just bordered," without competing with the toast tier.
 
 ### Named Rules
 
-**The Two-Tier Rule.** There are exactly two shadow tiers: `ambient-low` for in-flow hover/active feedback, `toast` for anything that floats above the page. Nothing else gets a shadow — bordered-flat stays the default for everything at rest.
+**The Two-Tier Rule.** There are exactly two shadow tiers: `ambient-low` for the key content blocks at rest (and in-flow hover/active feedback), `toast` for anything that floats above the page. Everything outside those key blocks stays bordered-flat at rest — no third tier, no decorative shadows.
 
 ## 5. Components
 
@@ -184,9 +197,13 @@ Flat by default: surfaces separate with a 1px Hairline Gray or Whisper Gray bord
 
 ### Probability bars
 
-- **Track:** Pale Fog background, full pill radius, 0.7rem tall.
-- **Fill:** Signal Blue, full pill radius, animates width over 150ms ease.
+- **Track:** Pale Fog background, full pill radius, 0.7rem tall. The `.probs` container is a key content block: rounded-lg with `ambient-low` at rest.
+- **Fill:** Signal Blue (`oklch(55% 0.20 255)`), full pill radius, animates width over 150ms ease.
 - **Label/Percent:** monospace, tabular-nums on the percentage so columns of numbers stay aligned — this is a data component first, decoration never.
+
+### Final-prompt preview (Tab ② / ③)
+
+- **Marker highlighting:** in the "final prompt actually sent to the model" preview, chat-template markers (`<|im_start|>`, `<|im_end|>`, and any `<|…|>`) are rendered in Signal Blue, semibold; the rest of the text stays `ink`. This makes the product-layer processing legible at a glance — **the colored markers ARE the role convention the product layer adds.** The preview container is a key content block: rounded-lg with `ambient-low` at rest.
 
 ### Turn blocks (Tab ④ agent)
 
@@ -196,7 +213,7 @@ Flat by default: surfaces separate with a 1px Hairline Gray or Whisper Gray bord
 
 ### Inputs (textarea/prompt fields)
 
-- **Style:** Hairline Gray border, Chalk White background, rounded-md.
+- **Style:** Hairline Gray border, Chalk White background, rounded-lg (8px), with `ambient-low` at rest — a key content block.
 - **Focus:** border shifts to Signal Blue with a matching 1px ring — no glow, no scale change.
 
 ### Toast (model-swap banner)
@@ -211,7 +228,7 @@ Flat by default: surfaces separate with a 1px Hairline Gray or Whisper Gray bord
 - **Do** keep all neutrals tinted to the same 280° hue (Near-Black Graphite through Chalk White) — never mix in a pure-gray or a different hue of neutral.
 - **Do** keep Signal Blue / Call Violet / Return Green each locked to their one meaning (interaction / tool-call / tool-result).
 - **Do** switch to monospace the moment content is literal model output or a number that needs to line up (tokens, percentages, prompt/template previews).
-- **Do** use borders (Hairline Gray / Whisper Gray), not shadows, for surfaces at rest; reserve shadow for the two named tiers (`ambient-low`, `toast`).
+- **Do** use borders (Hairline Gray / Whisper Gray) for surface separation; the only rest-state shadow is `ambient-low` on the key content blocks (prompt, output, probs, final-prompt preview) — everything else stays bordered-flat, and `toast` is the sole floating tier.
 - **Do** respect `prefers-reduced-motion` on every transition, matching the existing `.turn-block`/`.bar-fill`/`.tok` pattern.
 
 ### Don't:

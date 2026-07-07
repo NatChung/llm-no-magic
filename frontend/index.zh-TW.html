@@ -15,17 +15,17 @@
             'ink-soft':  'oklch(34% 0.010 280)',
             muted:       'oklch(50% 0.008 280)',
             faint:       'oklch(65% 0.006 280)',
-            surface:     'oklch(99% 0.005 280)',
-            'surface-2': 'oklch(96% 0.006 280)',
-            edge:        'oklch(90% 0.006 280)',
-            'edge-soft': 'oklch(94% 0.006 280)',
+            surface:     'oklch(98% 0.008 280)',
+            'surface-2': 'oklch(95% 0.011 280)',
+            edge:        'oklch(89% 0.012 280)',
+            'edge-soft': 'oklch(91.5% 0.010 280)',
             // anchor accent colors(對應 CLI ANSI hue,OKLCH 微調 chroma,不改 hue)
             tool:         'oklch(54% 0.22 320)',  // 紫(原 #b347d9)
             'tool-tint':  'oklch(96% 0.030 320)',
             result:       'oklch(50% 0.15 145)',  // 綠(原 #2ea043)
             'result-tint':'oklch(96% 0.026 145)',
-            final:        'oklch(50% 0.17 250)',  // 藍 final-answer 高亮
-            'final-tint': 'oklch(96% 0.038 250)',
+            final:        'oklch(55% 0.20 255)',  // 藍 final-answer 高亮
+            'final-tint': 'oklch(96% 0.045 255)',
           },
           fontFamily: {
             sans: ['ui-sans-serif', 'system-ui', '"PingFang TC"', '"Helvetica Neue"', 'sans-serif'],
@@ -42,7 +42,7 @@
       },
     };
   </script>
-  <link rel="stylesheet" href="styles.css?v=59">
+  <link rel="stylesheet" href="styles.css?v=60">
 </head>
 <body class="min-h-screen bg-surface text-ink antialiased">
   <div id="swap-banner" class="hidden fixed top-16 left-1/2 -translate-x-1/2 rounded-md bg-final-tint px-4 py-2 text-sm text-final shadow-md z-50">
@@ -78,7 +78,7 @@
   <main class="tab-panel active max-w-6xl mx-auto px-4 md:px-8 py-6 md:py-10" data-panel="basic">
     <section class="prompt-area lg:col-span-2 space-y-3">
       <label for="prompt-basic" class="block text-sm font-medium text-ink-soft">Prompt</label>
-      <textarea class="prompt w-full max-w-2xl rounded-md border border-edge bg-surface px-3 py-2 text-sm md:text-base font-mono focus:outline-none focus:border-final focus:ring-1 focus:ring-final" id="prompt-basic" rows="3" placeholder="輸入 prompt..."></textarea>
+      <textarea class="prompt w-full max-w-2xl rounded-lg shadow-[0_1px_3px_oklch(20%_0.012_280_/_0.06)] border border-edge bg-surface px-3 py-2 text-sm md:text-base font-mono focus:outline-none focus:border-final focus:ring-1 focus:ring-final" id="prompt-basic" rows="3" placeholder="輸入 prompt..."></textarea>
       <div class="flex gap-2 pt-1">
         <button class="run inline-flex items-center px-4 py-2 rounded-md bg-ink text-surface text-sm font-medium hover:bg-ink-soft disabled:bg-faint transition-colors">送出</button>
         <button class="stop inline-flex items-center px-4 py-2 rounded-md border border-edge text-ink-soft text-sm hover:bg-surface-2 disabled:text-faint disabled:hover:bg-transparent transition-colors" disabled>停</button>
@@ -86,11 +86,11 @@
     </section>
     <section class="output-area mt-8 lg:mt-0 space-y-2">
       <h2 class="text-xs uppercase tracking-wider text-muted font-medium">Model 吐的字</h2>
-      <div class="generated-text rounded-md bg-surface-2 border border-edge-soft p-4 min-h-[6rem] font-mono text-sm md:text-base leading-relaxed break-all"></div>
+      <div class="generated-text rounded-lg shadow-[0_1px_3px_oklch(20%_0.012_280_/_0.06)] bg-surface-2 border border-edge-soft p-4 min-h-[6rem] font-mono text-sm md:text-base leading-relaxed break-all"></div>
     </section>
     <section class="probs-area mt-6 lg:mt-0 space-y-2">
       <h2 class="text-xs uppercase tracking-wider text-muted font-medium">Token 候選 · top 10(點左邊任一 token 切換)</h2>
-      <div class="probs rounded-md bg-surface border border-edge-soft p-3 min-h-[6rem]"></div>
+      <div class="probs rounded-lg shadow-[0_1px_3px_oklch(20%_0.012_280_/_0.06)] bg-surface border border-edge-soft p-3 min-h-[6rem]"></div>
     </section>
   </main>
 
@@ -100,7 +100,7 @@
   <main class="tab-panel max-w-6xl mx-auto px-4 md:px-8 py-6 md:py-10" data-panel="advanced">
     <section class="prompt-area lg:col-span-2 space-y-3">
       <label for="prompt-advanced" class="block text-sm font-medium text-ink-soft">Prompt</label>
-      <textarea class="prompt w-full max-w-2xl rounded-md border border-edge bg-surface px-3 py-2 text-sm md:text-base font-mono focus:outline-none focus:border-final focus:ring-1 focus:ring-final" id="prompt-advanced" rows="3" placeholder="輸入 prompt..."></textarea>
+      <textarea class="prompt w-full max-w-2xl rounded-lg shadow-[0_1px_3px_oklch(20%_0.012_280_/_0.06)] border border-edge bg-surface px-3 py-2 text-sm md:text-base font-mono focus:outline-none focus:border-final focus:ring-1 focus:ring-final" id="prompt-advanced" rows="3" placeholder="輸入 prompt..."></textarea>
 
       <div class="mode-row flex flex-wrap gap-x-5 gap-y-2 pt-1">
         <label class="inline-flex items-center gap-2 text-sm text-ink-soft"><input type="radio" name="mode-advanced" value="raw" checked class="accent-final"> 裸 prompt(completion mode)</label>
@@ -109,7 +109,7 @@
 
       <details class="preview-details pt-2">
         <summary class="cursor-pointer text-sm text-muted hover:text-ink-soft">實際送進 model 的 final prompt(預覽)</summary>
-        <pre class="final-prompt-preview mt-2 rounded-md bg-surface-2 border border-edge-soft p-3 text-xs font-mono whitespace-pre-wrap break-all max-h-80 overflow-auto text-ink-soft"></pre>
+        <pre class="final-prompt-preview mt-2 rounded-lg shadow-[0_1px_3px_oklch(20%_0.012_280_/_0.06)] bg-surface-2 border border-edge-soft p-3 text-xs font-mono whitespace-pre-wrap break-all max-h-80 overflow-auto text-ink-soft"></pre>
       </details>
 
       <div class="flex gap-2 pt-1">
@@ -119,11 +119,11 @@
     </section>
     <section class="output-area mt-8 lg:mt-0 space-y-2">
       <h2 class="text-xs uppercase tracking-wider text-muted font-medium">Model 吐的字</h2>
-      <div class="generated-text rounded-md bg-surface-2 border border-edge-soft p-4 min-h-[6rem] font-mono text-sm md:text-base leading-relaxed break-all"></div>
+      <div class="generated-text rounded-lg shadow-[0_1px_3px_oklch(20%_0.012_280_/_0.06)] bg-surface-2 border border-edge-soft p-4 min-h-[6rem] font-mono text-sm md:text-base leading-relaxed break-all"></div>
     </section>
     <section class="probs-area mt-6 lg:mt-0 space-y-2">
       <h2 class="text-xs uppercase tracking-wider text-muted font-medium">Token 候選 · top 10</h2>
-      <div class="probs rounded-md bg-surface border border-edge-soft p-3 min-h-[6rem]"></div>
+      <div class="probs rounded-lg shadow-[0_1px_3px_oklch(20%_0.012_280_/_0.06)] bg-surface border border-edge-soft p-3 min-h-[6rem]"></div>
     </section>
   </main>
 
@@ -133,7 +133,7 @@
   <main class="tab-panel max-w-6xl mx-auto px-4 md:px-8 py-6 md:py-10" data-panel="reasoning">
     <section class="prompt-area space-y-3">
       <label for="prompt-reasoning" class="block text-sm font-medium text-ink-soft">經典題</label>
-      <textarea class="prompt w-full max-w-2xl rounded-md border border-edge bg-surface px-3 py-2 text-sm md:text-base font-mono focus:outline-none focus:border-final focus:ring-1 focus:ring-final" id="prompt-reasoning" rows="3" placeholder="爸爸有3顆蘋果,兒子多他2顆。請問兒子幾顆?">爸爸有3顆蘋果,兒子多他2顆。請問兒子幾顆?</textarea>
+      <textarea class="prompt w-full max-w-2xl rounded-lg shadow-[0_1px_3px_oklch(20%_0.012_280_/_0.06)] border border-edge bg-surface px-3 py-2 text-sm md:text-base font-mono focus:outline-none focus:border-final focus:ring-1 focus:ring-final" id="prompt-reasoning" rows="3" placeholder="爸爸有3顆蘋果,兒子多他2顆。請問兒子幾顆?">爸爸有3顆蘋果,兒子多他2顆。請問兒子幾顆?</textarea>
 
       <div class="mode-row flex flex-wrap gap-x-5 gap-y-2 pt-1">
         <label class="inline-flex items-center gap-2 text-sm text-ink-soft"><input type="radio" name="mode-reasoning" value="direct" checked class="accent-final"> 直答(跳過 thinking),模型直接答</label>
@@ -141,7 +141,7 @@
       </div>
       <details class="preview-details pt-2">
         <summary class="cursor-pointer text-sm text-muted hover:text-ink-soft">實際送進 model 的 final prompt(預覽)</summary>
-        <pre class="final-prompt-preview mt-2 rounded-md bg-surface-2 border border-edge-soft p-3 text-xs font-mono whitespace-pre-wrap break-all max-h-80 overflow-auto text-ink-soft"></pre>
+        <pre class="final-prompt-preview mt-2 rounded-lg shadow-[0_1px_3px_oklch(20%_0.012_280_/_0.06)] bg-surface-2 border border-edge-soft p-3 text-xs font-mono whitespace-pre-wrap break-all max-h-80 overflow-auto text-ink-soft"></pre>
       </details>
 
       <div class="flex gap-2 pt-1">
@@ -156,7 +156,7 @@
       </section>
       <section class="output-area space-y-2">
         <h2 class="text-xs uppercase tracking-wider text-muted font-medium">🎯 最終回答 (user 真正看到的、<code>&lt;/think&gt;</code> 後的部分)</h2>
-        <div class="generated-text rounded-md bg-surface-2 border border-edge-soft p-4 min-h-[6rem] font-mono text-sm md:text-base leading-relaxed break-all"></div>
+        <div class="generated-text rounded-lg shadow-[0_1px_3px_oklch(20%_0.012_280_/_0.06)] bg-surface-2 border border-edge-soft p-4 min-h-[6rem] font-mono text-sm md:text-base leading-relaxed break-all"></div>
       </section>
     </div>
   </main>
@@ -170,11 +170,11 @@
       <textarea class="system-prompt w-full rounded-md border border-edge bg-surface px-3 py-2 text-sm font-mono focus:outline-none focus:border-final focus:ring-1 focus:ring-final" id="system-prompt-agent" rows="4"></textarea>
 
       <label for="prompt-agent" class="block text-sm font-medium text-ink-soft pt-2">問題</label>
-      <textarea class="prompt w-full rounded-md border border-edge bg-surface px-3 py-2 text-sm md:text-base font-mono focus:outline-none focus:border-final focus:ring-1 focus:ring-final" id="prompt-agent" rows="3" placeholder="問題..."></textarea>
+      <textarea class="prompt w-full rounded-lg shadow-[0_1px_3px_oklch(20%_0.012_280_/_0.06)] border border-edge bg-surface px-3 py-2 text-sm md:text-base font-mono focus:outline-none focus:border-final focus:ring-1 focus:ring-final" id="prompt-agent" rows="3" placeholder="問題..."></textarea>
 
       <details class="preview-details pt-1">
         <summary class="cursor-pointer text-sm text-muted hover:text-ink-soft">實際送到 model 的 prompt(chat template 包好的 text,跟 Tab 2/3 同種視角)</summary>
-        <pre class="final-prompt-preview mt-2 rounded-md bg-surface-2 border border-edge-soft p-3 text-xs font-mono whitespace-pre-wrap break-all max-h-80 overflow-auto text-ink-soft"></pre>
+        <pre class="final-prompt-preview mt-2 rounded-lg shadow-[0_1px_3px_oklch(20%_0.012_280_/_0.06)] bg-surface-2 border border-edge-soft p-3 text-xs font-mono whitespace-pre-wrap break-all max-h-80 overflow-auto text-ink-soft"></pre>
       </details>
 
       <div class="flex gap-2 pt-1">
@@ -340,6 +340,6 @@
     </div>
   </main>
 
-  <script src="app.js?v=68"></script>
+  <script src="app.js?v=69"></script>
 </body>
 </html>

@@ -136,6 +136,20 @@ function carryPromptInto(panelName) {
   el.dispatchEvent(new Event("input", { bubbles: true }));  // refresh preview (advanced/reasoning)
 }
 
+// Render the "final prompt sent to the model" preview with chat-template
+// markers (<|im_start|>, <|im_end|>, any <|…|>) highlighted in Signal Blue —
+// so the product-layer processing reads at a glance: the colored markers ARE
+// the role convention the product layer adds. Escapes first, so user text is
+// never interpreted as HTML.
+function renderPromptPreview(previewEl, text) {
+  if (!previewEl) return;
+  const esc = (s) => s.replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
+  previewEl.innerHTML = esc(text).replace(
+    /&lt;\|[^|]*\|&gt;/g,
+    (m) => `<span class="text-final font-semibold">${m}</span>`
+  );
+}
+
 // Returns the fetch Response (or null on network error) so callers can detect
 // a rejected/failed drive (409 busy, or a 5xx e.g. swap failure) and re-enable
 // their Send button — no drive_start/final will arrive for it. On 200 the
@@ -250,7 +264,7 @@ function setupPanel(panel) {
   }
 
   function refreshPreview() {
-    if (previewEl) previewEl.textContent = buildFinalPrompt();
+    if (previewEl) renderPromptPreview(previewEl, buildFinalPrompt());
   }
 
   function appendClickableToken(stepIdx, token, target) {
@@ -407,7 +421,7 @@ function setupAgent(panel) {
       });
       if (!res.ok) { previewEl.textContent = `[preview HTTP ${res.status}]`; return; }
       const d = await res.json();
-      previewEl.textContent = d.prompt || "(no prompt)";
+      renderPromptPreview(previewEl, d.prompt || "(no prompt)");
     } catch (err) {
       previewEl.textContent = `[preview error] ${err.message}`;
     }

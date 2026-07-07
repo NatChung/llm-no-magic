@@ -8,12 +8,12 @@
       "ink-soft": { "role": "neutral", "displayName": "Soft Graphite", "canonical": "oklch(34% 0.010 280)" },
       "muted": { "role": "neutral", "displayName": "Quiet Slate", "canonical": "oklch(50% 0.008 280)" },
       "faint": { "role": "neutral", "displayName": "Faint Ash", "canonical": "oklch(65% 0.006 280)" },
-      "surface": { "role": "neutral", "displayName": "Chalk White", "canonical": "oklch(99% 0.005 280)" },
-      "surface-2": { "role": "neutral", "displayName": "Pale Fog", "canonical": "oklch(96% 0.006 280)" },
-      "edge": { "role": "neutral", "displayName": "Hairline Gray", "canonical": "oklch(90% 0.006 280)" },
-      "edge-soft": { "role": "neutral", "displayName": "Whisper Gray", "canonical": "oklch(94% 0.006 280)" },
-      "final": { "role": "primary", "displayName": "Signal Blue", "canonical": "oklch(50% 0.17 250)", "tonalRamp": ["oklch(15% 0.06 250)", "oklch(28% 0.12 250)", "oklch(38% 0.15 250)", "oklch(50% 0.17 250)", "oklch(62% 0.14 250)", "oklch(74% 0.10 250)", "oklch(86% 0.06 250)", "oklch(96% 0.038 250)"] },
-      "final-tint": { "role": "primary", "displayName": "Signal Blue Tint", "canonical": "oklch(96% 0.038 250)" },
+      "surface": { "role": "neutral", "displayName": "Chalk White", "canonical": "oklch(98% 0.008 280)" },
+      "surface-2": { "role": "neutral", "displayName": "Pale Fog", "canonical": "oklch(95% 0.011 280)" },
+      "edge": { "role": "neutral", "displayName": "Hairline Gray", "canonical": "oklch(89% 0.012 280)" },
+      "edge-soft": { "role": "neutral", "displayName": "Whisper Gray", "canonical": "oklch(91.5% 0.010 280)" },
+      "final": { "role": "primary", "displayName": "Signal Blue", "canonical": "oklch(55% 0.20 255)", "tonalRamp": ["oklch(15% 0.07 255)", "oklch(28% 0.14 255)", "oklch(40% 0.18 255)", "oklch(55% 0.20 255)", "oklch(66% 0.16 255)", "oklch(78% 0.11 255)", "oklch(88% 0.07 255)", "oklch(96% 0.045 255)"] },
+      "final-tint": { "role": "primary", "displayName": "Signal Blue Tint", "canonical": "oklch(96% 0.045 255)" },
       "tool": { "role": "secondary", "displayName": "Call Violet", "canonical": "oklch(54% 0.22 320)", "tonalRamp": ["oklch(15% 0.07 320)", "oklch(28% 0.14 320)", "oklch(40% 0.19 320)", "oklch(54% 0.22 320)", "oklch(66% 0.17 320)", "oklch(78% 0.11 320)", "oklch(88% 0.06 320)", "oklch(96% 0.030 320)"] },
       "tool-tint": { "role": "secondary", "displayName": "Call Violet Tint", "canonical": "oklch(96% 0.030 320)" },
       "result": { "role": "tertiary", "displayName": "Return Green", "canonical": "oklch(50% 0.15 145)", "tonalRamp": ["oklch(15% 0.05 145)", "oklch(28% 0.09 145)", "oklch(38% 0.12 145)", "oklch(50% 0.15 145)", "oklch(62% 0.12 145)", "oklch(74% 0.09 145)", "oklch(86% 0.05 145)", "oklch(96% 0.026 145)"] },
@@ -27,7 +27,7 @@
       "mono": { "displayName": "Mono", "purpose": "Token text, probabilities, prompt/template previews — anything that is literal model output or a number." }
     },
     "shadows": [
-      { "name": "ambient-low", "value": "0 1px 3px oklch(20% 0.012 280 / 0.08)", "purpose": "Hover/active lift on turn-blocks and output panels — detach without floating." },
+      { "name": "ambient-low", "value": "0 1px 3px oklch(20% 0.012 280 / 0.06)", "purpose": "Rest-state lift on key content blocks (prompt, output, probs, final-prompt preview) and hover/active on turn-blocks." },
       { "name": "toast", "value": "0 4px 12px oklch(20% 0.012 280 / 0.15)", "purpose": "Page-level floating notices (model-swap banner). Only tier that fully detaches from the document." }
     ],
     "motion": [
@@ -54,7 +54,7 @@
       "refersTo": "button-secondary",
       "description": "Stop action; also the general outline-button pattern.",
       "html": "<button class=\"ds-btn-secondary\">停</button>",
-      "css": ".ds-btn-secondary { background: oklch(99% 0.005 280); color: oklch(34% 0.010 280); border: 1px solid oklch(90% 0.006 280); border-radius: 6px; padding: 8px 16px; font-size: 0.875rem; transition: background 0.15s ease, color 0.15s ease; } .ds-btn-secondary:hover:not(:disabled) { background: oklch(96% 0.006 280); } .ds-btn-secondary:disabled { color: oklch(65% 0.006 280); cursor: not-allowed; }"
+      "css": ".ds-btn-secondary { background: oklch(99% 0.005 280); color: oklch(34% 0.010 280); border: 1px solid oklch(90% 0.006 280); border-radius: 6px; padding: 8px 16px; font-size: 0.875rem; transition: background 0.15s ease, color 0.15s ease; } .ds-btn-secondary:hover:not(:disabled) { background: oklch(95% 0.011 280); } .ds-btn-secondary:disabled { color: oklch(65% 0.006 280); cursor: not-allowed; }"
     },
     {
       "name": "Tab",
@@ -62,7 +62,7 @@
       "refersTo": "tab-active",
       "description": "Top nav item; active tab gets the Signal Blue underline.",
       "html": "<button class=\"ds-tab ds-tab-active\">① 基礎</button>",
-      "css": ".ds-tab { background: none; border: none; border-bottom: 2px solid transparent; color: oklch(50% 0.008 280); font-size: 0.9375rem; padding: 12px 20px; cursor: pointer; transition: color 0.15s ease; } .ds-tab:hover { color: oklch(20% 0.012 280); } .ds-tab-active { color: oklch(20% 0.012 280); border-bottom-color: oklch(50% 0.17 250); }"
+      "css": ".ds-tab { background: none; border: none; border-bottom: 2px solid transparent; color: oklch(50% 0.008 280); font-size: 0.9375rem; padding: 12px 20px; cursor: pointer; transition: color 0.15s ease; } .ds-tab:hover { color: oklch(20% 0.012 280); } .ds-tab-active { color: oklch(20% 0.012 280); border-bottom-color: oklch(55% 0.20 255); }"
     },
     {
       "name": "Token Chip",
@@ -70,7 +70,7 @@
       "refersTo": "token-chip",
       "description": "Clickable generated token; selected state shows its probability chart.",
       "html": "<span class=\"ds-token ds-token-selected\">霜</span>",
-      "css": ".ds-token { cursor: pointer; padding: 0 1px; border-radius: 2px; transition: background 0.1s ease; } .ds-token:hover { background: oklch(95% 0.012 280); } .ds-token-selected { background: oklch(88% 0.08 250); box-shadow: 0 0 0 1px oklch(50% 0.17 250) inset; }"
+      "css": ".ds-token { cursor: pointer; padding: 0 1px; border-radius: 2px; transition: background 0.1s ease; } .ds-token:hover { background: oklch(95% 0.012 280); } .ds-token-selected { background: oklch(88% 0.10 255); box-shadow: 0 0 0 1px oklch(55% 0.20 255) inset; }"
     },
     {
       "name": "Probability Bar Row",
@@ -78,7 +78,7 @@
       "refersTo": "probability-bar-track",
       "description": "Signature component: one row of the top-10 probability bar chart.",
       "html": "<div class=\"ds-bar-row\"><span class=\"ds-bar-label\">霜</span><div class=\"ds-bar-track\"><div class=\"ds-bar-fill\" style=\"width:94.7%\"></div></div><span class=\"ds-bar-pct\">94.7%</span></div>",
-      "css": ".ds-bar-row { display: grid; grid-template-columns: 6.5rem 1fr 3.5rem; gap: 0.6rem; align-items: center; padding: 0.2rem 0; font-size: 0.85rem; } .ds-bar-label { font-family: ui-monospace, \"SF Mono\", Menlo, monospace; color: oklch(34% 0.010 280); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .ds-bar-track { height: 0.7rem; background: oklch(96% 0.006 280); border-radius: 999px; overflow: hidden; } .ds-bar-fill { height: 100%; background: oklch(50% 0.17 250); border-radius: 999px; transition: width 0.15s ease; } .ds-bar-pct { font-family: ui-monospace, \"SF Mono\", Menlo, monospace; font-variant-numeric: tabular-nums; font-size: 0.78rem; color: oklch(50% 0.008 280); text-align: right; }"
+      "css": ".ds-bar-row { display: grid; grid-template-columns: 6.5rem 1fr 3.5rem; gap: 0.6rem; align-items: center; padding: 0.2rem 0; font-size: 0.85rem; } .ds-bar-label { font-family: ui-monospace, \"SF Mono\", Menlo, monospace; color: oklch(34% 0.010 280); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .ds-bar-track { height: 0.7rem; background: oklch(95% 0.011 280); border-radius: 999px; overflow: hidden; } .ds-bar-fill { height: 100%; background: oklch(55% 0.20 255); border-radius: 999px; transition: width 0.15s ease; } .ds-bar-pct { font-family: ui-monospace, \"SF Mono\", Menlo, monospace; font-variant-numeric: tabular-nums; font-size: 0.78rem; color: oklch(50% 0.008 280); text-align: right; }"
     },
     {
       "name": "Tool Call Block",
@@ -102,7 +102,7 @@
       "refersTo": "components.swap-toast",
       "description": "Signature component: floating model-swap loading indicator. Only element allowed to shadow-float above content.",
       "html": "<div class=\"ds-toast\"><span class=\"ds-toast-dot\"></span>載入 4B 中…</div>",
-      "css": ".ds-toast { display: inline-flex; align-items: center; gap: 8px; background: oklch(96% 0.038 250); color: oklch(50% 0.17 250); border-radius: 999px; padding: 8px 16px; font-size: 0.875rem; box-shadow: 0 4px 12px oklch(20% 0.012 280 / 0.15); } .ds-toast-dot { width: 6px; height: 6px; border-radius: 999px; background: oklch(50% 0.17 250); animation: ds-pulse 1.5s ease-in-out infinite; } @keyframes ds-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }"
+      "css": ".ds-toast { display: inline-flex; align-items: center; gap: 8px; background: oklch(96% 0.045 255); color: oklch(55% 0.20 255); border-radius: 999px; padding: 8px 16px; font-size: 0.875rem; box-shadow: 0 4px 12px oklch(20% 0.012 280 / 0.15); } .ds-toast-dot { width: 6px; height: 6px; border-radius: 999px; background: oklch(55% 0.20 255); animation: ds-pulse 1.5s ease-in-out infinite; } @keyframes ds-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }"
     }
   ],
   "narrative": {
@@ -118,7 +118,7 @@
       { "name": "The One Meaning Rule", "body": "Signal Blue, Call Violet, and Return Green each mean exactly one thing. None of the three is ever reused as a decorative accent, a \"brand\" color, or a fourth meaning.", "section": "colors" },
       { "name": "The Rarity Rule", "body": "Across any given screen, colored surface area (all three accents plus tints combined) stays under 10%. The whiteboard is the point; color is the exception that proves something is happening.", "section": "colors" },
       { "name": "The Flat Scale Warning", "body": "Today's type hierarchy sits mostly within a narrow 0.75–0.875rem band. Legible but nearly flat — look for a legitimate Title-level moment before defaulting back to Body everywhere.", "section": "typography" },
-      { "name": "The Two-Tier Rule", "body": "There are exactly two shadow tiers: ambient-low for in-flow hover/active feedback, toast for anything that floats above the page. Nothing else gets a shadow.", "section": "elevation" }
+      { "name": "The Two-Tier Rule", "body": "There are exactly two shadow tiers: ambient-low for the key content blocks at rest (and in-flow hover/active), toast for anything that floats above the page. Everything else stays bordered-flat at rest.", "section": "elevation" }
     ],
     "dos": [
       "Do keep all neutrals tinted to the same 280° hue — never mix in a pure-gray or a different hue of neutral.",
