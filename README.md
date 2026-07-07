@@ -2,7 +2,7 @@
 
 > English: [README.en.md](./README.en.md)
 
-4-tab 視覺化教學工具,讓 LLM 內部運作看得見:Token / 機率 / chat template / Agent 流程,逐層可見。
+6-tab 視覺化教學工具,讓 LLM 內部運作看得見:Token / 機率 / chat template / Agent 流程 / Skill 漸進載入 / MCP,逐層可見。
 
 跑在你 Mac 上,完全 local — `llama.cpp` + Qwen3 GGUF 模型。
 
@@ -10,10 +10,12 @@
 
 ## What you'll see
 
-- **① 基礎** — 打字進去 → 看 model 一個一個吐 token + 每個 token 當下 top-10 機率分佈。3 個中文範例句(自己打進輸入框)有完整教學弧:`床前明月光,疑是地上`(peaked,model 背過整首詩 → 接「霜」top-1 94%+)、`祖樹星上最高的山叫做`(peaked,**你瞎掰**的星球 model 照樣自信編 → **peaked ≠ 真實**)、`他打開冰箱,拿出一包`(flat,top-1 只有一成多,model 不知接啥)。3 個對比展示「confidence ≠ correctness」+「分佈形狀反映 model 把握度」
-- **② 產品層加工** — 看「接龍怎麼變問答」:同一句 `一年有幾個月?` 三種送法對比 — 裸 prompt(純接龍、跳針不回答)、手打「問:答:」(單純文字 pattern 就讓它切成回答模式,但會失控續問)、真 Qwen3 chat template(換成 `<|im_start|>` 這種訓練賦予邊界意義的保留 token,才有乾淨的停止訊號)。畫面常駐顯示 raw vs chat template 的 final prompt 對照(marker 以藍色標示),看產品層到底加了什麼
+- **① 接龍** — 打字進去 → 看 model 一個一個吐 token + 每個 token 當下 top-10 機率分佈。3 個中文範例句(自己打進輸入框)有完整教學弧:`床前明月光,疑是地上`(peaked,model 背過整首詩 → 接「霜」top-1 94%+)、`祖樹星上最高的山叫做`(peaked,**你瞎掰**的星球 model 照樣自信編 → **peaked ≠ 真實**)、`他打開冰箱,拿出一包`(flat,top-1 只有一成多,model 不知接啥)。3 個對比展示「confidence ≠ correctness」+「分佈形狀反映 model 把握度」
+- **② 問答** — 看「接龍怎麼變問答」:同一句 `一年有幾個月?` 三種送法對比 — 裸 prompt(純接龍、跳針不回答)、手打「問:答:」(單純文字 pattern 就讓它切成回答模式,但會失控續問)、真 Qwen3 chat template(換成 `<|im_start|>` 這種訓練賦予邊界意義的保留 token,才有乾淨的停止訊號)。畫面常駐顯示 raw vs chat template 的 final prompt 對照(marker 以藍色標示),看產品層到底加了什麼
 - **③ 推理** — thinking 開關。同題目,直答 vs 寫 think block 後再答(reasoning 對精度的影響)
-- **④ Agent** — multi-turn function calling,model 吐 `<tool_call>` token → client parse → **真的執行**(`get_time` 查真實系統時間)→ 結果塞回對話再吐字,直到 final
+- **④ 代理** — multi-turn function calling,model 吐 `<tool_call>` token → client parse → **真的執行**(`get_time` 查真實系統時間)→ 結果塞回對話再吐字,直到 final
+- **⑤ Skill(預覽)** — 送一句 query 進去,看 model 自己判斷要不要載入 skill、載哪個(3 個 preset:整理檔案 → `organize_files`、台北天氣 → `check_weather`、`1+1` → 沒命中直接答)。對齊 Claude Code 的三層漸進式揭露:L1 metadata 常駐 system prompt、L2 `SKILL.md` body 按需載入、L3 bundled scripts 只讀不進 context
+- **⑥ MCP** — 純文章、不跟 model 互動。講「工具不固定時 AI 怎麼自己選/操作工具」,以操控網頁為例
 
 Tab 1-3 點 token 看當下 top-10 機率(bar chart 跳階);Tab ④ token 不 clickable,改展開「收到 / 再送出」details 看 chat template text 跟 conversation 怎麼累積。
 
@@ -23,14 +25,21 @@ Tab 1-3 點 token 看當下 top-10 機率(bar chart 跳階);Tab ④ token 不 cl
 
 ## Quick start(Mac)
 
-不用自己手動裝。打開這個 repo 用 AI coding agent(Claude Code / Codex),它會讀
-[AGENTS.md](./AGENTS.md)、問你是老師還是學員,然後:
+不用自己手動裝、不用先開 terminal。打開 **Claude(桌面 app)**,左側選單切到 **Code** 分頁、開一個新 session,貼上:
+
+```
+請下載:https://github.com/NatChung/llm-no-magic,並開始這個教學
+```
+
+AI 會自己抓 repo、讀 [AGENTS.md](./AGENTS.md)、問你是老師還是學員,然後:
 
 - 跑 `python3 init.py` 幫你檢查環境(llama.cpp、模型),缺什麼帶你裝 — 教學只需要一個能發
   HTTP 請求的 AI,加上你自己開一次的瀏覽器,不需要 Node、不需要 MCP
 - 照 [teaching/](./teaching/) 課綱帶課:AI **透過 HTTP 打 `POST /drive` 驅動頁面**,頁面
   透過 SSE(`/events`)即時反映每個動作,邊做邊解說,demo 完留著讓你接手試
 - 你自己開一次網址(http://localhost:9000/)後留著就好,之後只要看那個畫面、聽解說、偶爾自己動手 — 其餘由 AI 透過 HTTP 驅動
+
+用 terminal 版 AI coding agent(Claude Code / Codex)也一樣,先 `git clone` 這個 repo 再開:
 
 ```bash
 git clone https://github.com/NatChung/llm-no-magic.git
@@ -45,80 +54,16 @@ Python 3.10+、`requests`。沒 npm / build step。
 
 ---
 
-## 進階:課堂 LAN demo(creator 自己手動起)
-
-同 WiFi 學員可連你 Mac,不透過 AI 帶課、自己手動起 server 給多人同時連:
-
-```bash
-LISTEN_HOST=0.0.0.0 nohup python3 -u -m agent.server > /tmp/agent-server.log 2>&1 &
-# 學員開 http://<你 Mac 的 LAN IP>:9000/(例 192.168.x.x:9000/)
-# llama-server 也會自動帶 --host 0.0.0.0 launch
-# 注意:GPU 一次只一個 model、多學員同時切不同 tab 會互踢
-```
-
-送出(drive)時 server 自動 swap model(tab 切換本身是 UI-only)(Tab 1-3 → 0.6B、Tab ④/⑤ → 4B,Tab ⑥ 是純 article 不切)。第一次會看「載入 X 中…」banner 等 3-5 秒。
-
----
-
-## Try it
-
-### Tab ① 基礎 — 60 秒對比
-
-1. 切到 Tab ① (default active)
-2. 打「`床前明月光,疑是地上`」+ 送出 → 預期 model 接「霜」,top-1 94%+(次高才 3%,model 對熟悉文本極高 confidence)
-3. 打「`祖樹星上最高的山叫做`」+ 送出 → 預期 model 自信編一個假地名,top-1 也很高 — **同樣 peaked,但這次是瞎掰** (peaked ≠ 真實 / confidence ≠ correctness)
-4. 打「`他打開冰箱,拿出一包`」+ 送出 → 預期 top-10 分散(糖果 / 薯片 / 巧克力 / 牛奶...flat,top-1 只一成多),model 表達「不知接啥」
-5. **畫面上生成出來的每個字都能點**,不是只有第一個——點任一 token 看 top-10 bar chart;3 句的「形狀對比」就是 Tab ① 全部教學
-
-### Tab ② 產品層加工 — 接龍怎麼變問答
-
-1. 切到 Tab ②(0.6B,banner ~3 秒)
-2. 「`一年有幾個月?`」**raw mode** + 送出 → model 不斷重複反問「有沒有其他月份的特殊性?」,跟 Lesson 1 一樣純接龍,不算回答
-3. 改打「`問:一年有幾個月?\n答:`」,一樣 **raw mode** + 送出 → 開頭直接答對「一年有12个月」,但接著自己循環出下一輪「問:...答:...」——**單純多打兩個字「問:」「答:」就讓它從接龍切成回答模式,但純文字沒有停止邊界**
-4. 同樣「`一年有幾個月?`」切 **chat mode** + 送出 → 乾淨答「一年有12個月」,不會循環;看常駐的「實際送進 model 的 prompt」區,看 `<|im_start|>user\n...<|im_end|>\n<|im_start|>assistant\n` 怎麼包——跟上一步「問:」「答:」是同一招,只是換成訓練賦予邊界意義的保留 token,才有乾淨的停止訊號
-
-### Tab ④ Agent — 真執行 demo
-
-1. 切到 Tab ④(會看到「載入 4B 中…」banner ~5 秒)
-2. 打「現在幾點?」+ 送出
-3. 預期:
-   - Turn 1:model 吐的 token 序列(`<tool_call>` 開頭)+ 紫色「↑ 工具呼叫」block 顯示 `get_time({})` + 綠色「↓ 工具結果」顯示 `HH:MM:SS`
-   - Turn 2:final「現在是 HH:MM:SS」
-4. 展開 turn block 內「再送出,累積 N turn 後送進下次 model 的 prompt」details → 看 chat template text 跟 conversation 怎麼累積成下次 input
-
-Tab ④ 只掛一個工具:`get_time`(頁面的「實際送進 model 的 prompt」常駐區
-可看到 `<tools>` 只有一行)。對照題:打一句不需要工具的問題(例:`1+1 等於
-幾?`),model 這輪**不**呼叫工具直接答 — 用不用工具是 model 自己決定的。
-
----
-
-## How it works
-
-```
-Browser
-    ↓ GET / (HTML)    ↓ POST /drive /inspect /stop /agent /skill-agent /preview
-    ↓ GET /events (SSE)
-Server :9000 (agent/server.py — 同個 process 吐靜態 + API)
-    ↓ POST /v1/chat/completions  (non-stream + logprobs + tools)
-llama-server :8080 (Qwen3 model — auto-swap inside /drive)
-```
-
-**核心**:
-- Tab 1-3:送出 → `POST /drive` → server 打 llama `/completion`(stream + n_probs)→ 逐 token publish 到 `/events`,頁面渲染
-- Tab ④ Agent:`POST /drive {tab:4}` → server 跑 multi-turn agent loop(OpenAI chat completions + tools、real execute、結果塞回 messages)→ turn/final publish 到 `/events`
-- Tab ⑤ Skill:frontend → `/skill-agent`(SSE)→ server 跑 3-layer progressive disclosure simulator(lazy 載 SKILL.md body + bundled scripts/)
-- Tab ⑥:純 article、不跟 model 互動
-- 送出時 server 在 `/drive` 內比對 `GLOBAL_STATE['model']`、需要才 `handle_swap`(`SWAP_LOCK` 守單 flight → `pkill` + 等 port free + `Popen` + poll `/v1/models` 直到 ready ~3-5s);tab 切換是 UI-only,不觸發 swap
-
----
-
 ## Code tour
 
-- `frontend/index.html` + `app.js` + `styles.css` — Tailwind Play CDN(零 build),7 tab UI
-- `agent/server.py` — 單 port stdlib http.server(no FastAPI):同時 serve 靜態 frontend + API endpoints(agent loop、skill simulator、swap orchestrator(`handle_swap`,由 `/drive` 呼叫)、`/preview` apply-template proxy)。`LISTEN_HOST=0.0.0.0` opt-in 給 LAN demo。
+- `frontend/index.html` + `index.zh-TW.html` + `app.js` + `styles.css` — Tailwind Play CDN(零 build),6 tab UI(①接龍/②問答/③推理/④代理/⑤Skill/⑥MCP)
+- `agent/server.py` — 單 port stdlib http.server(no FastAPI):同時 serve 靜態 frontend + API endpoints(`/drive` `/inspect` `/stop` `/agent` `/skill-agent` `/preview` `/events` `/health`)、swap orchestrator(`handle_swap`,由 `/drive` 呼叫)
 - `agent/agent.py` — CLI fallback REPL + 4 tools(`get_time` / `read_file` / `write_file` / `exec_bash`)+ `dispatch_tool_call` + `AgentLoop`
+- `agent/skill_agent.py` — Tab ⑤ 三層漸進式揭露 simulator(lazy 載 `SKILL.md` body + bundled scripts/)
+- `agent/skills/` — Tab ⑤ demo 用的 2 個 skill(`check_weather`、`organize_files`)
 - `agent/tests/` — pytest suite(mocked subprocess + requests + socket;`pytest agent/tests -q`)
 - `agent/SETUP.md` — port / Fri AM check / fallback 操作備忘
+- `agent/smoke.py` — creator 用的 playwright 迴歸驗證腳本(`--smoke`)
 - `prompts.md` — 教學用 prompt 素材(token-level demo 的 input)
 
 ---
