@@ -11,7 +11,7 @@
 ## What you'll see
 
 - **① 基礎** — 打字進去 → 看 model 一個一個吐 token + 每個 token 當下 top-10 機率分佈。中文 preset 3 個有完整教學弧:`床前明月光,疑是地上`(peaked,model 背過整首詩 → 接「霜」top-1 94%+)、`祖樹星上最高的山叫做`(peaked,**你瞎掰**的星球 model 照樣自信編 → **peaked ≠ 真實**)、`他打開冰箱,拿出一包`(flat,top-1 只有一成多,model 不知接啥)。3 個對比展示「confidence ≠ correctness」+「分佈形狀反映 model 把握度」
-- **② 產品層加工** — 加 system prompt + Qwen3 chat template,看「加工後」prompt 跟 raw 對比。中文 preset 3 個 user prompt 一鍵試:`一年有幾個月?`(常識短答)、`寫一個夏季冰飲的促銷文案`(創作)、`請寫一首關於月亮的五言絕句`(文學)— system 自填(textarea placeholder 已 hint「你是行銷顧問,用條列式回答,只給 3 點」)
+- **② 產品層加工** — 看「接龍怎麼變問答」:同一句 `一年有幾個月?` 三種送法對比 — 裸 prompt(純接龍、跳針不回答)、手打「問:答:」(單純文字 pattern 就讓它切成回答模式,但會失控續問)、真 Qwen3 chat template(換成 `<|im_start|>` 這種訓練賦予邊界意義的保留 token,才有乾淨的停止訊號)。展開 raw vs chat template 的 final prompt 對照,看產品層到底加了什麼
 - **③ 推理** — thinking 開關。同題目,直答 vs 寫 think block 後再答(reasoning 對精度的影響)
 - **④ Agent** — multi-turn function calling,model 吐 `<tool_call>` token → client parse → **真的執行**(read/write 檔案、跑 bash)→ 結果塞回對話再吐字,直到 final
 
@@ -56,7 +56,7 @@ LISTEN_HOST=0.0.0.0 nohup python3 -u -m agent.server > /tmp/agent-server.log 2>&
 # 注意:GPU 一次只一個 model、多學員同時切不同 tab 會互踢
 ```
 
-送出(drive)時 server 自動 swap model(tab 切換本身是 UI-only)(Tab 1-3 → 0.6B、Tab ④/⑥ → 4B,Tab ⑤/⑦ 是純 article 不切)。第一次會看「載入 X 中…」banner 等 3-5 秒。
+送出(drive)時 server 自動 swap model(tab 切換本身是 UI-only)(Tab 1-3 → 0.6B、Tab ④/⑤ → 4B,Tab ⑥ 是純 article 不切)。第一次會看「載入 X 中…」banner 等 3-5 秒。
 
 ---
 
@@ -70,13 +70,12 @@ LISTEN_HOST=0.0.0.0 nohup python3 -u -m agent.server > /tmp/agent-server.log 2>&
 4. preset 3「`他打開冰箱,拿出一包`」+ 送出 → 預期 top-10 分散(糖果 / 薯片 / 巧克力 / 牛奶...flat,top-1 只一成多),model 表達「不知接啥」
 5. **畫面上生成出來的每個字都能點**,不是只有第一個——點任一 token 看 top-10 bar chart;3 個 preset 的「形狀對比」就是 Tab ① 全部教學
 
-### Tab ② 產品層加工 — 加工 vs 不加工
+### Tab ② 產品層加工 — 接龍怎麼變問答
 
 1. 切到 Tab ②(0.6B,banner ~3 秒)
-2. preset 1「`一年有幾個月?`」**raw mode** + 送出 → 看 model 散開答(可能講「12 個月」+ 冗詞)
-3. 同 prompt + 加 system「你是行銷顧問,用條列式回答,只給 3 點。」+ **chat mode** + 送出 → 看「加工後」變整齊條列
-4. 展開「實際送進 model 的 final prompt」details → 看 `<|im_start|>system\n...<|im_end|>` 怎麼被包進去
-5. 試 preset 2「夏季冰飲文案」對比同樣方式
+2. 「`一年有幾個月?`」**raw mode** + 送出 → model 不斷重複反問「有沒有其他月份的特殊性?」,跟 Lesson 1 一樣純接龍,不算回答
+3. 改打「`問:一年有幾個月?\n答:`」,一樣 **raw mode** + 送出 → 開頭直接答對「一年有12个月」,但接著自己循環出下一輪「問:...答:...」——**單純多打兩個字「問:」「答:」就讓它從接龍切成回答模式,但純文字沒有停止邊界**
+4. 同樣「`一年有幾個月?`」切 **chat mode** + 送出 → 乾淨答「一年有12個月」,不會循環;展開「實際送進 model 的 final prompt」details,看 `<|im_start|>user\n...<|im_end|>\n<|im_start|>assistant\n` 怎麼包——跟上一步「問:」「答:」是同一招,只是換成訓練賦予邊界意義的保留 token,才有乾淨的停止訊號
 
 ### Tab ④ Agent — 真執行 demo
 
@@ -108,8 +107,8 @@ llama-server :8080 (Qwen3 model — auto-swap inside /drive)
 **核心**:
 - Tab 1-3:送出 → `POST /drive` → server 打 llama `/completion`(stream + n_probs)→ 逐 token publish 到 `/events`,頁面渲染
 - Tab ④ Agent:`POST /drive {tab:4}` → server 跑 multi-turn agent loop(OpenAI chat completions + tools、real execute、結果塞回 messages)→ turn/final publish 到 `/events`
-- Tab ⑥ Skill:frontend → `/skill-agent`(SSE)→ server 跑 3-layer progressive disclosure simulator(lazy 載 SKILL.md body + bundled scripts/)
-- Tab ⑤/⑦:純 article、不跟 model 互動
+- Tab ⑤ Skill:frontend → `/skill-agent`(SSE)→ server 跑 3-layer progressive disclosure simulator(lazy 載 SKILL.md body + bundled scripts/)
+- Tab ⑥:純 article、不跟 model 互動
 - 送出時 server 在 `/drive` 內比對 `GLOBAL_STATE['model']`、需要才 `handle_swap`(`SWAP_LOCK` 守單 flight → `pkill` + 等 port free + `Popen` + poll `/v1/models` 直到 ready ~3-5s);tab 切換是 UI-only,不觸發 swap
 
 ---

@@ -11,7 +11,7 @@ Runs entirely local on your Mac — `llama.cpp` + Qwen3 GGUF models.
 ## What you'll see
 
 - **① Basics** — Type something → watch the model emit tokens one at a time + the top-10 probability distribution at each step. Three Chinese presets form a complete teaching arc: `床前明月光,疑是地上` (peaked — the model has this Tang poem memorized → completes `霜` at top-1 94%+), `祖樹星上最高的山叫做` (peaked, but **you made up** the star name — the model still confidently invents an answer → **peaked ≠ truth**), `他打開冰箱,拿出一包` (flat — top-1 barely above 10%, the model has no idea what to fill in). Together they show "confidence ≠ correctness" + "shape of the distribution reflects model certainty".
-- **② Product Layer** — Add a system prompt + Qwen3 chat template, compare the "processed" prompt with raw. Three preset user prompts to try with one click: `一年有幾個月?` (general knowledge, short answer), `寫一個夏季冰飲的促銷文案` (creative), `請寫一首關於月亮的五言絕句` (literary form) — system prompt is yours to write (placeholder hint: "you are a marketing consultant, answer in bullet points, max 3").
+- **② Product Layer** — Watch "how chaining becomes Q&A": send the same `一年有幾個月?` ("How many months in a year?") three ways — raw prompt (pure chaining, loops without answering), hand-typed "Q:/A:" (a plain text pattern alone flips it into answer mode, but it spirals into more questions), and the real Qwen3 chat template (swaps in reserved tokens like `<|im_start|>` whose boundary meaning was assigned during training, which is what gives a clean stop signal). Expand the raw-vs-chat-template final prompt to see exactly what the product layer adds.
 - **③ Reasoning** — Thinking on/off. Same question, direct answer vs writing a think block first (effect of reasoning on accuracy).
 - **④ Agent** — Multi-turn function calling. The model emits `<tool_call>` tokens → client parses them → **actually executes** (read/write files, run bash) → result goes back into the conversation → the model continues, until final.
 
@@ -59,7 +59,7 @@ LISTEN_HOST=0.0.0.0 nohup python3 -u -m agent.server > /tmp/agent-server.log 2>&
 # Note: only one model on the GPU at a time — multiple students switching tabs may compete
 ```
 
-When you drive a tab, the server auto-swaps models (tab-switching itself is UI-only) (Tabs 1-3 → 0.6B, Tabs ④/⑥ → 4B; Tabs ⑤/⑦ are static articles). The first swap shows a "Loading X..." banner for ~3-5 seconds.
+When you drive a tab, the server auto-swaps models (tab-switching itself is UI-only) (Tabs 1-3 → 0.6B, Tabs ④/⑤ → 4B; Tab ⑥ is a static article). The first swap shows a "Loading X..." banner for ~3-5 seconds.
 
 ---
 
@@ -73,13 +73,12 @@ When you drive a tab, the server auto-swaps models (tab-switching itself is UI-o
 4. Preset 3 `他打開冰箱,拿出一包` + Send → expect top-10 spread out (candy / chips / chocolate / milk...flat, top-1 barely above 10%), the model is "unsure what comes next"
 5. **Every token the model produces is clickable, not just the first one** — click any of them to see the top-10 bar chart. The "shape comparison" across the three presets is the entire teaching point of Tab ①.
 
-### Tab ② Product Layer — processed vs raw
+### Tab ② Product Layer — how chaining becomes Q&A
 
 1. Switch to Tab ② (0.6B, banner ~3 sec)
-2. Preset 1 `一年有幾個月?` + **raw mode** + Send → watch the model ramble (might say "12 months" plus a bunch of filler)
-3. Same prompt + add system `你是行銷顧問,用條列式回答,只給 3 點。` + **chat mode** + Send → see the "processed" output become a tidy bullet list
-4. Expand "Final prompt sent to model" details → see how `<|im_start|>system\n...<|im_end|>` wraps everything
-5. Try preset 2 "summer drink marketing copy" the same way for contrast
+2. `一年有幾個月?` ("How many months in a year?") + **raw mode** + Send → the model loops on "有沒有其他月份的特殊性?" ("anything else special about the other months?"), the same pure chaining as Lesson 1 — not an answer
+3. Change it to `問:一年有幾個月?\n答:` ("Q: ... A:"), still **raw mode** + Send → it opens with the correct "一年有12个月" but then keeps generating another Q/A round on its own — **just typing two extra characters, "Q:" and "A:", flips it from chaining into answering, but plain text has no stop boundary**
+4. Same `一年有幾個月?`, switch to **chat mode** + Send → a clean answer, no looping; expand "Final prompt sent to model" and see `<|im_start|>user\n...<|im_end|>\n<|im_start|>assistant\n` — the same move as step 3's "Q:"/"A:", just swapped for reserved tokens whose boundary meaning was assigned by training, which is what gives it a clean stop signal
 
 ### Tab ④ Agent — real execution demo
 
@@ -111,8 +110,8 @@ llama-server :8080 (Qwen3 model — auto-swap inside /drive)
 **Core points**:
 - Tabs 1-3: Send → `POST /drive` → server calls llama `/completion` (stream + n_probs) → publishes each token to `/events`, page renders live.
 - Tab ④ Agent: `POST /drive {tab:4}` → server runs a multi-turn agent loop (OpenAI chat completions + tools, real-executes tools, results back into messages) → publishes each turn/final to `/events`.
-- Tab ⑥ Skill: frontend → `/skill-agent` (SSE) → server runs 3-layer progressive disclosure simulator (lazy-loads SKILL.md body + bundled scripts/).
-- Tabs ⑤/⑦: static article only, no model interaction.
+- Tab ⑤ Skill: frontend → `/skill-agent` (SSE) → server runs 3-layer progressive disclosure simulator (lazy-loads SKILL.md body + bundled scripts/).
+- Tab ⑥: static article only, no model interaction.
 - On send, the server compares `GLOBAL_STATE['model']` inside `/drive` and calls `handle_swap` only if needed (`SWAP_LOCK` serializes calls → `pkill` + wait for port to free + `Popen` + poll `/v1/models` until ready ~3-5s); tab-switching itself is UI-only and does not trigger a swap.
 
 ---

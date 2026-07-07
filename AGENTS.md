@@ -3,9 +3,9 @@
 > 中文對照:[AGENTS.zh-TW.md](./AGENTS.zh-TW.md)(same content, for human readers)
 
 This repo is **"LLM, no magic"** — a hands-on, fully-local LLM teaching tool: a web UI
-(tabs ⓪–⑧) served by a stdlib Python server on :9000, driving llama.cpp + Qwen3 GGUF
+(tabs ①–⑥) served by a stdlib Python server on :9000, driving llama.cpp + Qwen3 GGUF
 models on :8080. Tabs ①–④ are interactive (tokens/probabilities, chat template,
-thinking mode, function-calling agent); ⑤–⑧ are articles.
+thinking mode, function-calling agent); ⑤ is an interactive Skill preview; ⑥ is an article.
 
 **This repo supports AI-led teaching.** You (the AI agent) can run the course.
 
