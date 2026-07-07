@@ -34,6 +34,15 @@ Each bridge is the previous lesson's closing prompt, carried into the next lesso
 tab. The pattern is always: **new tab first shows the same text and the same failure, then
 this lesson's feature resolves it.**
 
+**The failure beats are live-verified (0.6B, 2026-07-07):**
+- ①→② `一年有幾個月?` raw → chaining loop (verified earlier this session).
+- ②→③ apple problem on Tab 2 chat mode → muddled *wrong* algebra (lets 兒子=x, 爸爸=x+2=3,
+  heading to 兒子=1; correct is 5), runs out at the 80-token cap. Consistent with the existing
+  Lesson 3 "直答常錯" behavior — the bridge holds ("answers, but wrong").
+- ③→④ `現在幾點?` on Tab 3 thinking → the model visibly reasons *"I don't have a physical
+  clock here… how do I know the current time?"* and invents/assumes one. Strongest of the
+  three; directly motivates Lesson 4's `get_time` tool.
+
 | Transition | Bridge prompt | Previous lesson closes with | Next lesson opens with |
 |---|---|---|---|
 | ①→② | `一年有幾個月?` | Tab 1: drive → chaining loop, never answers | Tab 2 raw → same loop; flip to 產品加工 → answers |
@@ -88,15 +97,26 @@ new tab's prompt field is overwritten with the last-used prompt.
 ## B. Tab 3 probs removal
 
 - **HTML** (`frontend/index{,.zh-TW}.html`): delete the reasoning panel's `.probs-area`
-  `<section>` (the "TOKEN 候選 · top 10" chart).
-- **styles.css**: remove `[data-panel="reasoning"]` from the desktop 2-column grid rule so the
-  reasoning panel flows single-column — prompt on top, thinking + answer below at full width.
-- **app.js `setupPanel`**: guard every `probsEl` use with a null check (the reasoning panel no
-  longer has one), so `renderProbs`/`onInspect`/step-0 rendering no-op there. Render Tab 3
-  tokens as non-interactive (no probability chart to pop), consistent with the tab's focus;
-  reuse the existing `.tok-static` treatment.
-- **demo_tab3.py**: if it clicks tokens or asserts on the probs panel, drop those steps; keep
-  the direct-vs-thinking generation assertions.
+  `<section>` (the "TOKEN 候選 · top 10" chart). **Also fix the grid-specific utility classes
+  left behind on the remaining two children** — the panel currently relies on the desktop
+  2-column grid: `.prompt-area` carries `lg:col-span-2` and the middle thinking/answer
+  wrapper `<div>` carries `mt-8 lg:mt-0`. In single-column layout `lg:col-span-2` is
+  meaningless (drop it) and `lg:mt-0` collapses the wrapper's top margin on desktop so
+  thinking/answer would sit flush against the prompt (change to a plain `mt-8` so the spacing
+  survives). Verified reasoning panel structure: `frontend/index.zh-TW.html:133-166` — three
+  children: `.prompt-area` (134), middle `<div class="mt-8 lg:mt-0 space-y-6">` (152),
+  `.probs-area` (162).
+- **styles.css**: remove `[data-panel="reasoning"]` from the desktop 2-column grid rule
+  (`styles.css:13-27`) so the reasoning panel flows single-column — prompt on top, thinking +
+  answer below at full width. Must be paired with the HTML class fixes above.
+- **app.js `setupPanel`**: guard every `probsEl` use (`probsEl = panel.querySelector(".probs")`
+  at `app.js:202`) with a null check (the reasoning panel no longer has one), so
+  `renderProbs`/`onInspect`/step-0 rendering no-op there. Render Tab 3 tokens as
+  non-interactive (no probability chart to pop), consistent with the tab's focus; reuse the
+  existing `.tok-static` treatment. Note: `appendClickableToken` is currently used for the
+  reasoning panel too, so this needs an explicit branch.
+- **demo_tab3.py**: no change needed — verified it only reads `.thinking-content` and
+  `.generated-text` (`demo_tab3.py:22,33-37`); it never clicks tokens or asserts on `.probs`.
 
 ## Testing / verification
 
