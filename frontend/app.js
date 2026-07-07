@@ -200,7 +200,6 @@ function setupPanel(panel) {
   const stopBtn   = panel.querySelector(".stop");
   const textEl    = panel.querySelector(".generated-text");
   const probsEl   = panel.querySelector(".probs");
-  const systemEl  = panel.querySelector(".system-prompt");           // 只有 advanced panel 有
   const previewEl = panel.querySelector(".final-prompt-preview");    // 只有 advanced / reasoning panel 有
   const thinkingArea = panel.querySelector(".thinking-area");        // 只有 reasoning panel 有
   const thinkingContentEl = panel.querySelector(".thinking-content");
@@ -213,16 +212,14 @@ function setupPanel(panel) {
 
   function buildFinalPrompt() {
     if (panelType === "basic") return promptEl.value;
-    const sys  = (systemEl?.value || "").trim();
     const user = promptEl.value;
-    const sysBlock = sys ? `<|im_start|>system\n${sys}<|im_end|>\n` : "";
-    const chatBase = sysBlock + `<|im_start|>user\n${user}<|im_end|>\n<|im_start|>assistant\n`;
+    const chatBase = `<|im_start|>user\n${user}<|im_end|>\n<|im_start|>assistant\n`;
 
     if (panelType === "advanced") {
       const mode = panel.querySelector('input[name="mode-advanced"]:checked')?.value || "raw";
       if (mode === "raw") return user;
-      // 加工模式預設跳 thinking(乾淨答案)
-      return chatBase + `<think>\n\n</think>\n\n`;
+      // 加工模式預設跳 thinking(乾淨答案);think 標記留給 Lesson 3 再解釋,預覽不顯示
+      return chatBase;
     }
     if (panelType === "reasoning") {
       const mode = panel.querySelector('input[name="mode-reasoning"]:checked')?.value || "direct";
@@ -272,7 +269,6 @@ function setupPanel(panel) {
     // them into this panel's own input fields so the student watches the
     // instrument show the question that was actually asked, not a blank one.
     if (frame.user != null) promptEl.value = frame.user;
-    if (systemEl && frame.system != null) systemEl.value = frame.system;
     if (frame.mode != null) {
       const radio = panel.querySelector(`input[name="mode-${panelType}"][value="${frame.mode}"]`);
       if (radio) radio.checked = true;
@@ -319,7 +315,6 @@ function setupPanel(panel) {
     runBtn.disabled = true;   // disable immediately to avoid double-fire 409
     const payload = { tab: PANEL_TO_TAB[panelType], user: promptEl.value };
     if (panelType === "advanced") {
-      payload.system = systemEl?.value || "";
       payload.mode = panel.querySelector('input[name="mode-advanced"]:checked')?.value || "raw";
     } else if (panelType === "reasoning") {
       payload.mode = panel.querySelector('input[name="mode-reasoning"]:checked')?.value || "direct";
@@ -349,7 +344,6 @@ function setupPanel(panel) {
   if (panelType !== "basic") {
     const updatePreview = () => refreshPreview();
     promptEl.addEventListener("input", updatePreview);
-    systemEl?.addEventListener("input", updatePreview);
     panel.querySelectorAll(`input[name="mode-${panelType}"]`).forEach((r) =>
       r.addEventListener("change", updatePreview)
     );
@@ -612,12 +606,10 @@ function setupAgent(panel) {
 window.addEventListener("DOMContentLoaded", connectEvents);
 
 // Initialize panels — basic/advanced/reasoning go through setupPanel;
-// agent uses setupAgent; skill uses setupSkill; placeholders (script/api/mcp) skip.
+// agent uses setupAgent; skill uses setupSkill; placeholders (mcp) skip.
 // Static-content tabs (no .prompt/.run interactivity → setupPanel skips them):
-// - commands: full article (⑤ Commands, Scripts & APIs)
-// - mcp: full article (⑦ MCP)
-// - recap: series-finale article (⑧ Put it all together)
-const PLACEHOLDER_PANELS = new Set(["commands", "mcp", "recap"]);
+// - mcp: full article (⑥ MCP)
+const PLACEHOLDER_PANELS = new Set(["mcp"]);
 document.querySelectorAll(".tab-panel").forEach((panel) => {
   const id = panel.dataset.panel;
   if (PLACEHOLDER_PANELS.has(id)) return;
@@ -627,7 +619,7 @@ document.querySelectorAll(".tab-panel").forEach((panel) => {
 });
 
 
-// ── Tab 7: Skill preview ─────────────────────────────────────────────
+// ── Tab 5: Skill preview ─────────────────────────────────────────────
 const SKILL_BACKEND_URL = "/skill-agent";
 
 function setupSkill(panel) {
@@ -642,7 +634,7 @@ function setupSkill(panel) {
   const finalEl = panel.querySelector(".skill-final");
   const _isZh2 = LANG.toLowerCase().startsWith("zh");
 
-  // Tab ⑦ always runs with skills. To demo "no skills" contrast, reader
+  // Tab ⑤ always runs with skills. To demo "no skills" contrast, reader
   // switches to Tab ④ Agent (raw function-calling agent, no skill layer).
   const mode = "proper";
   let abortCtl = null;

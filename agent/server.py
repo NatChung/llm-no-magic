@@ -578,7 +578,7 @@ class AgentHandler(SimpleHTTPRequestHandler):
             self.end_headers()
 
     def _handle_skill_agent(self) -> None:
-        """Tab ⑦ preview: skill simulator with naive/proper toggle."""
+        """Tab ⑤ preview: skill simulator with naive/proper toggle."""
         body = self._read_body()
         if body is None:
             return

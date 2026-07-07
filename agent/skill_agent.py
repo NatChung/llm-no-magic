@@ -1,4 +1,4 @@
-"""Skill simulator — Tab ⑦ preview, faithful to Claude Code's 3-layer
+"""Skill simulator — Tab ⑤ preview, faithful to Claude Code's 3-layer
 progressive disclosure pattern.
 
 Layers (per https://platform.claude.com/docs/zh-TW/agents-and-tools/agent-skills/overview):
