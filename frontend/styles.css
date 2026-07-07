@@ -12,16 +12,14 @@
 /* §5.1.2 — Tab 1-3 desktop 2-col grid(prompt-area 全寬,output 左 + probs 右) */
 @media (min-width: 1024px) {
   .tab-panel.active[data-panel="basic"],
-  .tab-panel.active[data-panel="advanced"],
-  .tab-panel.active[data-panel="reasoning"] {
+  .tab-panel.active[data-panel="advanced"] {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 1.75rem;
     row-gap: 2rem;
   }
   .tab-panel.active[data-panel="basic"] > .prompt-area,
-  .tab-panel.active[data-panel="advanced"] > .prompt-area,
-  .tab-panel.active[data-panel="reasoning"] > .prompt-area {
+  .tab-panel.active[data-panel="advanced"] > .prompt-area {
     grid-column: 1 / -1;
   }
 }

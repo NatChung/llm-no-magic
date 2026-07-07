@@ -42,7 +42,7 @@
       },
     };
   </script>
-  <link rel="stylesheet" href="styles.css?v=58">
+  <link rel="stylesheet" href="styles.css?v=59">
 </head>
 <body class="min-h-screen bg-surface text-ink antialiased">
   <div id="swap-banner" class="hidden fixed top-16 left-1/2 -translate-x-1/2 rounded-md bg-final-tint px-4 py-2 text-sm text-final shadow-md z-50">
@@ -131,7 +131,7 @@
        Tab 3: Reasoning — thinking on/off comparison
        ───────────────────────────────────────────────────────────────── -->
   <main class="tab-panel max-w-6xl mx-auto px-4 md:px-8 py-6 md:py-10" data-panel="reasoning">
-    <section class="prompt-area lg:col-span-2 space-y-3">
+    <section class="prompt-area space-y-3">
       <label for="prompt-reasoning" class="block text-sm font-medium text-ink-soft">Classic problem</label>
       <textarea class="prompt w-full max-w-2xl rounded-md border border-edge bg-surface px-3 py-2 text-sm md:text-base font-mono focus:outline-none focus:border-final focus:ring-1 focus:ring-final" id="prompt-reasoning" rows="3" placeholder="爸爸有3顆蘋果,兒子多他2顆。請問兒子幾顆? (Dad has 3 apples, son has 2 more than him. How many does the son have?)">爸爸有3顆蘋果,兒子多他2顆。請問兒子幾顆?</textarea>
 
@@ -149,7 +149,7 @@
         <button class="stop inline-flex items-center px-4 py-2 rounded-md border border-edge text-ink-soft text-sm hover:bg-surface-2 disabled:text-faint disabled:hover:bg-transparent transition-colors" disabled>Stop</button>
       </div>
     </section>
-    <div class="mt-8 lg:mt-0 space-y-6">
+    <div class="mt-8 space-y-6">
       <section class="thinking-area space-y-2 hidden">
         <h2 class="text-xs uppercase tracking-wider text-muted font-medium">📜 Complete model output (the actual stream — includes <code>&lt;think&gt;</code>...<code>&lt;/think&gt;</code>)</h2>
         <div class="thinking-content rounded-md bg-surface-2 border border-edge-soft border-dashed p-4 min-h-[6rem] font-mono text-sm leading-relaxed break-all text-ink-soft"></div>
@@ -159,10 +159,6 @@
         <div class="generated-text rounded-md bg-surface-2 border border-edge-soft p-4 min-h-[6rem] font-mono text-sm md:text-base leading-relaxed break-all"></div>
       </section>
     </div>
-    <section class="probs-area mt-6 lg:mt-0 space-y-2">
-      <h2 class="text-xs uppercase tracking-wider text-muted font-medium">Token candidates · top 10</h2>
-      <div class="probs rounded-md bg-surface border border-edge-soft p-3 min-h-[6rem]"></div>
-    </section>
   </main>
 
   <!-- ─────────────────────────────────────────────────────────────────
@@ -345,6 +341,6 @@
     </div>
   </main>
 
-  <script src="app.js?v=65"></script>
+  <script src="app.js?v=67"></script>
 </body>
 </html>

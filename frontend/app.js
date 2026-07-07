@@ -235,16 +235,20 @@ function setupPanel(panel) {
 
   function appendClickableToken(stepIdx, token, target) {
     const span = document.createElement("span");
-    span.className = "tok";
     span.dataset.step = String(stepIdx);
     span.textContent = token;
-    span.title = t('tok_title', {n: stepIdx + 1});
-    span.addEventListener("click", () => {
-      const s = tokenSteps[stepIdx];
-      if (!s) return;
-      renderProbs(probsEl, s.top_logprobs);
-      highlightStep(stepIdx);
-    });
+    if (probsEl) {
+      span.className = "tok";
+      span.title = t('tok_title', {n: stepIdx + 1});
+      span.addEventListener("click", () => {
+        const s = tokenSteps[stepIdx];
+        if (!s) return;
+        renderProbs(probsEl, s.top_logprobs);
+        highlightStep(stepIdx);
+      });
+    } else {
+      span.className = "tok tok-static";   // reasoning: no probs panel to pop
+    }
     (target || textEl).appendChild(span);
   }
 
@@ -263,7 +267,7 @@ function setupPanel(panel) {
   let isThinkingMode = false;
   function beginRun(frame) {
     runBtn.disabled = true; stopBtn.disabled = false;
-    textEl.textContent = ""; probsEl.innerHTML = "";
+    textEl.textContent = ""; if (probsEl) probsEl.innerHTML = "";
     tokenSteps = [];
     // §3.6 顯示輸入 — drive_start carries the driven user/system/mode; reflect
     // them into this panel's own input fields so the student watches the
@@ -287,10 +291,11 @@ function setupPanel(panel) {
     if (isThinkingMode && trim === "<think>") phase = "in_think";
     else if (isThinkingMode && trim === "</think>") phase = "in_answer";
     else if (phase === "in_answer") appendClickableToken(stepIdx, step.token, textEl);
-    if (stepIdx === 0) { renderProbs(probsEl, step.top_logprobs); highlightStep(0); }
+    if (probsEl && stepIdx === 0) { renderProbs(probsEl, step.top_logprobs); highlightStep(0); }
   }
   function endRun() { runBtn.disabled = false; stopBtn.disabled = true; }
   function onInspect(frame) {
+    if (!probsEl) return;                     // reasoning: no probs panel
     const s = tokenSteps[frame.tokenIndex];
     if (!s) return;
     renderProbs(probsEl, s.top_logprobs);
