@@ -10,12 +10,12 @@ Runs entirely local on your Mac — `llama.cpp` + Qwen3 GGUF models.
 
 ## What you'll see
 
-- **① Basics** — Type something → watch the model emit tokens one at a time + the top-10 probability distribution at each step. Three Chinese presets form a complete teaching arc: `床前明月光,疑是地上` (peaked — the model has this Tang poem memorized → completes `霜` at top-1 94%+), `祖樹星上最高的山叫做` (peaked, but **you made up** the star name — the model still confidently invents an answer → **peaked ≠ truth**), `他打開冰箱,拿出一包` (flat — top-1 barely above 10%, the model has no idea what to fill in). Together they show "confidence ≠ correctness" + "shape of the distribution reflects model certainty".
+- **① Basics** — Type something → watch the model emit tokens one at a time + the top-10 probability distribution at each step. Three Chinese example prompts (you type them into the input box) form a complete teaching arc: `床前明月光,疑是地上` (peaked — the model has this Tang poem memorized → completes `霜` at top-1 94%+), `祖樹星上最高的山叫做` (peaked, but **you made up** the star name — the model still confidently invents an answer → **peaked ≠ truth**), `他打開冰箱,拿出一包` (flat — top-1 barely above 10%, the model has no idea what to fill in). Together they show "confidence ≠ correctness" + "shape of the distribution reflects model certainty".
 - **② Product Layer** — Watch "how chaining becomes Q&A": send the same `一年有幾個月?` ("How many months in a year?") three ways — raw prompt (pure chaining, loops without answering), hand-typed "Q:/A:" (a plain text pattern alone flips it into answer mode, but it spirals into more questions), and the real Qwen3 chat template (swaps in reserved tokens like `<|im_start|>` whose boundary meaning was assigned during training, which is what gives a clean stop signal). The raw-vs-chat-template final prompt stays visible on screen (markers highlighted in blue), showing exactly what the product layer adds.
 - **③ Reasoning** — Thinking on/off. Same question, direct answer vs writing a think block first (effect of reasoning on accuracy).
-- **④ Agent** — Multi-turn function calling. The model emits `<tool_call>` tokens → client parses them → **actually executes** (read/write files, run bash) → result goes back into the conversation → the model continues, until final.
+- **④ Agent** — Multi-turn function calling. The model emits `<tool_call>` tokens → client parses them → **actually executes** (`get_time`, reading the real system clock) → result goes back into the conversation → the model continues, until final.
 
-Tabs 1-3 let you click any token to see the top-10 distribution at that step (bar chart pops up). Tab ④ tokens aren't clickable — instead, expand the "received / sent next" details to see how the chat template text and conversation accumulate.
+Tabs 1-3 let you click any token to see the top-10 distribution at that step (bar chart pops up). Tab ④ tokens aren't clickable — instead, expand the "Received / Sent again" details to see how the chat template text and conversation accumulate.
 
 Each tab also has small `(?)` explainer drop-downs (System prompt, chat template, thinking mode, Agent, tool_call, turn) — click them to read inline definitions while you experiment.
 
@@ -68,10 +68,10 @@ When you drive a tab, the server auto-swaps models (tab-switching itself is UI-o
 ### Tab ① Basics — 60-second comparison
 
 1. Open Tab ① (default active)
-2. Preset 1 `床前明月光,疑是地上` + Send → expect the model to continue with `霜`, top-1 at 94%+ (next-best only 3%, high confidence on familiar text)
-3. Preset 2 `祖樹星上最高的山叫做` + Send → expect the model to confidently invent a fake mountain name, top-1 also high — **same peaked shape, but this time it's made up** (peaked ≠ truth / confidence ≠ correctness)
-4. Preset 3 `他打開冰箱,拿出一包` + Send → expect top-10 spread out (candy / chips / chocolate / milk...flat, top-1 barely above 10%), the model is "unsure what comes next"
-5. **Every token the model produces is clickable, not just the first one** — click any of them to see the top-10 bar chart. The "shape comparison" across the three presets is the entire teaching point of Tab ①.
+2. Type `床前明月光,疑是地上` + Send → expect the model to continue with `霜`, top-1 at 94%+ (next-best only 3%, high confidence on familiar text)
+3. Type `祖樹星上最高的山叫做` + Send → expect the model to confidently invent a fake mountain name, top-1 also high — **same peaked shape, but this time it's made up** (peaked ≠ truth / confidence ≠ correctness)
+4. Type `他打開冰箱,拿出一包` + Send → expect top-10 spread out (candy / chips / chocolate / milk...flat, top-1 barely above 10%), the model is "unsure what comes next"
+5. **Every token the model produces is clickable, not just the first one** — click any of them to see the top-10 bar chart. The "shape comparison" across the three prompts is the entire teaching point of Tab ①.
 
 ### Tab ② Product Layer — how chaining becomes Q&A
 
@@ -83,16 +83,13 @@ When you drive a tab, the server auto-swaps models (tab-switching itself is UI-o
 ### Tab ④ Agent — real execution demo
 
 1. Switch to Tab ④ (you'll see a "Loading 4B..." banner for ~5 sec)
-2. Preset 1 "What time is it?" + Send
+2. Type `現在幾點?` ("What time is it?") + Send
 3. Expected:
-   - Turn 1: model emits token stream (starts with `<tool_call>`) + purple "↑ tool call" block showing `get_time({})` + green "↓ tool result" showing `HH:MM:SS`
+   - Turn 1: model emits token stream (starts with `<tool_call>`) + purple "↑ Tool call" block showing `get_time({})` + green "↓ Tool result" showing `HH:MM:SS`
    - Turn 2: final "現在是 HH:MM:SS"
-4. Expand the per-turn "sent next — prompt accumulated across N turns sent into next model call" details → see how the chat template text and conversation accumulate as next input
+4. Expand the per-turn "Sent again: the prompt sent to the model after accumulating N turn(s)" details → see how the chat template text and conversation accumulate as next input
 
-Three Tab ④ presets:
-- 1. **What time is it?** — `get_time` demo (fastest, 1-2 turns)
-- 2. **Read + write summary** — `read_file` → `write_file` actually writes a file to `~/Desktop/llm-summary.md`
-- 3. **Count .md files** — `exec_bash` runs `find` to actually count files in the repo
+Tab ④ ships exactly one tool: `get_time` (the always-visible "Prompt actually sent to the model" block shows a single-line `<tools>`). Contrast prompt: type a question that needs no tool (e.g. `1+1 等於幾?`) — the model answers directly with **no** tool call; whether to use a tool is the model's own decision.
 
 ---
 

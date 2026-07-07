@@ -10,10 +10,10 @@
 
 ## What you'll see
 
-- **① 基礎** — 打字進去 → 看 model 一個一個吐 token + 每個 token 當下 top-10 機率分佈。中文 preset 3 個有完整教學弧:`床前明月光,疑是地上`(peaked,model 背過整首詩 → 接「霜」top-1 94%+)、`祖樹星上最高的山叫做`(peaked,**你瞎掰**的星球 model 照樣自信編 → **peaked ≠ 真實**)、`他打開冰箱,拿出一包`(flat,top-1 只有一成多,model 不知接啥)。3 個對比展示「confidence ≠ correctness」+「分佈形狀反映 model 把握度」
+- **① 基礎** — 打字進去 → 看 model 一個一個吐 token + 每個 token 當下 top-10 機率分佈。3 個中文範例句(自己打進輸入框)有完整教學弧:`床前明月光,疑是地上`(peaked,model 背過整首詩 → 接「霜」top-1 94%+)、`祖樹星上最高的山叫做`(peaked,**你瞎掰**的星球 model 照樣自信編 → **peaked ≠ 真實**)、`他打開冰箱,拿出一包`(flat,top-1 只有一成多,model 不知接啥)。3 個對比展示「confidence ≠ correctness」+「分佈形狀反映 model 把握度」
 - **② 產品層加工** — 看「接龍怎麼變問答」:同一句 `一年有幾個月?` 三種送法對比 — 裸 prompt(純接龍、跳針不回答)、手打「問:答:」(單純文字 pattern 就讓它切成回答模式,但會失控續問)、真 Qwen3 chat template(換成 `<|im_start|>` 這種訓練賦予邊界意義的保留 token,才有乾淨的停止訊號)。畫面常駐顯示 raw vs chat template 的 final prompt 對照(marker 以藍色標示),看產品層到底加了什麼
 - **③ 推理** — thinking 開關。同題目,直答 vs 寫 think block 後再答(reasoning 對精度的影響)
-- **④ Agent** — multi-turn function calling,model 吐 `<tool_call>` token → client parse → **真的執行**(read/write 檔案、跑 bash)→ 結果塞回對話再吐字,直到 final
+- **④ Agent** — multi-turn function calling,model 吐 `<tool_call>` token → client parse → **真的執行**(`get_time` 查真實系統時間)→ 結果塞回對話再吐字,直到 final
 
 Tab 1-3 點 token 看當下 top-10 機率(bar chart 跳階);Tab ④ token 不 clickable,改展開「收到 / 再送出」details 看 chat template text 跟 conversation 怎麼累積。
 
@@ -65,10 +65,10 @@ LISTEN_HOST=0.0.0.0 nohup python3 -u -m agent.server > /tmp/agent-server.log 2>&
 ### Tab ① 基礎 — 60 秒對比
 
 1. 切到 Tab ① (default active)
-2. preset 1「`床前明月光,疑是地上`」+ 送出 → 預期 model 接「霜」,top-1 94%+(次高才 3%,model 對熟悉文本極高 confidence)
-3. preset 2「`祖樹星上最高的山叫做`」+ 送出 → 預期 model 自信編一個假地名,top-1 也很高 — **同樣 peaked,但這次是瞎掰** (peaked ≠ 真實 / confidence ≠ correctness)
-4. preset 3「`他打開冰箱,拿出一包`」+ 送出 → 預期 top-10 分散(糖果 / 薯片 / 巧克力 / 牛奶...flat,top-1 只一成多),model 表達「不知接啥」
-5. **畫面上生成出來的每個字都能點**,不是只有第一個——點任一 token 看 top-10 bar chart;3 個 preset 的「形狀對比」就是 Tab ① 全部教學
+2. 打「`床前明月光,疑是地上`」+ 送出 → 預期 model 接「霜」,top-1 94%+(次高才 3%,model 對熟悉文本極高 confidence)
+3. 打「`祖樹星上最高的山叫做`」+ 送出 → 預期 model 自信編一個假地名,top-1 也很高 — **同樣 peaked,但這次是瞎掰** (peaked ≠ 真實 / confidence ≠ correctness)
+4. 打「`他打開冰箱,拿出一包`」+ 送出 → 預期 top-10 分散(糖果 / 薯片 / 巧克力 / 牛奶...flat,top-1 只一成多),model 表達「不知接啥」
+5. **畫面上生成出來的每個字都能點**,不是只有第一個——點任一 token 看 top-10 bar chart;3 句的「形狀對比」就是 Tab ① 全部教學
 
 ### Tab ② 產品層加工 — 接龍怎麼變問答
 
@@ -80,16 +80,15 @@ LISTEN_HOST=0.0.0.0 nohup python3 -u -m agent.server > /tmp/agent-server.log 2>&
 ### Tab ④ Agent — 真執行 demo
 
 1. 切到 Tab ④(會看到「載入 4B 中…」banner ~5 秒)
-2. preset 1「現在幾點?」+ 送出
+2. 打「現在幾點?」+ 送出
 3. 預期:
    - Turn 1:model 吐的 token 序列(`<tool_call>` 開頭)+ 紫色「↑ 工具呼叫」block 顯示 `get_time({})` + 綠色「↓ 工具結果」顯示 `HH:MM:SS`
    - Turn 2:final「現在是 HH:MM:SS」
-4. 展開 turn block 內「再送出 — 累積 N turn 後送進下次 model 的 prompt」details → 看 chat template text 跟 conversation 怎麼累積成下次 input
+4. 展開 turn block 內「再送出,累積 N turn 後送進下次 model 的 prompt」details → 看 chat template text 跟 conversation 怎麼累積成下次 input
 
-3 個 Tab ④ preset:
-- 1. **現在幾點?** — `get_time` demo(最快,1-2 turn)
-- 2. **讀+寫 摘要** — `read_file` → `write_file` 真寫一個檔到 `~/Desktop/llm-summary.md`
-- 3. **數 .md 檔** — `exec_bash` 跑 `find` 真數 repo 下檔
+Tab ④ 只掛一個工具:`get_time`(頁面的「實際送進 model 的 prompt」常駐區
+可看到 `<tools>` 只有一行)。對照題:打一句不需要工具的問題(例:`1+1 等於
+幾?`),model 這輪**不**呼叫工具直接答 — 用不用工具是 model 自己決定的。
 
 ---
 

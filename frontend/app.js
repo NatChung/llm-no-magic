@@ -87,16 +87,6 @@ function hideSwapBanner() {
   document.body.classList.remove("swapping");
 }
 
-// 預填的 system prompt — 跟 agent.py SYSTEM_PROMPT 逐字相符(canonical 源 = agent.py)
-// 改這個常數 = 也要改 agent.py SYSTEM_PROMPT,反之亦然
-const AGENT_DEFAULT_SYSTEM = (
-  "You are a helpful assistant with access to tools (get_time, read_file, " +
-  "write_file, exec_bash). Use them when relevant — call get_time for time " +
-  "questions, read_file to read files, write_file to create or modify files, " +
-  "exec_bash to run shell commands. Always call tools first, don't guess. " +
-  "Answer in 繁體中文 when the user writes Chinese."
-);
-
 // ── Render top-K probability bar chart (module-level, 可被多 panel 重用)──
 function renderProbs(probsEl, topLogprobs) {
   if (!topLogprobs || !Array.isArray(topLogprobs)) {
@@ -435,7 +425,6 @@ function setupPanel(panel) {
 
 // ── Tab ④ Agent — 真執行 tool,SSE per-turn render ─────────────────────
 function setupAgent(panel) {
-  const systemEl   = panel.querySelector(".system-prompt");
   const promptEl   = panel.querySelector(".prompt");
   const previewEl  = panel.querySelector(".final-prompt-preview");
   const runBtn     = panel.querySelector(".run");
@@ -443,9 +432,6 @@ function setupAgent(panel) {
   const finalEl    = panel.querySelector(".final-content");
   // Note: Tab ④ 拿掉 probs-area,token 不再 clickable(教學焦點移到 turn-level
   // 累積 prompt,不在 per-token 機率)— renderProbs 仍在 Tab 1-3 用
-
-  // 預填 system prompt
-  if (!systemEl.value) systemEl.value = AGENT_DEFAULT_SYSTEM;
 
   // 即時 preview「實際送到 model 的 prompt」— 跟 Tab 2/3 一致(chat template
   // 包好的 text);呼叫 backend /preview,由 llama.cpp /apply-template 算出。
@@ -456,10 +442,7 @@ function setupAgent(panel) {
       const res = await fetch(AGENT_PREVIEW_URL, {
         method: "POST",
         headers: {"Content-Type": "application/json"},
-        body:   JSON.stringify({
-          system: systemEl.value || AGENT_DEFAULT_SYSTEM,
-          user:   promptEl.value,
-        }),
+        body:   JSON.stringify({ user: promptEl.value }),
       });
       if (!res.ok) { previewEl.textContent = `[preview HTTP ${res.status}]`; return; }
       const d = await res.json();
@@ -475,7 +458,6 @@ function setupAgent(panel) {
     previewTimer = setTimeout(refreshPreview, 300);
   }
   refreshPreview();
-  systemEl.addEventListener("input", debouncedRefreshPreview);
   promptEl.addEventListener("input", debouncedRefreshPreview);
 
   // Per-turn token storage(避免不同 turn 的 token index 衝突)
@@ -653,10 +635,9 @@ function setupAgent(panel) {
   function beginRun(frame) {
     clearAll();
     setRunning(true);
-    // §3.6 顯示輸入 — reflect the driven user/system into the panel's own
+    // §3.6 顯示輸入 — reflect the driven user into the panel's own
     // input fields so the student sees the question that was actually asked.
     if (frame && frame.user != null) { promptEl.value = frame.user; lastPrompt = frame.user; }
-    if (frame && frame.system != null) systemEl.value = frame.system;
     refreshPreview();
   }
   function endRun() { setRunning(false); }
@@ -671,7 +652,7 @@ function setupAgent(panel) {
   function driveAgent() {
     if (!promptEl.value.trim()) return;
     setRunning(true);   // flip to stop-icon immediately, avoid double-fire 409
-    postDrive({ tab: "4", user: promptEl.value, system: systemEl.value })
+    postDrive({ tab: "4", user: promptEl.value })
       .then((r) => { if (!r || !r.ok) setRunning(false); });
   }
 

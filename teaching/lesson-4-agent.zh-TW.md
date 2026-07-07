@@ -33,23 +33,18 @@
   塞回對話 → Turn 2 才答得出來。**XML 標籤只是約定,執行的是 client**;跟上一課對照:同一句
   「現在幾點?」,thinking 只能編,這裡真的拿到了 — 差別就是有沒有工具
 
-### 段落 2 — 數 .md 檔(exec_bash)
-- 預告:「這次它要跑 shell 指令、真的數這個 repo 的檔案。」
-- 驅動:`POST /drive {"tab":"4","user":"數一下這個 repo 底下有幾個 .md 檔"}` → 頁面渲染 turn 軌跡
-- 讀回應:Turn 1 exec_bash 工具呼叫 + 結果 → final answer(N 個 .md 檔)→
-  旁白:學員,點一下展開那個 turn 的「再送出」,看 conversation 怎麼一輪輪累積成下次 input
-
 ## 學員動手
-學員在輸入框**打** `讀 prompts.md,把它總結成 3 點,寫到 ~/Desktop/llm-summary.md`,送出,
-跑完去開 `~/Desktop/llm-summary.md` — **檔案真的在**,
-這就是「動手工具」跟「說話工具」的差別。
+學員在輸入框自己打一句**不需要工具的問題**(例:`1+1 等於幾?`),送出,
+看 turn 軌跡:這次**沒有**紫色「↑ 工具呼叫」,Turn 1 直接就是 final answer。
+對照「現在幾點?」— 同一個 model、同一份 prompt,**要不要用工具是它在
+Turn 1 自己決定的**;這也是為什麼看「↑ 工具呼叫」就能知道它這一輪在幹嘛。
 
 ## 揭曉與回顧(整課收尾 — 對照 Lesson 1 與本課 Hook 答案)
 
 1. **回放 Hook B + 再問一次(after 題)**:Q2 你選「覺得像魔法」的話 — 現在你看過了:
-   read_file 是真的 Python function,`<tool_call>` 是約定標籤,沒有魔法。然後問:
+   get_time 是真的 Python function,`<tool_call>` 是約定標籤,沒有魔法。然後問:
    「**現在再讓你做這個任務(50 份逐字稿),你會怎麼做?**」記下回答,跟他課前 Q3 的回答對照
-2. **50 份逐字稿那題的正解骨架**:Agent(read_file 真讀檔)→ 套摘要範本 → 挑樣本 spot-check →
+2. **50 份逐字稿那題的正解骨架**:Agent(用讀檔工具真讀檔 — 跟今天的 get_time 一樣,是 client 定義的真 function)→ 套摘要範本 → 挑樣本 spot-check →
    要重複用就包成工具
 3. **說話 vs 動手(帶學員把這張表講一遍)**:
    - 說話工具(ChatGPT / Gemini):聊天框餵對 context(SOP/規則)+ 交代紅線 + 核重點。

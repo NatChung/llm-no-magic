@@ -31,7 +31,6 @@ from agent.agent import (
     TOOLS,                 # used by Task 4 (tool dispatch)
     dispatch_tool_call,    # used by Task 4
     TOOL_SCHEMAS,
-    SYSTEM_PROMPT,
     MODEL_NAME,
     LLAMA_URL,
 )
@@ -222,6 +221,17 @@ CANCEL = threading.Event()   # set by POST /stop; checked each token by generato
 GEN_LOCK = threading.Lock()   # serialize /drive: one generation fans out at a time
 MODEL_FOR_TAB = {"1": "0.6B", "2": "0.6B", "3": "0.6B", "4": "4B"}
 
+# Tab ④ 教學用瘦身配置(spec 2026-07-07-tab4-simplify):頁面只教 get_time,
+# system 只留 /no_think。CLI(agent.py)與 Tab ⑤ 仍用完整 SYSTEM_PROMPT /
+# TOOL_SCHEMAS——這裡是唯一縮減的路徑。
+TAB4_TOOL_SCHEMAS = [s for s in TOOL_SCHEMAS if s["function"]["name"] == "get_time"]
+
+
+def tab4_system(system: str) -> str:
+    """Tab ④ system 內容:可選 override + /no_think(Qwen3 documented switch,
+    fallback:enable_thinking:false 在部分 llama.cpp build 壓不住 <think>)。"""
+    return (system.strip() + "\n\n" if system and system.strip() else "") + "/no_think"
+
 
 def agent_loop(system: str, user: str) -> Iterable[dict]:
     """Run multi-turn agent loop against llama. Yields SSE event dicts.
@@ -231,18 +241,14 @@ def agent_loop(system: str, user: str) -> Iterable[dict]:
     tool_calls, emit final and stop.
     """
     messages = [
-        # Qwen3 documented /no_think switch — fallback because
-        # enable_thinking:false does not suppress <think> on some llama.cpp
-        # builds (confirmed smoke 2026-05-27, b9310-e2ef8fe42 build).
-        {"role": "system",
-         "content": (system or SYSTEM_PROMPT) + "\n\n/no_think"},
+        {"role": "system", "content": tab4_system(system)},
         {"role": "user",   "content": user},
     ]
     for turn in range(1, MAX_TURNS + 1):
         resp = requests.post(LLAMA_URL, json={
             "model":       MODEL_NAME,
             "messages":    messages,
-            "tools":       TOOL_SCHEMAS,
+            "tools":       TAB4_TOOL_SCHEMAS,
             "stream":      False,
             "logprobs":    True,
             "top_logprobs": 10,
@@ -287,7 +293,7 @@ def agent_loop(system: str, user: str) -> Iterable[dict]:
             try:
                 tpl_resp = requests.post(LLAMA_TEMPLATE_URL, json={
                     "messages": messages,
-                    "tools":    TOOL_SCHEMAS,
+                    "tools":    TAB4_TOOL_SCHEMAS,
                     "add_generation_prompt": True,
                 }, timeout=5)
                 tpl_resp.raise_for_status()
@@ -650,14 +656,13 @@ class AgentHandler(SimpleHTTPRequestHandler):
             return
 
         messages = [
-            {"role": "system",
-             "content": (body.get("system") or SYSTEM_PROMPT) + "\n\n/no_think"},
+            {"role": "system", "content": tab4_system(body.get("system", ""))},
             {"role": "user",   "content": body.get("user", "")},
         ]
         try:
             resp = requests.post(LLAMA_TEMPLATE_URL, json={
                 "messages": messages,
-                "tools":    TOOL_SCHEMAS,
+                "tools":    TAB4_TOOL_SCHEMAS,
                 "add_generation_prompt": True,
             }, timeout=5)
             resp.raise_for_status()

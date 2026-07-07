@@ -125,6 +125,59 @@ def test_agent_loop_no_tools_yields_turn_then_final(monkeypatch):
     assert events[1] == {"type": "final", "content": "Hello!"}
 
 
+def test_tab4_system_helper():
+    """tab4_system:無 override → 純 /no_think;有 override → 附加在前。"""
+    import agent.server as server
+    assert server.tab4_system("") == "/no_think"
+    assert server.tab4_system("Be brief.") == "Be brief.\n\n/no_think"
+
+
+def test_agent_loop_tab4_slim_prompt(monkeypatch):
+    """Tab ④ 瘦身:tools 只送 get_time;system 沒 override 時內容只剩 /no_think。"""
+    import agent.server as server
+
+    captured = {}
+    def fake_post(url, **kw):
+        if "apply-template" in str(url):
+            return _mock_template_resp(prompt="(stub)")
+        captured["json"] = kw.get("json")
+        return _mock_llama_resp(content="hi", logprobs_content=[])
+    monkeypatch.setattr(server.requests, "post", fake_post)
+
+    list(server.agent_loop("", "現在幾點?"))
+    sent = captured["json"]
+    assert [t["function"]["name"] for t in sent["tools"]] == ["get_time"]
+    assert sent["messages"][0] == {"role": "system", "content": "/no_think"}
+
+
+def test_preview_uses_tab4_slim_config(monkeypatch):
+    """POST /preview 打 /apply-template 帶 get_time-only tools + /no_think system。"""
+    import agent.server as server
+
+    captured = {}
+    def fake_post(url, **kw):
+        captured["json"] = kw.get("json")
+        return _mock_template_resp(prompt="TPL")
+    monkeypatch.setattr(server.requests, "post", fake_post)
+
+    srv, port = _start_server_in_thread()
+    try:
+        req = urllib.request.Request(
+            f"http://127.0.0.1:{port}/preview",
+            data=json.dumps({"user": "現在幾點?"}).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        resp = urllib.request.urlopen(req, timeout=5)
+        assert json.loads(resp.read())["prompt"] == "TPL"
+    finally:
+        srv.shutdown()
+
+    sent = captured["json"]
+    assert [t["function"]["name"] for t in sent["tools"]] == ["get_time"]
+    assert sent["messages"][0]["content"] == "/no_think"
+
+
 def test_do_post_agent_streams_events_via_sse(monkeypatch):
     """End-to-end: POST /agent → SSE body 含 turn_complete + final 兩 frame。"""
     import agent.server as server
