@@ -83,12 +83,20 @@
 .generated-text .echo { color: oklch(65% 0.006 280); }   /* faint */
 .tab-panel[data-panel="basic"] .generated-text .tok { margin-right: 0.15em; }
 
-/* Tab ② segmented switcher(裸 prompt / 產品加工)— 選中段亮 accent tint */
+/* Tab ②③ segmented switcher — 選中段亮 accent tint */
 .mode-switch .mode-opt:has(input:checked) {
   background: oklch(96% 0.045 255);              /* final-tint */
   color: oklch(55% 0.20 255);                    /* final 藍 */
   font-weight: 500;
 }
+
+/* GPT-style 輸入框內圓形按鈕:idle 顯示 send(↑),.running 顯示 stop(■) */
+.run .icon-stop,
+.skill-run .icon-stop { display: none; }
+.run.running .icon-send,
+.skill-run.running .icon-send { display: none; }
+.run.running .icon-stop,
+.skill-run.running .icon-stop { display: block; }
 
 /* §5.1.4 — Tab ④ turn-block 累積 collapse 動畫(JS .classList.toggle("collapsed")) */
 .turn-block {

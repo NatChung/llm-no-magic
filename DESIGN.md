@@ -178,9 +178,15 @@ Mostly flat, with a restrained modern lift: surfaces still separate with a 1px H
 
 ### Buttons
 
-- **Shape:** rounded-md (6px).
-- **Primary ("送出/Send"):** Near-Black Graphite background, Chalk White text, 8px/16px padding. Hover darkens to Soft Graphite. Disabled drops to Faint Ash background. It is the only action button — there is no Stop button; canceling a generation is the AI driver's job (`POST /stop`), not a learner control.
-- **Feel:** plain but present — states are functional signage (disabled looks visibly inert, hover visibly responds), never decorative.
+- **Send/Stop (the only action button):** a GPT-style circular icon button (32px, full-round, Near-Black Graphite bg, Chalk White icon) anchored inside the prompt textarea at its bottom-right. Idle it shows an up-arrow (send); while a generation is running it morphs into a filled square (stop), and clicking it cancels (`POST /stop`, or aborting the SSE on the Skill tab). One control, two states — exactly the convention every AI chat UI has taught users.
+- **The textarea reserves `pr-12` and is `resize-none`** so text never runs under the button and the browser resize grip doesn't collide with it.
+- **Feel:** plain but present — states are functional signage (the icon itself says what the click will do), never decorative.
+
+### Mode switcher (Tab ② / ③)
+
+- **Style:** a two-segment pill control (rounded-lg container, Pale Fog bg, 1px Hairline Gray border, 4px inner padding); each segment is a full-width flat label. Tab ②: 裸 prompt / 產品加工; Tab ③: 直答 / 用 thinking.
+- **Active segment:** Signal Blue text on Signal Blue Tint, weight 500 — driven purely by the hidden radio's `:checked` via `:has()`, so the input semantics stay native.
+- **Below it, always visible:** the "prompt actually sent to the model" block — eyebrow heading, a one-line mode note that switches with the segment, and the marker-highlighted preview. Never collapsed.
 
 ### Tab selector (nav dropdown)
 

@@ -25,6 +25,14 @@ const I18N = {
     'en':    'Processed: the product layer wraps your text in role markers — the blue parts are the added convention.',
     'zh-TW': '加工後:產品層用角色 marker 把你的字包起來 —— 藍色的就是被加上去的約定。',
   },
+  mode_note_direct: {
+    'en':    'Direct: an empty <think></think> is forced in — no room to reason, straight to the answer.',
+    'zh-TW': '直答:強塞一個空的 <think></think>,model 沒空間想、直接吐答案。',
+  },
+  mode_note_thinking: {
+    'en':    'Thinking: the <think> block is left open — the model writes its reasoning as tokens before answering.',
+    'zh-TW': 'thinking:把 <think> 留著開口,model 先把推理寫成 token、再給答案。',
+  },
   turn_subtitle_more: {
     'en':    'The whole turn (model output plus tool results) accumulates into messages and is sent to the model next turn',
     'zh-TW': '整個 turn(model 吐的字 加上 tool 結果)累積進 messages,送進下次 model',
@@ -183,6 +191,16 @@ async function postDrive(payload) {
   }
 }
 
+async function postStop() {
+  try {
+    await fetch("/stop", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: "{}",
+    });
+  } catch (err) { console.error("[stop] failed", err); }
+}
+
 function connectEvents() {
   let active = null;   // the PANELS[tab] entry currently being driven
   const es = new EventSource("/events");
@@ -271,7 +289,15 @@ function setupPanel(panel) {
       const mode = panel.querySelector('input[name="mode-advanced"]:checked')?.value || "raw";
       modeNoteEl.textContent = t(mode === "raw" ? "mode_note_raw" : "mode_note_chat");
     }
+    if (modeNoteEl && panelType === "reasoning") {
+      const mode = panel.querySelector('input[name="mode-reasoning"]:checked')?.value || "direct";
+      modeNoteEl.textContent = t(mode === "direct" ? "mode_note_direct" : "mode_note_thinking");
+    }
   }
+
+  // GPT-style combined button:idle = send(↑),生成中 = stop(■)可按停
+  let running = false;
+  function setRunning(on) { running = on; runBtn.classList.toggle("running", on); }
 
   function appendClickableToken(stepIdx, token, target) {
     const span = document.createElement("span");
@@ -312,7 +338,7 @@ function setupPanel(panel) {
   // ── Relay render callbacks (replace the old self-fetch runCompletion) ──
   let isThinkingMode = false;
   function beginRun(frame) {
-    runBtn.disabled = true;
+    setRunning(true);
     textEl.textContent = ""; if (probsEl) probsEl.innerHTML = "";
     if (captionEl) captionEl.classList.add("hidden");
     tokenSteps = [];
@@ -347,7 +373,7 @@ function setupPanel(panel) {
     else if (phase === "in_answer") appendClickableToken(stepIdx, step.token, textEl);
     if (probsEl && stepIdx === 0) { renderProbs(probsEl, step.top_logprobs); highlightStep(0); }
   }
-  function endRun() { runBtn.disabled = false; }
+  function endRun() { setRunning(false); }
   function onInspect(frame) {
     if (!probsEl) return;                     // reasoning: no probs panel
     const s = tokenSteps[frame.tokenIndex];
@@ -371,7 +397,7 @@ function setupPanel(panel) {
 
   function driveThisPanel() {
     if (!promptEl.value.trim()) return;
-    runBtn.disabled = true;   // disable immediately to avoid double-fire 409
+    setRunning(true);   // flip to stop-icon immediately, avoid double-fire 409
     const payload = { tab: PANEL_TO_TAB[panelType], user: promptEl.value };
     if (panelType === "advanced") {
       payload.mode = panel.querySelector('input[name="mode-advanced"]:checked')?.value || "raw";
@@ -381,14 +407,17 @@ function setupPanel(panel) {
     // Re-enable Send if the drive was rejected (409 busy) or failed (e.g. a
     // 5xx from a swap failure) — no drive_start/final will arrive for it.
     // On 200 (r.ok) final has already re-enabled via onFinal.
-    postDrive(payload).then((r) => { if (!r || !r.ok) runBtn.disabled = false; });
+    postDrive(payload).then((r) => { if (!r || !r.ok) setRunning(false); });
   }
 
   // ── Wire events ────────────────────────────────────────────────────
-  runBtn.addEventListener("click", driveThisPanel);
+  runBtn.addEventListener("click", () => {
+    if (running) { postStop(); setRunning(false); }   // 生成中:按 = 停止
+    else driveThisPanel();
+  });
   promptEl.addEventListener("keydown", (e) => {
     if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
-      if (!promptEl.value.trim() || runBtn.disabled) return;
+      if (!promptEl.value.trim() || running) return;
       driveThisPanel();
     }
   });
@@ -619,16 +648,18 @@ function setupAgent(panel) {
   }
 
   // ── Relay: register so the global /events dispatcher drives this panel ──
+  let running = false;
+  function setRunning(on) { running = on; runBtn.classList.toggle("running", on); }
   function beginRun(frame) {
     clearAll();
-    runBtn.disabled = true;
+    setRunning(true);
     // §3.6 顯示輸入 — reflect the driven user/system into the panel's own
     // input fields so the student sees the question that was actually asked.
     if (frame && frame.user != null) { promptEl.value = frame.user; lastPrompt = frame.user; }
     if (frame && frame.system != null) systemEl.value = frame.system;
     refreshPreview();
   }
-  function endRun() { runBtn.disabled = false; }
+  function endRun() { setRunning(false); }
   PANELS["4"] = {
     onDriveStart: beginRun,
     onTurnComplete: (f) =>
@@ -639,12 +670,15 @@ function setupAgent(panel) {
 
   function driveAgent() {
     if (!promptEl.value.trim()) return;
-    runBtn.disabled = true;   // immediate, avoid double-fire 409
+    setRunning(true);   // flip to stop-icon immediately, avoid double-fire 409
     postDrive({ tab: "4", user: promptEl.value, system: systemEl.value })
-      .then((r) => { if (!r || !r.ok) runBtn.disabled = false; });
+      .then((r) => { if (!r || !r.ok) setRunning(false); });
   }
 
-  runBtn.addEventListener("click", driveAgent);
+  runBtn.addEventListener("click", () => {
+    if (running) { postStop(); setRunning(false); }   // 生成中:按 = 停止
+    else driveAgent();
+  });
 }
 
 // On load: subscribe to the relay. No model swap here — the server swaps
@@ -791,11 +825,13 @@ function setupSkill(panel) {
     return String(s).replace(/[&<>]/g, (c) => ({"&": "&amp;", "<": "&lt;", ">": "&gt;"})[c]);
   }
 
+  let running = false;
+  function setRunning(on) { running = on; runBtn.classList.toggle("running", on); }
   async function run() {
     if (!promptEl.value.trim()) return;
     reset();
 
-    runBtn.disabled = true;
+    setRunning(true);
     abortCtl = new AbortController();
 
     let currentTurn = 0;
@@ -919,12 +955,15 @@ function setupSkill(panel) {
         appendToTurn(currentTurn || 1, `<div class="text-tool text-xs">FETCH ERROR: ${escape(err.message)}</div>`);
       }
     } finally {
-      runBtn.disabled = false;
+      setRunning(false);
       abortCtl = null;
     }
   }
 
-  runBtn.addEventListener("click", run);
+  runBtn.addEventListener("click", () => {
+    if (running) abortCtl?.abort();   // 生成中:按 = 中止 SSE
+    else run();
+  });
   promptEl.addEventListener("keydown", (e) => {
     if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
       e.preventDefault();
