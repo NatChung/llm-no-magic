@@ -149,7 +149,7 @@ def tab4_system(system: str) -> str:
     ]
 ```
 
-(原本 `(system or SYSTEM_PROMPT) + "\n\n/no_think"` 與其上兩行 `/no_think` 註解刪掉——註解已搬進 `tab4_system` docstring)
+(原本的 system 那行與其上**三行** `/no_think` 註解(`# Qwen3 documented …` 起共 3 行)一併刪掉——內容已搬進 `tab4_system` docstring;直接以上面的 code block 為準整段替換即可)
 
 3c. `agent_loop` 內兩處 `"tools": TOOL_SCHEMAS` → `"tools": TAB4_TOOL_SCHEMAS`(主呼叫 約L245 與 next_prompt 的 `/apply-template` 約L290)。
 
@@ -314,7 +314,7 @@ Watch the turn trace: this time there is **no** purple "↑ Tool call" — Turn 
 Contrast with `現在幾點?` — same model, same prompt: **whether to use a tool is the model's own Turn-1 decision.** This is exactly why watching the "↑ Tool call" block tells you what it did this round.
 ```
 
-2c. Reveal item 1 `read_file is a real Python function` → `get_time is a real Python function`;item 2 `Agent (read_file reads files for real)` → `Agent (a file-reading tool reads files for real — a genuine client-defined function, just like today's get_time)`。
+2c. Reveal item 1 `` `read_file` is a real Python function `` → `` `get_time` is a real Python function ``(原文 read_file 帶 backtick,用 substring 比對);item 2 `Agent (read_file reads files for real)` → `Agent (a file-reading tool reads files for real — a genuine client-defined function, just like today's get_time)`。
 
 - [ ] **Step 3: README.md — Tab ④ demo 段**
 
@@ -355,6 +355,7 @@ PRESETS = {
 
 Run: `grep -rn 'llm-summary\|exec_bash\|read_file\|write_file' teaching/*.md README.md README.en.md`
 Expected: 只剩 README `Code tour` 那行(講 `agent.py` CLI 有 4 tools — 仍為事實,保留)。
+註:`agent/SETUP*.md` 刻意不在 grep 範圍——它們描述的是 `agent/smoke.py` 走 CLI(`agent.agent`)的回歸 harness,不受本次 server 端改動影響。
 
 - [ ] **Step 7: Commit**
 
