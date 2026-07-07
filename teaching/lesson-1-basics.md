@@ -7,19 +7,11 @@
 2. Be able to read a top-10 bar chart: peaked (high confidence) vs flat (uncertain what comes next)
 3. Grasp that **peaked ≠ true**: confidence ≠ correctness
 
-## Hook Questions (ask first — no answers yet; record learner responses to revisit in Lesson 4)
+## Opening (no Q&A — go straight into the demo)
 
-Read the scenario to the learner (or show it on screen):
-
-> A customer emails in to complain: the product is defective, they want a refund, and they're clearly annoyed.
-> Your plan: paste the complaint into ChatGPT, ask it to write a sincere apology that doesn't over-promise
-> compensation, glance at it, and send it.
-
-Ask each question in order:
-- **Q1.** Would you send the reply ChatGPT writes directly to the customer? (`Yes, handy / Yes, but I'd re-read it / No / Not sure`)
-- **Q2.** Do you trust it won't spontaneously promise a refund or extra compensation on its own? (`Trust it / Half-trust / Don't trust`)
-- **Q3.** What would you type in the chat box first to get a better reply? (Multiple choice: `Nothing — just paste & ask / Paste in refund policy / SOP / Spell out tone & rules / Never thought about it`)
-- **Q4.** (Optional) How do you actually prompt it today?
+One line of framing: the model generates text "one token at a time," sampling each step from a
+probability distribution; we'll use a top-10 bar chart to read how confident it is — peaked vs
+flat — and the key point: **peaked ≠ true**.
 
 ## Demo Segments
 
@@ -46,8 +38,8 @@ Ask each question in order:
 ## Learner Practice
 Ask learners to try it themselves: type a different prompt and re-run, then click different tokens to see how the distribution shifts. Advanced: type the opening of a fact only their company would know, and watch the model confidently hallucinate (their own made-up planet).
 
-## Reveal & Recap (cross-reference Hook answers)
-- Pull up each learner's Q2 answer, and connect it to Segment 2: the model doesn't over-promise because it's "bad" — it's because **it doesn't have your company's refund policy**. It can only do probability chaining, and it does so with full confidence. Hallucination isn't "ChatGPT can't be trusted" — it's "ChatGPT is missing that piece of knowledge."
+## Reveal & Recap
+- Connect back to Segment 2's made-up planet: if you used this to reply to a customer complaint, it wouldn't over-promise a refund because it's "bad" — it's because **it doesn't have your company's refund policy**. It can only do probability chaining, and it does so with full confidence. Hallucination isn't "ChatGPT can't be trusted" — it's "ChatGPT is missing that piece of knowledge."
 - **Closing chain (sets up the next lesson):** drive Tab ① once more — `POST /drive {"tab":"1","user":"一年有幾個月?"}` ("How many months in a year?"). It's a normal question, but in pure chaining mode the model doesn't *answer* it — it just keeps continuing the text and gets stuck in a loop, never producing "12".
 - **Right after the loop demo, ask the learner (collect a prediction — no answer yet):** "Same chaining engine — how do you think it gets turned into the ChatGPT you know, the one that properly answers a client's question?" Let them guess freely (common guesses: a bigger model, added search, a module that detects questions…). Record their guess — next lesson's demos will confirm or break it. This lands harder than just previewing "there's a hidden layer in between."
 - Tell the learner: **remember this line, `一年有幾個月?` — next lesson the very same line auto-carries with you to the next tab** (it auto-fills the input box when you switch). We'll start from it to see "how chaining becomes Q&A" — and check their guess → Lesson 2
