@@ -33,16 +33,25 @@
   塞回對話 → Turn 2 才答得出來。**XML 標籤只是約定,執行的是 client**;跟上一課對照:同一句
   「現在幾點?」,thinking 只能編,這裡真的拿到了 — 差別就是有沒有工具
 
-### 段落 2 — 數 .md 檔(exec_bash)
+### 段落 2(選配,時間夠才跑)— 數 .md 檔(exec_bash)
+- get_time 已把「tool_call → client 執行 → 塞回」教完;這段教的是同一件事,趕時間直接跳過
 - 預告:「這次它要跑 shell 指令、真的數這個 repo 的檔案。」
 - 驅動:`POST /drive {"tab":"4","user":"數一下這個 repo 底下有幾個 .md 檔"}` → 頁面渲染 turn 軌跡
 - 讀回應:Turn 1 exec_bash 工具呼叫 + 結果 → final answer(N 個 .md 檔)→
   旁白:學員,點一下展開那個 turn 的「再送出」,看 conversation 怎麼一輪輪累積成下次 input
+- **若它把指令寫錯**(實測發生過:find pattern 寫成 `'.md'` 少了 `*`,對著真實的 `0` 自信
+  下結論「沒有 .md 檔」)— 別重跑,這是比成功更好的教材:**工具給它手,沒給它對**;順勢教
+  「為什麼要盯『↑ 工具呼叫』」,再下一句指出錯誤讓它自己修,正好示範 multi-turn 修正
 
 ## 學員動手
 學員在輸入框**打** `讀 prompts.md,把它總結成 3 點,寫到 ~/Desktop/llm-summary.md`,送出,
 跑完去開 `~/Desktop/llm-summary.md` — **檔案真的在**,
 這就是「動手工具」跟「說話工具」的差別。
+
+> 註:system prompt 刻意只點名 get_time(降低第一眼資訊量),但 read_file / write_file /
+> exec_bash 仍在 client 的工具 registry 裡 — 完整定義隨 chat template 的 `<tools>` 區塊
+> 進 prompt,所以這段照樣能跑。「老師只示範一個工具,你動手才發現它還有別的手」是刻意的
+> 驚喜曲線;順勢帶學員看 preview 區的 `<tools>` 區塊:工具清單也只是文字。
 
 ## 揭曉與回顧(整課收尾 — 對照 Lesson 1 與本課 Hook 答案)
 

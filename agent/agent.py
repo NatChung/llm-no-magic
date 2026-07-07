@@ -20,11 +20,9 @@ MODEL_NAME = "qwen3-4b"
 MAX_TURNS = 6  # safety: limit agent loop iterations
 
 SYSTEM_PROMPT = (
-    "You are a helpful assistant with access to tools (get_time, read_file, "
-    "write_file, exec_bash). Use them when relevant — call get_time for time "
-    "questions, read_file to read files, write_file to create or modify files, "
-    "exec_bash to run shell commands. Always call tools first, don't guess. "
-    "Answer in 繁體中文 when the user writes Chinese."
+    "You are a helpful assistant with access to tools. Use them when relevant "
+    "— e.g. call get_time for time questions. Always call tools first, don't "
+    "guess. Answer in 繁體中文 when the user writes Chinese."
 )
 
 # Tool schemas (OpenAI function calling format) — sent to llama-server in each request

@@ -90,11 +90,9 @@ function hideSwapBanner() {
 // 預填的 system prompt — 跟 agent.py SYSTEM_PROMPT 逐字相符(canonical 源 = agent.py)
 // 改這個常數 = 也要改 agent.py SYSTEM_PROMPT,反之亦然
 const AGENT_DEFAULT_SYSTEM = (
-  "You are a helpful assistant with access to tools (get_time, read_file, " +
-  "write_file, exec_bash). Use them when relevant — call get_time for time " +
-  "questions, read_file to read files, write_file to create or modify files, " +
-  "exec_bash to run shell commands. Always call tools first, don't guess. " +
-  "Answer in 繁體中文 when the user writes Chinese."
+  "You are a helpful assistant with access to tools. Use them when relevant " +
+  "— e.g. call get_time for time questions. Always call tools first, don't " +
+  "guess. Answer in 繁體中文 when the user writes Chinese."
 );
 
 // ── Render top-K probability bar chart (module-level, 可被多 panel 重用)──

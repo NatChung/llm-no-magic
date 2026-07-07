@@ -28,14 +28,18 @@ Read this scenario aloud to participants:
 - Drive: `POST /drive {"tab":"4","user":"現在幾點?"}` → the page auto-switches to Tab ④ and renders; **the first drive triggers a 0.6B→4B swap — the loading banner runs 3-5 s** (the swap happens inside `/drive`; the page shows the banner on `swap_start`)
 - Read: the turn trace — Turn 1 purple "↑ Tool call get_time" → green "↓ Tool result" → Turn 2's final answer (the current time, HH:MM:SS) → Debrief: Turn 1 — model outputs `<tool_call>{"name":"get_time"…}` → client actually runs Python to get the time → feeds result back into the conversation → Turn 2 can now answer. **The XML tag is just a convention; the client is what executes.** Contrast with last lesson: the same line, `現在幾點?` — thinking could only make one up, here it really got it — the difference is simply having a tool.
 
-### Segment 2 — Count .md files (exec_bash)
+### Segment 2 (optional — run only if time allows) — Count .md files (exec_bash)
+- get_time already taught the full "tool_call → client executes → result fed back" loop; this segment teaches the same thing, so skip it when short on time
 - Preview: "This time it will run a shell command and actually count files in this repo."
 - Drive: `POST /drive {"tab":"4","user":"數一下這個 repo 底下有幾個 .md 檔"}` → the page renders the turn trace
 - Read: Turn 1 exec_bash tool call + its result → the final answer (N .md files) → Debrief: narration — student, click to expand that turn's "resend" details, and watch how the conversation accumulates round by round to become the next input.
+- **If it writes the command wrong** (observed live: find pattern written as `'.md'`, missing the `*` — it then confidently concluded "no .md files" from a genuine `0`) — don't rerun; this is better teaching material than success: **tools give it hands, not correctness.** Use it to teach "why you watch the '↑ Tool call' block", then point out the mistake in the next message and let it fix itself — a live demo of multi-turn correction
 
 ## Hands-On
 Have participants type this prompt themselves into the input box: `讀 prompts.md,把它總結成 3 點,寫到 ~/Desktop/llm-summary.md` — submit it. When it finishes, open `~/Desktop/llm-summary.md` — **the file is really there.**
 That is the difference between a "doing tool" and a "speaking tool."
+
+> Note: the system prompt deliberately names only get_time (to keep the first look light), but read_file / write_file / exec_bash are still in the client's tool registry — their full definitions ride into the prompt via the chat template's `<tools>` block, so this hands-on works as-is. "The teacher demoed one tool; you discover it has more hands" is an intentional surprise curve; use the moment to point at the `<tools>` block in the preview area: the tool list is also just text.
 
 ## Reveal and Wrap-Up (whole-course close — compare against Lesson 1 and this lesson's Hook answers)
 
