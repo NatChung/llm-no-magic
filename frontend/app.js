@@ -745,10 +745,10 @@ function setupAgent(panel) {
 window.addEventListener("DOMContentLoaded", connectEvents);
 
 // Initialize panels — basic/advanced/reasoning go through setupPanel;
-// agent uses setupAgent; placeholders (skill/mcp) skip.
-// ⑤ Skill / ⑥ MCP 目前在 main 是「即將推出」placeholder(demo model 載不動
-// skill,內容移到 feature branch 打磨)— setupSkill 保留,完工後移回即可。
-const PLACEHOLDER_PANELS = new Set(["skill", "mcp"]);
+// agent uses setupAgent; skill uses setupSkill; placeholders (mcp) skip.
+// Static-content tabs (no .prompt/.run interactivity → setupPanel skips them):
+// - mcp: full article (⑥ MCP)
+const PLACEHOLDER_PANELS = new Set(["mcp"]);
 document.querySelectorAll(".tab-panel").forEach((panel) => {
   const id = panel.dataset.panel;
   if (PLACEHOLDER_PANELS.has(id)) return;
