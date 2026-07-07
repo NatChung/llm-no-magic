@@ -85,12 +85,6 @@
 .tok.tok-static { cursor: default; padding: 0; }
 .tok.tok-static:hover { background: transparent; }
 
-/* Tab ① preset chips — 選中(prompt 內容 == chip 的 data-fill)時亮 accent */
-.preset-chip.chip-active {
-  color: oklch(55% 0.20 255);                   /* final 藍 */
-  border-color: oklch(55% 0.20 255);
-}
-
 /* Tab ① 輸出框:prompt 回聲(灰)+ 生成 token 間距(mockup:字距拉開好點按) */
 .generated-text .echo { color: oklch(65% 0.006 280); }   /* faint */
 .tab-panel[data-panel="basic"] .generated-text .tok { margin-right: 0.15em; }

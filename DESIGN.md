@@ -203,12 +203,6 @@ Mostly flat, with a restrained modern lift: surfaces still separate with a 1px H
 - **Label/Percent:** monospace, tabular-nums on the percentage so columns of numbers stay aligned — this is a data component first, decoration never.
 - **Caption:** below the output box, a quiet muted line `└ 正在看第 N 個 token「X」的分布` tells the reader which token's distribution the chart is showing; it updates on every token click/inspect.
 
-### Preset chips (Tab ①)
-
-- **Style:** pill buttons (rounded-full, 1px Hairline Gray border, Chalk White bg, Soft Graphite text) under the prompt box — one per teaching preset (唐詩背誦 / 瞎掰的星球 / 打開冰箱).
-- **Active:** when the prompt content equals a chip's preset text, that chip turns Signal Blue (text + border) — a live reflection of the input, not a separate selection state.
-- **Behavior:** clicking fills the prompt (and syncs the carry-over `lastPrompt`).
-
 ### Output box (Tab ①)
 
 - **Prompt echo:** each run starts by echoing the prompt in Faint Ash inside the output box; generated tokens append after it — the box itself demonstrates "chaining continues your text."
