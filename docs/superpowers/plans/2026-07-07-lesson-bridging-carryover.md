@@ -83,7 +83,29 @@ In `setupPanel` (`frontend/app.js`), `probsEl` comes from `panel.querySelector("
 
 - In `onTokenStep`, the step-0 render `if (stepIdx === 0) { renderProbs(probsEl, step.top_logprobs); highlightStep(0); }` → guard: `if (probsEl && stepIdx === 0) { renderProbs(probsEl, step.top_logprobs); highlightStep(0); }`.
 - In `onInspect`, wrap the `renderProbs(probsEl, s.top_logprobs); highlightStep(...)` calls in `if (probsEl) { ... }`.
-- Where reasoning tokens are appended (`appendClickableToken`), render them non-interactive when there is no probs panel. Simplest: in `appendClickableToken`, add the `tok-static` class (and skip the click handler) when `!probsEl`. Concretely, gate the click wiring: `if (probsEl) { span.classList.add("tok"); span.addEventListener("click", ...); } else { span.classList.add("tok", "tok-static"); }` — keep whatever existing structure builds the span, only the clickable/inspect wiring is conditional.
+- Rewrite `appendClickableToken` (currently `app.js:236-249`) so the class and click wiring are BOTH gated on `probsEl` — do not leave the unconditional `span.className = "tok"` at line 238. Replace the whole function body:
+
+  ```js
+  function appendClickableToken(stepIdx, token, target) {
+    const span = document.createElement("span");
+    span.dataset.step = String(stepIdx);
+    span.textContent = token;
+    if (probsEl) {
+      span.className = "tok";
+      span.title = t('tok_title', {n: stepIdx + 1});
+      span.addEventListener("click", () => {
+        const s = tokenSteps[stepIdx];
+        if (!s) return;
+        renderProbs(probsEl, s.top_logprobs);
+        highlightStep(stepIdx);
+      });
+    } else {
+      span.className = "tok tok-static";   // reasoning: no probs panel to pop
+    }
+    (target || textEl).appendChild(span);
+  }
+  ```
+  `highlightStep` still queries `.tok` (line ~254), so `tok-static` tokens remain harmless there (they're never clicked, never highlighted).
 
 - [ ] **Step 5: Bump the cache-bust in both HTML files**
 
@@ -96,7 +118,7 @@ Expected: `93 passed`
 
 - [ ] **Step 7: Verify — Tab 3 renders single-column, no probs, tokens static, generation works**
 
-With the server up and a subscribed browser tab, drive Tab 3 and inspect via playwright/eval:
+**First hard-reload the driven browser tab** (the `?v=66` cache-bust changed `app.js`; without a reload the eval runs against stale JS and gives a false result). With the server up and a subscribed browser tab, drive Tab 3 and inspect via playwright/eval:
 
 ```bash
 curl -s -X POST http://localhost:9000/drive -H 'Content-Type: application/json' \
@@ -130,7 +152,7 @@ Add the `lastPrompt` carry so clicking into tabs 1–4 overwrites the destinatio
 - Modify: `frontend/index.html`, `frontend/index.zh-TW.html` (cache-bust bump only)
 
 **Interfaces:**
-- Consumes: `PANEL_TO_TAB` (`app.js:109`), `activateTabUI` (`app.js:115`), the tab-button click loop (`app.js:193`). Task 1's reasoning panel still has a `.prompt`.
+- Consumes: `PANEL_TO_TAB` (`app.js:109`), `activateTabUI` (`app.js:115`), the tab-button click loop (`app.js:192-194`). Task 1's reasoning panel still has a `.prompt`.
 - Produces: module-level `let lastPrompt` and `function carryPromptInto(panelName)`. No later task depends on these.
 
 - [ ] **Step 1: Add `lastPrompt` state + a global input listener + `carryPromptInto`**
@@ -201,7 +223,7 @@ Change `app.js?v=66` → `app.js?v=67` in `index.html` and `index.zh-TW.html`.
 
 - [ ] **Step 6: Verify — carry-over works by hand-clicking tabs**
 
-Server up + subscribed browser tab. In the browser (playwright `browser_evaluate`), simulate the bridge: type on Tab 1, click Tab 2, assert it carried:
+**First hard-reload the driven browser tab** (the `?v=67` cache-bust changed `app.js`; a stale tab would run the old JS with no carry-over and fail this check for the wrong reason). Server up + subscribed browser tab. In the browser (playwright `browser_evaluate`), simulate the bridge: type on Tab 1, click Tab 2, assert it carried:
 
 ```js
 () => {
