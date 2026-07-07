@@ -1,0 +1,139 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-07-07T00:00:00Z",
+  "title": "Design System: LLM, no magic",
+  "extensions": {
+    "colorMeta": {
+      "ink": { "role": "neutral", "displayName": "Near-Black Graphite", "canonical": "oklch(20% 0.012 280)", "tonalRamp": ["oklch(15% 0.008 280)", "oklch(25% 0.010 280)", "oklch(35% 0.010 280)", "oklch(45% 0.009 280)", "oklch(55% 0.008 280)", "oklch(68% 0.007 280)", "oklch(82% 0.006 280)", "oklch(95% 0.005 280)"] },
+      "ink-soft": { "role": "neutral", "displayName": "Soft Graphite", "canonical": "oklch(34% 0.010 280)" },
+      "muted": { "role": "neutral", "displayName": "Quiet Slate", "canonical": "oklch(50% 0.008 280)" },
+      "faint": { "role": "neutral", "displayName": "Faint Ash", "canonical": "oklch(65% 0.006 280)" },
+      "surface": { "role": "neutral", "displayName": "Chalk White", "canonical": "oklch(99% 0.005 280)" },
+      "surface-2": { "role": "neutral", "displayName": "Pale Fog", "canonical": "oklch(96% 0.006 280)" },
+      "edge": { "role": "neutral", "displayName": "Hairline Gray", "canonical": "oklch(90% 0.006 280)" },
+      "edge-soft": { "role": "neutral", "displayName": "Whisper Gray", "canonical": "oklch(94% 0.006 280)" },
+      "final": { "role": "primary", "displayName": "Signal Blue", "canonical": "oklch(50% 0.17 250)", "tonalRamp": ["oklch(15% 0.06 250)", "oklch(28% 0.12 250)", "oklch(38% 0.15 250)", "oklch(50% 0.17 250)", "oklch(62% 0.14 250)", "oklch(74% 0.10 250)", "oklch(86% 0.06 250)", "oklch(96% 0.038 250)"] },
+      "final-tint": { "role": "primary", "displayName": "Signal Blue Tint", "canonical": "oklch(96% 0.038 250)" },
+      "tool": { "role": "secondary", "displayName": "Call Violet", "canonical": "oklch(54% 0.22 320)", "tonalRamp": ["oklch(15% 0.07 320)", "oklch(28% 0.14 320)", "oklch(40% 0.19 320)", "oklch(54% 0.22 320)", "oklch(66% 0.17 320)", "oklch(78% 0.11 320)", "oklch(88% 0.06 320)", "oklch(96% 0.030 320)"] },
+      "tool-tint": { "role": "secondary", "displayName": "Call Violet Tint", "canonical": "oklch(96% 0.030 320)" },
+      "result": { "role": "tertiary", "displayName": "Return Green", "canonical": "oklch(50% 0.15 145)", "tonalRamp": ["oklch(15% 0.05 145)", "oklch(28% 0.09 145)", "oklch(38% 0.12 145)", "oklch(50% 0.15 145)", "oklch(62% 0.12 145)", "oklch(74% 0.09 145)", "oklch(86% 0.05 145)", "oklch(96% 0.026 145)"] },
+      "result-tint": { "role": "tertiary", "displayName": "Return Green Tint", "canonical": "oklch(96% 0.026 145)" }
+    },
+    "typographyMeta": {
+      "headline": { "displayName": "Headline", "purpose": "Page title only (\"LLM, no magic\")." },
+      "title": { "displayName": "Title", "purpose": "Section/tab-level headers." },
+      "body": { "displayName": "Body", "purpose": "Default for labels, buttons, textareas, prose." },
+      "label": { "displayName": "Label", "purpose": "Uppercase section eyebrows above content blocks." },
+      "mono": { "displayName": "Mono", "purpose": "Token text, probabilities, prompt/template previews — anything that is literal model output or a number." }
+    },
+    "shadows": [
+      { "name": "ambient-low", "value": "0 1px 3px oklch(20% 0.012 280 / 0.08)", "purpose": "Hover/active lift on turn-blocks and output panels — detach without floating." },
+      { "name": "toast", "value": "0 4px 12px oklch(20% 0.012 280 / 0.15)", "purpose": "Page-level floating notices (model-swap banner). Only tier that fully detaches from the document." }
+    ],
+    "motion": [
+      { "name": "bar-fill", "value": "width 0.15s ease", "purpose": "Probability bar fill animating to its measured width." },
+      { "name": "turn-collapse", "value": "max-height 0.2s cubic-bezier(0.22, 1, 0.36, 1)", "purpose": "Agent turn-block expand/collapse." },
+      { "name": "token-hover", "value": "background 0.1s ease", "purpose": "Token chip hover/selected background fade." }
+    ],
+    "breakpoints": [
+      { "name": "lg", "value": "1024px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Send/submit action across Tabs 1-4.",
+      "html": "<button class=\"ds-btn-primary\">送出</button>",
+      "css": ".ds-btn-primary { background: oklch(20% 0.012 280); color: oklch(99% 0.005 280); padding: 8px 16px; border-radius: 6px; font-size: 0.875rem; font-weight: 500; border: none; transition: background 0.15s ease; } .ds-btn-primary:hover { background: oklch(34% 0.010 280); } .ds-btn-primary:disabled { background: oklch(65% 0.006 280); cursor: not-allowed; }"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Stop action; also the general outline-button pattern.",
+      "html": "<button class=\"ds-btn-secondary\">停</button>",
+      "css": ".ds-btn-secondary { background: oklch(99% 0.005 280); color: oklch(34% 0.010 280); border: 1px solid oklch(90% 0.006 280); border-radius: 6px; padding: 8px 16px; font-size: 0.875rem; transition: background 0.15s ease, color 0.15s ease; } .ds-btn-secondary:hover:not(:disabled) { background: oklch(96% 0.006 280); } .ds-btn-secondary:disabled { color: oklch(65% 0.006 280); cursor: not-allowed; }"
+    },
+    {
+      "name": "Tab",
+      "kind": "nav",
+      "refersTo": "tab-active",
+      "description": "Top nav item; active tab gets the Signal Blue underline.",
+      "html": "<button class=\"ds-tab ds-tab-active\">① 基礎</button>",
+      "css": ".ds-tab { background: none; border: none; border-bottom: 2px solid transparent; color: oklch(50% 0.008 280); font-size: 0.9375rem; padding: 12px 20px; cursor: pointer; transition: color 0.15s ease; } .ds-tab:hover { color: oklch(20% 0.012 280); } .ds-tab-active { color: oklch(20% 0.012 280); border-bottom-color: oklch(50% 0.17 250); }"
+    },
+    {
+      "name": "Token Chip",
+      "kind": "chip",
+      "refersTo": "token-chip",
+      "description": "Clickable generated token; selected state shows its probability chart.",
+      "html": "<span class=\"ds-token ds-token-selected\">霜</span>",
+      "css": ".ds-token { cursor: pointer; padding: 0 1px; border-radius: 2px; transition: background 0.1s ease; } .ds-token:hover { background: oklch(95% 0.012 280); } .ds-token-selected { background: oklch(88% 0.08 250); box-shadow: 0 0 0 1px oklch(50% 0.17 250) inset; }"
+    },
+    {
+      "name": "Probability Bar Row",
+      "kind": "custom",
+      "refersTo": "probability-bar-track",
+      "description": "Signature component: one row of the top-10 probability bar chart.",
+      "html": "<div class=\"ds-bar-row\"><span class=\"ds-bar-label\">霜</span><div class=\"ds-bar-track\"><div class=\"ds-bar-fill\" style=\"width:94.7%\"></div></div><span class=\"ds-bar-pct\">94.7%</span></div>",
+      "css": ".ds-bar-row { display: grid; grid-template-columns: 6.5rem 1fr 3.5rem; gap: 0.6rem; align-items: center; padding: 0.2rem 0; font-size: 0.85rem; } .ds-bar-label { font-family: ui-monospace, \"SF Mono\", Menlo, monospace; color: oklch(34% 0.010 280); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .ds-bar-track { height: 0.7rem; background: oklch(96% 0.006 280); border-radius: 999px; overflow: hidden; } .ds-bar-fill { height: 100%; background: oklch(50% 0.17 250); border-radius: 999px; transition: width 0.15s ease; } .ds-bar-pct { font-family: ui-monospace, \"SF Mono\", Menlo, monospace; font-variant-numeric: tabular-nums; font-size: 0.78rem; color: oklch(50% 0.008 280); text-align: right; }"
+    },
+    {
+      "name": "Tool Call Block",
+      "kind": "custom",
+      "refersTo": "components.turn-block-tool-call",
+      "description": "Signature component: Tab ④ agent tool-call turn block.",
+      "html": "<div class=\"ds-turn-call\">↑ 工具呼叫 get_time({})</div>",
+      "css": ".ds-turn-call { background: oklch(96% 0.030 320); color: oklch(54% 0.22 320); border-radius: 6px; padding: 10px 14px; font-size: 0.875rem; font-family: ui-monospace, \"SF Mono\", Menlo, monospace; }"
+    },
+    {
+      "name": "Tool Result Block",
+      "kind": "custom",
+      "refersTo": "components.turn-block-tool-result",
+      "description": "Signature component: Tab ④ agent tool-result turn block, answers a Tool Call Block.",
+      "html": "<div class=\"ds-turn-result\">↓ 工具結果 14:32:07</div>",
+      "css": ".ds-turn-result { background: oklch(96% 0.026 145); color: oklch(50% 0.15 145); border-radius: 6px; padding: 10px 14px; font-size: 0.875rem; font-family: ui-monospace, \"SF Mono\", Menlo, monospace; }"
+    },
+    {
+      "name": "Swap Toast",
+      "kind": "custom",
+      "refersTo": "components.swap-toast",
+      "description": "Signature component: floating model-swap loading indicator. Only element allowed to shadow-float above content.",
+      "html": "<div class=\"ds-toast\"><span class=\"ds-toast-dot\"></span>載入 4B 中…</div>",
+      "css": ".ds-toast { display: inline-flex; align-items: center; gap: 8px; background: oklch(96% 0.038 250); color: oklch(50% 0.17 250); border-radius: 999px; padding: 8px 16px; font-size: 0.875rem; box-shadow: 0 4px 12px oklch(20% 0.012 280 / 0.15); } .ds-toast-dot { width: 6px; height: 6px; border-radius: 999px; background: oklch(50% 0.17 250); animation: ds-pulse 1.5s ease-in-out infinite; } @keyframes ds-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Teaching Whiteboard",
+    "overview": "The interface is a whiteboard, not a stage. It stays quiet by default so the model's actual behavior — the tokens, the probability bars, the tool calls — reads as the content, not the UI around it. Color and elevation are reserved for the moments something real is happening: a token is selected, a probability bar fills in, a tool call fires, a result comes back. Everything else stays in a tight, cool-neutral grayscale so those moments read as signal, not noise.\n\nThis system explicitly rejects generic SaaS marketing chrome (gradient heroes, icon+heading+text cards), gamified flourish (badges, celebratory motion, progress-bar theatrics), and enterprise-dashboard cliché (navy-and-cream, dense identical card grids). Nothing here should look decorative — a tool whose whole premise is \"no magic\" cannot have UI chrome that performs sophistication it doesn't need.",
+    "keyCharacteristics": [
+      "Cool-neutral grayscale base (all neutrals share a 280° hue tint) with three semantic accents, never a decorative one",
+      "Flat by default; a light elevation tier is reserved for surfaces that need to visually detach (hover states, the model-swap toast)",
+      "Monospace reserved for anything that is literally model output or a number (tokens, probabilities, prompts)",
+      "One accent per meaning: blue = primary interaction, violet = tool call, green = tool result — never mixed"
+    ],
+    "rules": [
+      { "name": "The One Meaning Rule", "body": "Signal Blue, Call Violet, and Return Green each mean exactly one thing. None of the three is ever reused as a decorative accent, a \"brand\" color, or a fourth meaning.", "section": "colors" },
+      { "name": "The Rarity Rule", "body": "Across any given screen, colored surface area (all three accents plus tints combined) stays under 10%. The whiteboard is the point; color is the exception that proves something is happening.", "section": "colors" },
+      { "name": "The Flat Scale Warning", "body": "Today's type hierarchy sits mostly within a narrow 0.75–0.875rem band. Legible but nearly flat — look for a legitimate Title-level moment before defaulting back to Body everywhere.", "section": "typography" },
+      { "name": "The Two-Tier Rule", "body": "There are exactly two shadow tiers: ambient-low for in-flow hover/active feedback, toast for anything that floats above the page. Nothing else gets a shadow.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do keep all neutrals tinted to the same 280° hue — never mix in a pure-gray or a different hue of neutral.",
+      "Do keep Signal Blue / Call Violet / Return Green each locked to their one meaning (interaction / tool-call / tool-result).",
+      "Do switch to monospace the moment content is literal model output or a number that needs to line up.",
+      "Do use borders, not shadows, for surfaces at rest; reserve shadow for the two named tiers.",
+      "Do respect prefers-reduced-motion on every transition."
+    ],
+    "donts": [
+      "Don't add gradient hero sections, big rounded icon+heading+text marketing cards, or any generic SaaS landing-page chrome.",
+      "Don't add gamified flourish: colorful badges, progress-bar celebration animations, confetti, or playful mascots.",
+      "Don't reach for an enterprise-dashboard palette (navy + cream) or dense grids of identical cards.",
+      "Don't use border-left/border-right as a colored accent stripe on any card, list item, or callout.",
+      "Don't use gradient text, glassmorphism-as-default, or the SaaS hero-metric template.",
+      "Don't let the three accent colors exceed roughly 10% combined surface area on any one screen."
+    ]
+  }
+}
