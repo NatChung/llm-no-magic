@@ -89,10 +89,7 @@ When you drive a tab, the server auto-swaps models (tab-switching itself is UI-o
    - Turn 2: final "現在是 HH:MM:SS"
 4. Expand the per-turn "sent next — prompt accumulated across N turns sent into next model call" details → see how the chat template text and conversation accumulate as next input
 
-Three Tab ④ presets:
-- 1. **What time is it?** — `get_time` demo (fastest, 1-2 turns)
-- 2. **Read + write summary** — `read_file` → `write_file` actually writes a file to `~/Desktop/llm-summary.md`
-- 3. **Count .md files** — `exec_bash` runs `find` to actually count files in the repo
+Tab ④ ships exactly one tool: `get_time` (the always-visible "Prompt actually sent to the model" block shows a single-line `<tools>`). Contrast prompt: type a question that needs no tool (e.g. `1+1 等於幾?`) — the model answers directly with **no** tool call; whether to use a tool is the model's own decision.
 
 ---
 

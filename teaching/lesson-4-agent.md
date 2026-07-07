@@ -28,24 +28,16 @@ Read this scenario aloud to participants:
 - Drive: `POST /drive {"tab":"4","user":"現在幾點?"}` → the page auto-switches to Tab ④ and renders; **the first drive triggers a 0.6B→4B swap — the loading banner runs 3-5 s** (the swap happens inside `/drive`; the page shows the banner on `swap_start`)
 - Read: the turn trace — Turn 1 purple "↑ Tool call get_time" → green "↓ Tool result" → Turn 2's final answer (the current time, HH:MM:SS) → Debrief: Turn 1 — model outputs `<tool_call>{"name":"get_time"…}` → client actually runs Python to get the time → feeds result back into the conversation → Turn 2 can now answer. **The XML tag is just a convention; the client is what executes.** Contrast with last lesson: the same line, `現在幾點?` — thinking could only make one up, here it really got it — the difference is simply having a tool.
 
-### Segment 2 (optional — run only if time allows) — Count .md files (exec_bash)
-- get_time already taught the full "tool_call → client executes → result fed back" loop; this segment teaches the same thing, so skip it when short on time
-- Preview: "This time it will run a shell command and actually count files in this repo."
-- Drive: `POST /drive {"tab":"4","user":"數一下這個 repo 底下有幾個 .md 檔"}` → the page renders the turn trace
-- Read: Turn 1 exec_bash tool call + its result → the final answer (N .md files) → Debrief: narration — student, click to expand that turn's "resend" details, and watch how the conversation accumulates round by round to become the next input.
-- **If it writes the command wrong** (observed live: find pattern written as `'.md'`, missing the `*` — it then confidently concluded "no .md files" from a genuine `0`) — don't rerun; this is better teaching material than success: **tools give it hands, not correctness.** Use it to teach "why you watch the '↑ Tool call' block", then point out the mistake in the next message and let it fix itself — a live demo of multi-turn correction
-
 ## Hands-On
-Have participants type this prompt themselves into the input box: `讀 prompts.md,把它總結成 3 點,寫到 ~/Desktop/llm-summary.md` — submit it. When it finishes, open `~/Desktop/llm-summary.md` — **the file is really there.**
-That is the difference between a "doing tool" and a "speaking tool."
-
-> Note: the system prompt deliberately names only get_time (to keep the first look light), but read_file / write_file / exec_bash are still in the client's tool registry — their full definitions ride into the prompt via the chat template's `<tools>` block, so this hands-on works as-is. "The teacher demoed one tool; you discover it has more hands" is an intentional surprise curve; use the moment to point at the `<tools>` block in the preview area: the tool list is also just text.
+Have participants type **a question that needs no tool** (e.g. `1+1 等於幾?`) into the input box themselves and submit it.
+Watch the turn trace: this time there is **no** purple "↑ Tool call" — Turn 1 goes straight to the final answer.
+Contrast with `現在幾點?` — same model, same prompt: **whether to use a tool is the model's own Turn-1 decision.** This is exactly why watching the "↑ Tool call" block tells you what it did this round.
 
 ## Reveal and Wrap-Up (whole-course close — compare against Lesson 1 and this lesson's Hook answers)
 
-1. **Replay Hook B + re-ask (the after question):** If you chose "Feels like magic" for Q2 — now you've seen it: `read_file` is a real Python function, `<tool_call>` is a convention tag, no magic. Then ask:
+1. **Replay Hook B + re-ask (the after question):** If you chose "Feels like magic" for Q2 — now you've seen it: `get_time` is a real Python function, `<tool_call>` is a convention tag, no magic. Then ask:
    **"Now that you've seen this, how would you approach that task (50 transcripts)?"** Note the answer and compare it with their Q3 answer from before the lesson.
-2. **Skeleton solution for the 50-transcripts task:** Agent (read_file reads files for real) → apply a summary template → spot-check a sample → if you need to reuse it, wrap it as a tool.
+2. **Skeleton solution for the 50-transcripts task:** Agent (a file-reading tool reads files for real — a genuine client-defined function, just like today's get_time) → apply a summary template → spot-check a sample → if you need to reuse it, wrap it as a tool.
 3. **Speaking tools vs. doing tools (walk participants through this table):**
    - Speaking tools (①②③): ChatGPT / Gemini — feed the right context (SOP/rules) into the chat box, set red lines, check the key claims. Line: context you can paste in full.
    - Doing tools (④⑤⑥): Claude Code / Codex — read your files, run commands, multi-step. Line: context too big / must auto-read files.

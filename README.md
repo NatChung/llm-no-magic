@@ -86,10 +86,9 @@ LISTEN_HOST=0.0.0.0 nohup python3 -u -m agent.server > /tmp/agent-server.log 2>&
    - Turn 2:final「現在是 HH:MM:SS」
 4. 展開 turn block 內「再送出 — 累積 N turn 後送進下次 model 的 prompt」details → 看 chat template text 跟 conversation 怎麼累積成下次 input
 
-3 個 Tab ④ preset:
-- 1. **現在幾點?** — `get_time` demo(最快,1-2 turn)
-- 2. **讀+寫 摘要** — `read_file` → `write_file` 真寫一個檔到 `~/Desktop/llm-summary.md`
-- 3. **數 .md 檔** — `exec_bash` 跑 `find` 真數 repo 下檔
+Tab ④ 只掛一個工具:`get_time`(頁面的「實際送進 model 的 prompt」常駐區
+可看到 `<tools>` 只有一行)。對照題:打一句不需要工具的問題(例:`1+1 等於
+幾?`),model 這輪**不**呼叫工具直接答 — 用不用工具是 model 自己決定的。
 
 ---
 
