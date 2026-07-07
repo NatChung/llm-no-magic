@@ -48,6 +48,7 @@ Ask learners to try it themselves: type a different prompt and re-run, then clic
 
 ## Reveal & Recap (cross-reference Hook answers)
 - Pull up each learner's Q2 answer, and connect it to Segment 2: the model doesn't over-promise because it's "bad" — it's because **it doesn't have your company's refund policy**. It can only do probability chaining, and it does so with full confidence. Hallucination isn't "ChatGPT can't be trusted" — it's "ChatGPT is missing that piece of knowledge."
+- **Closing chain (sets up the next lesson):** drive Tab ① once more — `POST /drive {"tab":"1","user":"一年有幾個月?"}` ("How many months in a year?"). It's a normal question, but in pure chaining mode the model doesn't *answer* it — it just keeps continuing the text and gets stuck in a loop, never producing "12". Tell the learner: **remember this line, `一年有幾個月?` — next lesson the very same line auto-carries with you to the next tab** (it auto-fills the input box when you switch), and we'll start from it to see "how chaining becomes Q&A."
 - Preview next lesson: everything today was pure **chaining** (it even chained a planet you made up). Next lesson pulls back the curtain on something else — ChatGPT clearly looks like it's *answering a question*, not just continuing your text. Where does that "Q&A feel" actually come from? → Lesson 2
 
 ## Common Learner Questions

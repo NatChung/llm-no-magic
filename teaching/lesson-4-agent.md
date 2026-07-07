@@ -23,9 +23,10 @@ Read this scenario aloud to participants:
 ## Demo Segments (the first time you drive Tab ④ it loads the 4B model — banner waits 3-5 s — warn participants in advance)
 
 ### Segment 1 — What time is it? (get_time)
+- **Picks up from last lesson (the payoff of the whole chain)**: the input box already holds `現在幾點?` — the exact line Lesson 3 closed on, auto-carried when you switched tabs. Last lesson even thinking could only invent a time out of thin air; this lesson, the same line and the same model **actually calls `get_time` and returns the real time** — this is the line the whole ①→②→③→④ chain has been building toward
 - Preview: "The model has no clock. Guess how it knows the current time? Watch the purple '↑ Tool call' and green '↓ Tool result' blocks."
 - Drive: `POST /drive {"tab":"4","user":"現在幾點?"}` → the page auto-switches to Tab ④ and renders; **the first drive triggers a 0.6B→4B swap — the loading banner runs 3-5 s** (the swap happens inside `/drive`; the page shows the banner on `swap_start`)
-- Read: the turn trace — Turn 1 purple "↑ Tool call get_time" → green "↓ Tool result" → Turn 2's final answer (the current time, HH:MM:SS) → Debrief: Turn 1 — model outputs `<tool_call>{"name":"get_time"…}` → client actually runs Python to get the time → feeds result back into the conversation → Turn 2 can now answer. **The XML tag is just a convention; the client is what executes.**
+- Read: the turn trace — Turn 1 purple "↑ Tool call get_time" → green "↓ Tool result" → Turn 2's final answer (the current time, HH:MM:SS) → Debrief: Turn 1 — model outputs `<tool_call>{"name":"get_time"…}` → client actually runs Python to get the time → feeds result back into the conversation → Turn 2 can now answer. **The XML tag is just a convention; the client is what executes.** Contrast with last lesson: the same line, `現在幾點?` — thinking could only make one up, here it really got it — the difference is simply having a tool.
 
 ### Segment 2 — Count .md files (exec_bash)
 - Preview: "This time it will run a shell command and actually count files in this repo."
