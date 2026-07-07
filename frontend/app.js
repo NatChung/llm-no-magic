@@ -13,6 +13,10 @@ const I18N = {
     'en':    'Generated token #{n} — click to see its distribution',
     'zh-TW': '第 {n} 個生成 token — 點看當下分布',
   },
+  probs_caption: {
+    'en':    '└ viewing the distribution at token #{n} "{tok}"',
+    'zh-TW': '└ 正在看第 {n} 個 token「{tok}」的分布',
+  },
   turn_subtitle_more: {
     'en':    'The whole turn (model output plus tool results) accumulates into messages and is sent to the model next turn',
     'zh-TW': '整個 turn(model 吐的字 加上 tool 結果)累積進 messages,送進下次 model',
@@ -237,6 +241,8 @@ function setupPanel(panel) {
   const previewEl = panel.querySelector(".final-prompt-preview");    // 只有 advanced / reasoning panel 有
   const thinkingArea = panel.querySelector(".thinking-area");        // 只有 reasoning panel 有
   const thinkingContentEl = panel.querySelector(".thinking-content");
+  const captionEl = panel.querySelector(".probs-caption");           // 只有 basic panel 有
+  const chips     = panel.querySelectorAll(".preset-chip");          // 只有 basic panel 有
   const panelType = panel.dataset.panel;  // 'basic' | 'advanced' | 'reasoning'
 
   let tokenSteps = [];
@@ -267,6 +273,17 @@ function setupPanel(panel) {
     if (previewEl) renderPromptPreview(previewEl, buildFinalPrompt());
   }
 
+  // Tab ① preset chips:點了填入 prompt;chip 亮起與否跟 prompt 內容即時同步
+  function syncChips() {
+    chips.forEach((c) => c.classList.toggle("chip-active", c.dataset.fill === promptEl.value));
+  }
+  chips.forEach((c) => c.addEventListener("click", () => {
+    promptEl.value = c.dataset.fill;
+    promptEl.dispatchEvent(new Event("input", { bubbles: true }));  // 更新 lastPrompt
+    syncChips();
+  }));
+  if (chips.length) promptEl.addEventListener("input", syncChips);
+
   function appendClickableToken(stepIdx, token, target) {
     const span = document.createElement("span");
     span.dataset.step = String(stepIdx);
@@ -295,6 +312,12 @@ function setupPanel(panel) {
     allToks.forEach((s) => {
       s.classList.toggle("selected", parseInt(s.dataset.step) === idx);
     });
+    // Tab ①:輸出框下方的「正在看第 N 個 token 的分布」提示
+    if (captionEl && tokenSteps[idx]) {
+      const tokText = tokenSteps[idx].token.replace(/\n/g, "⏎").trim() || tokenSteps[idx].token;
+      captionEl.textContent = t('probs_caption', { n: idx + 1, tok: tokText });
+      captionEl.classList.remove("hidden");
+    }
   }
 
   // ── Relay render callbacks (replace the old self-fetch runCompletion) ──
@@ -302,11 +325,20 @@ function setupPanel(panel) {
   function beginRun(frame) {
     runBtn.disabled = true; stopBtn.disabled = false;
     textEl.textContent = ""; if (probsEl) probsEl.innerHTML = "";
+    if (captionEl) captionEl.classList.add("hidden");
     tokenSteps = [];
     // §3.6 顯示輸入 — drive_start carries the driven user/system/mode; reflect
     // them into this panel's own input fields so the student watches the
     // instrument show the question that was actually asked, not a blank one.
     if (frame.user != null) { promptEl.value = frame.user; lastPrompt = frame.user; }
+    if (chips.length) syncChips();
+    // Tab ①:輸出框先回聲 prompt(灰字),生成 token 接在後面 — 畫面直接呈現「接龍」
+    if (panelType === "basic" && frame.user) {
+      const echo = document.createElement("span");
+      echo.className = "echo";
+      echo.textContent = frame.user;
+      textEl.appendChild(echo);
+    }
     if (frame.mode != null) {
       const radio = panel.querySelector(`input[name="mode-${panelType}"][value="${frame.mode}"]`);
       if (radio) radio.checked = true;

@@ -197,9 +197,22 @@ Mostly flat, with a restrained modern lift: surfaces still separate with a 1px H
 
 ### Probability bars
 
-- **Track:** Pale Fog background, full pill radius, 0.7rem tall. The `.probs` container is a key content block: rounded-lg with `ambient-low` at rest.
+- **Layout:** a naked list — no card, no border, no shadow around the `.probs` container; the rows sit directly on the page (the chart reads as data, not as a boxed widget).
+- **Track:** Pale Fog background, full pill radius, **0.375rem (6px) thin**.
 - **Fill:** Signal Blue (`oklch(55% 0.20 255)`), full pill radius, animates width over 150ms ease.
 - **Label/Percent:** monospace, tabular-nums on the percentage so columns of numbers stay aligned — this is a data component first, decoration never.
+- **Caption:** below the output box, a quiet muted line `└ 正在看第 N 個 token「X」的分布` tells the reader which token's distribution the chart is showing; it updates on every token click/inspect.
+
+### Preset chips (Tab ①)
+
+- **Style:** pill buttons (rounded-full, 1px Hairline Gray border, Chalk White bg, Soft Graphite text) under the prompt box — one per teaching preset (唐詩背誦 / 瞎掰的星球 / 打開冰箱).
+- **Active:** when the prompt content equals a chip's preset text, that chip turns Signal Blue (text + border) — a live reflection of the input, not a separate selection state.
+- **Behavior:** clicking fills the prompt (and syncs the carry-over `lastPrompt`).
+
+### Output box (Tab ①)
+
+- **Prompt echo:** each run starts by echoing the prompt in Faint Ash inside the output box; generated tokens append after it — the box itself demonstrates "chaining continues your text."
+- **Token spacing:** generated tokens get a slight `0.15em` gap so each is visibly a discrete, clickable unit.
 
 ### Final-prompt preview (Tab ② / ③)
 
