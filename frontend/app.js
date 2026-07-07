@@ -4,6 +4,15 @@
 
 // ── i18n: language is taken from <html lang>;預設 en,zh-TW fallback ──
 const LANG = document.documentElement.lang || 'en';
+
+// Feature flag: English hasn't been walked through end-to-end yet -- hide the
+// language-switch nav link so students land only on 繁體中文 for now. Flip to
+// true once the English course has been tested.
+const ENABLE_ENGLISH = false;
+if (!ENABLE_ENGLISH) {
+  document.querySelectorAll(".lang-switch").forEach((el) => el.classList.add("hidden"));
+}
+
 const I18N = {
   swap_failed: {
     'en':    'Model swap failed: {err}\n\nManual fallback: SETUP.md "Fri AM check"',
@@ -155,10 +164,35 @@ function carryPromptInto(panelName) {
 function renderPromptPreview(previewEl, text) {
   if (!previewEl) return;
   const esc = (s) => s.replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
-  previewEl.innerHTML = esc(text).replace(
+
+  // <tools>...</tools> ships as one dense JSON line per function signature --
+  // pretty-print + color it (purple keys / green string values) so students
+  // can actually read the schema instead of one long escaped line.
+  function renderToolJson(line) {
+    let obj;
+    try { obj = JSON.parse(line); } catch { return esc(line); }
+    return esc(JSON.stringify(obj, null, 2))
+      .replace(/"([^"]+)":/g, '<span class="text-tool">"$1"</span>:')
+      .replace(/: "([^"]*)"/g, ': <span class="text-result">"$1"</span>');
+  }
+
+  const placeholders = [];
+  const withMarkers = text.replace(/<tools>([\s\S]*?)<\/tools>/g, (full, inner) => {
+    const lines = inner.split("\n").map((l) => l.trim()).filter(Boolean);
+    if (!lines.length) return full;   // e.g. an inline "<tools></tools>" mention in prose -- leave as-is
+    const body = lines.map(renderToolJson).join("\n\n");
+    placeholders.push(
+      `<span class="text-muted">&lt;tools&gt;</span>\n${body}\n<span class="text-muted">&lt;/tools&gt;</span>`
+    );
+    return `@@TOOLS_BLOCK_${placeholders.length - 1}@@`;
+  });
+
+  let html = esc(withMarkers).replace(
     /&lt;\|[^|]*\|&gt;/g,
     (m) => `<span class="text-final font-semibold">${m}</span>`
   );
+  html = html.replace(/@@TOOLS_BLOCK_(\d+)@@/g, (_, i) => placeholders[Number(i)]);
+  previewEl.innerHTML = html;
 }
 
 // Returns the fetch Response (or null on network error) so callers can detect
