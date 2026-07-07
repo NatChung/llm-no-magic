@@ -85,7 +85,7 @@ When you drive a tab, the server auto-swaps models (tab-switching itself is UI-o
 1. Switch to Tab ④ (you'll see a "Loading 4B..." banner for ~5 sec)
 2. Type `現在幾點?` ("What time is it?") + Send
 3. Expected:
-   - Turn 1: model emits token stream (starts with `<tool_call>`) + purple "↑ tool call" block showing `get_time({})` + green "↓ tool result" showing `HH:MM:SS`
+   - Turn 1: model emits token stream (starts with `<tool_call>`) + purple "↑ Tool call" block showing `get_time({})` + green "↓ Tool result" showing `HH:MM:SS`
    - Turn 2: final "現在是 HH:MM:SS"
 4. Expand the per-turn "Sent again: the prompt sent to the model after accumulating N turn(s)" details → see how the chat template text and conversation accumulate as next input
 
