@@ -10,7 +10,7 @@
 
 ## What you'll see
 
-- **① 基礎** — 打字進去 → 看 model 一個一個吐 token + 每個 token 當下 top-10 機率分佈。中文 preset 3 個有完整教學弧:`床前明月光,疑是地上`(peaked,model 背過整首詩 → 接「霜」top-1 94%+)、`祖樹星上最高的山叫做`(peaked,**你瞎掰**的星球 model 照樣自信編 → **peaked ≠ 真實**)、`他打開冰箱,拿出`(flat,model 不知接啥)。3 個對比展示「confidence ≠ correctness」+「分佈形狀反映 model 把握度」
+- **① 基礎** — 打字進去 → 看 model 一個一個吐 token + 每個 token 當下 top-10 機率分佈。中文 preset 3 個有完整教學弧:`床前明月光,疑是地上`(peaked,model 背過整首詩 → 接「霜」top-1 94%+)、`祖樹星上最高的山叫做`(peaked,**你瞎掰**的星球 model 照樣自信編 → **peaked ≠ 真實**)、`他打開冰箱,拿出一包`(flat,top-1 只有一成多,model 不知接啥)。3 個對比展示「confidence ≠ correctness」+「分佈形狀反映 model 把握度」
 - **② 產品層加工** — 加 system prompt + Qwen3 chat template,看「加工後」prompt 跟 raw 對比。中文 preset 3 個 user prompt 一鍵試:`一年有幾個月?`(常識短答)、`寫一個夏季冰飲的促銷文案`(創作)、`請寫一首關於月亮的五言絕句`(文學)— system 自填(textarea placeholder 已 hint「你是行銷顧問,用條列式回答,只給 3 點」)
 - **③ 推理** — thinking 開關。同題目,直答 vs 寫 think block 後再答(reasoning 對精度的影響)
 - **④ Agent** — multi-turn function calling,model 吐 `<tool_call>` token → client parse → **真的執行**(read/write 檔案、跑 bash)→ 結果塞回對話再吐字,直到 final
@@ -23,29 +23,31 @@ Tab 1-3 點 token 看當下 top-10 機率(bar chart 跳階);Tab ④ token 不 cl
 
 ## Quick start(Mac)
 
+不用自己手動裝。打開這個 repo 用 AI coding agent(Claude Code / Codex),它會讀
+[AGENTS.md](./AGENTS.md)、問你是老師還是學員,然後:
+
+- 跑 `python3 init.py` 幫你檢查環境(llama.cpp、模型),缺什麼帶你裝 — 教學只需要一個能發
+  HTTP 請求的 AI,加上你自己開一次的瀏覽器,不需要 Node、不需要 MCP
+- 照 [teaching/](./teaching/) 課綱帶課:AI **透過 HTTP 打 `POST /drive` 驅動頁面**,頁面
+  透過 SSE(`/events`)即時反映每個動作,邊做邊解說,demo 完留著讓你接手試
+- 你自己開一次網址(http://localhost:9000/)後留著就好,之後只要看那個畫面、聽解說、偶爾自己動手 — 其餘由 AI 透過 HTTP 驅動
+
 ```bash
-# 1. Install llama.cpp
-brew install llama.cpp
-
-# 2. Download Qwen3 模型(2 種 size:0.6B 給 token 教學、4B 給 Agent function calling)
-mkdir -p ~/models
-hf download Qwen/Qwen3-0.6B-GGUF Qwen3-0.6B-Q4_K_M.gguf --local-dir ~/models
-hf download Qwen/Qwen3-4B-GGUF   Qwen3-4B-Q4_K_M.gguf   --local-dir ~/models
-
-# 3. Clone
 git clone https://github.com/NatChung/llm-no-magic.git
 cd llm-no-magic
-
-# 4. 起 server(同時吐 HTML + API on :9000,auto-launch llama-server on :8080)
-nohup python3 -u -m agent.server > /tmp/agent-server.log 2>&1 &
-
-# 5. 開 browser
-open http://localhost:9000/
 ```
 
-送出(drive)時 server 自動 swap model(tab 切換本身是 UI-only)(Tab 1-3 → 0.6B、Tab ④/⑥ → 4B,Tab ⑤/⑦ 是純 article 不切)。第一次會看「載入 X 中…」banner 等 3-5 秒。
+打開 Claude Code / Codex,打聲「hi」就會開始。
 
-**課堂 LAN demo**(同 WiFi 學員可連你 Mac):
+**Dependencies**(AI 會幫你檢查/補裝,這裡列出來給想知道底層裝了什麼的人參考):
+`llama.cpp`(brew)、`huggingface_hub`(`pip install -U "huggingface_hub[cli]"`)、
+Python 3.10+、`requests`。沒 npm / build step。
+
+---
+
+## 進階:課堂 LAN demo(creator 自己手動起)
+
+同 WiFi 學員可連你 Mac,不透過 AI 帶課、自己手動起 server 給多人同時連:
 
 ```bash
 LISTEN_HOST=0.0.0.0 nohup python3 -u -m agent.server > /tmp/agent-server.log 2>&1 &
@@ -54,22 +56,7 @@ LISTEN_HOST=0.0.0.0 nohup python3 -u -m agent.server > /tmp/agent-server.log 2>&
 # 注意:GPU 一次只一個 model、多學員同時切不同 tab 會互踢
 ```
 
-**Dependencies**:`llama.cpp`(brew)、`huggingface_hub`(`pip install -U "huggingface_hub[cli]"`)、Python 3.10+、`requests`(`pip install requests`)。沒 npm / build step。
-
----
-
-## 🤖 AI 帶課模式(Claude Code / Codex)
-
-不想自己摸?用 AI coding agent 打開這個 repo,它會讀 [AGENTS.md](./AGENTS.md)、
-問你是老師還是學員,然後:
-
-- 跑 `python3 init.py` 幫你檢查環境(llama.cpp、模型),缺什麼帶你裝 — 教學只需要一個能發
-  HTTP 請求的 AI,加上你自己開一次的瀏覽器,不需要 Node、不需要 MCP
-- 照 [teaching/](./teaching/) 課綱帶課:AI **透過 HTTP 打 `POST /drive` 驅動頁面**,頁面
-  透過 SSE(`/events`)即時反映每個動作,邊做邊解說,demo 完留著讓你接手試
-- 你自己開一次網址(http://localhost:9000/)後留著就好,之後只要看那個畫面、聽解說、偶爾自己動手 — 其餘由 AI 透過 HTTP 驅動
-
-學員用法:clone 後在 repo 資料夾開 Claude Code,打聲「hi」就會開始。
+送出(drive)時 server 自動 swap model(tab 切換本身是 UI-only)(Tab 1-3 → 0.6B、Tab ④/⑥ → 4B,Tab ⑤/⑦ 是純 article 不切)。第一次會看「載入 X 中…」banner 等 3-5 秒。
 
 ---
 
@@ -80,8 +67,8 @@ LISTEN_HOST=0.0.0.0 nohup python3 -u -m agent.server > /tmp/agent-server.log 2>&
 1. 切到 Tab ① (default active)
 2. preset 1「`床前明月光,疑是地上`」+ 送出 → 預期 model 接「霜」,top-1 94%+(次高才 3%,model 對熟悉文本極高 confidence)
 3. preset 2「`祖樹星上最高的山叫做`」+ 送出 → 預期 model 自信編一個假地名,top-1 也很高 — **同樣 peaked,但這次是瞎掰** (peaked ≠ 真實 / confidence ≠ correctness)
-4. preset 3「`他打開冰箱,拿出`」+ 送出 → 預期 top-10 分散(水 / 雞蛋 / 剩飯 / 啤酒...flat),model 表達「不知接啥」
-5. 點任一 token 看 top-10 bar chart;3 個 preset 的「形狀對比」就是 Tab ① 全部教學
+4. preset 3「`他打開冰箱,拿出一包`」+ 送出 → 預期 top-10 分散(糖果 / 薯片 / 巧克力 / 牛奶...flat,top-1 只一成多),model 表達「不知接啥」
+5. **畫面上生成出來的每個字都能點**,不是只有第一個——點任一 token 看 top-10 bar chart;3 個 preset 的「形狀對比」就是 Tab ① 全部教學
 
 ### Tab ② 產品層加工 — 加工 vs 不加工
 

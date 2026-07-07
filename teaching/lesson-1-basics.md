@@ -28,6 +28,7 @@ Ask each question in order:
 - Drive: `POST /drive {"tab":"1","user":"床前明月光,疑是地上"}` → the page auto-switches to Tab ① and renders token by token
 - Read: first token `霜`, top-1 94%+, peaked distribution → Narrate: the model has "memorized" the whole poem → peaked
 - Inspect: `POST /inspect {"tokenIndex":0}` → the page pops up that token's probability chart
+- **Always say this**: every token the model produces on screen is clickable, not just this one — click any of them to pop up its own probability chart (no need to repeat this in later segments, but make sure the learner knows it here first)
 
 ### Segment 2 — The made-up planet (peaked ≠ true)
 - Set-up: "This time we send `祖樹星上最高的山叫做` — `祖樹星` is a planet I made up. Guess: will the model say 'I don't know', or will it invent a mountain name?" (Collect learner predictions first!)
@@ -36,9 +37,10 @@ Ask each question in order:
 - Inspect: `POST /inspect {"tokenIndex":0}` → the page pops up that token's probability chart
 
 ### Segment 3 — No clear next token (flat)
-- Set-up: "`他打開冰箱,拿出` ('He opened the fridge and took out') — what do you think the top-10 chart looks like?"
-- Drive: `POST /drive {"tab":"1","user":"他打開冰箱,拿出"}` → the page auto-switches to Tab ① and renders token by token
-- Read: top-10 spread across many candidates (water / eggs / beer …) → Narrate: the shape of the distribution reflects the model's uncertainty
+- Set-up: "`他打開冰箱,拿出一包` ('He opened the fridge and took out a pack of') — what do you think the top-10 chart looks like?"
+- Drive: `POST /drive {"tab":"1","user":"他打開冰箱,拿出一包"}` → the page auto-switches to Tab ① and renders token by token
+- Read: top-10 spread across many candidates (candy / chips / chocolate / milk …), top-1 barely above 10% → Narrate: the shape of the distribution reflects the model's uncertainty
+  (stopping at just `拿出` still leaves top-1 at 27% — not convincing enough; the added measure word `一包` forces a concrete-item guess and flattens it properly)
 - Inspect: `POST /inspect {"tokenIndex":0}` → the page pops up that token's probability chart
 
 ## Learner Practice

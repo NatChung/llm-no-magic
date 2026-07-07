@@ -10,7 +10,7 @@ Runs entirely local on your Mac — `llama.cpp` + Qwen3 GGUF models.
 
 ## What you'll see
 
-- **① Basics** — Type something → watch the model emit tokens one at a time + the top-10 probability distribution at each step. Three Chinese presets form a complete teaching arc: `床前明月光,疑是地上` (peaked — the model has this Tang poem memorized → completes `霜` at top-1 94%+), `祖樹星上最高的山叫做` (peaked, but **you made up** the star name — the model still confidently invents an answer → **peaked ≠ truth**), `他打開冰箱,拿出` (flat, the model has no idea what to fill in). Together they show "confidence ≠ correctness" + "shape of the distribution reflects model certainty".
+- **① Basics** — Type something → watch the model emit tokens one at a time + the top-10 probability distribution at each step. Three Chinese presets form a complete teaching arc: `床前明月光,疑是地上` (peaked — the model has this Tang poem memorized → completes `霜` at top-1 94%+), `祖樹星上最高的山叫做` (peaked, but **you made up** the star name — the model still confidently invents an answer → **peaked ≠ truth**), `他打開冰箱,拿出一包` (flat — top-1 barely above 10%, the model has no idea what to fill in). Together they show "confidence ≠ correctness" + "shape of the distribution reflects model certainty".
 - **② Product Layer** — Add a system prompt + Qwen3 chat template, compare the "processed" prompt with raw. Three preset user prompts to try with one click: `一年有幾個月?` (general knowledge, short answer), `寫一個夏季冰飲的促銷文案` (creative), `請寫一首關於月亮的五言絕句` (literary form) — system prompt is yours to write (placeholder hint: "you are a marketing consultant, answer in bullet points, max 3").
 - **③ Reasoning** — Thinking on/off. Same question, direct answer vs writing a think block first (effect of reasoning on accuracy).
 - **④ Agent** — Multi-turn function calling. The model emits `<tool_call>` tokens → client parses them → **actually executes** (read/write files, run bash) → result goes back into the conversation → the model continues, until final.
@@ -23,45 +23,8 @@ Each tab also has small `(?)` explainer drop-downs (System prompt, chat template
 
 ## Quick start (Mac)
 
-```bash
-# 1. Install llama.cpp
-brew install llama.cpp
-
-# 2. Download Qwen3 models (two sizes: 0.6B for token-level teaching, 4B for Agent function calling)
-mkdir -p ~/models
-hf download Qwen/Qwen3-0.6B-GGUF Qwen3-0.6B-Q4_K_M.gguf --local-dir ~/models
-hf download Qwen/Qwen3-4B-GGUF   Qwen3-4B-Q4_K_M.gguf   --local-dir ~/models
-
-# 3. Clone
-git clone https://github.com/NatChung/llm-no-magic.git
-cd llm-no-magic
-
-# 4. Start the server (serves HTML + API on :9000, auto-launches llama-server on :8080)
-nohup python3 -u -m agent.server > /tmp/agent-server.log 2>&1 &
-
-# 5. Open browser
-open http://localhost:9000/
-```
-
-When you drive a tab, the server auto-swaps models (tab-switching itself is UI-only) (Tabs 1-3 → 0.6B, Tabs ④/⑥ → 4B; Tabs ⑤/⑦ are static articles). The first swap shows a "Loading X..." banner for ~3-5 seconds.
-
-**Classroom LAN demo** (students on the same WiFi join your Mac):
-
-```bash
-LISTEN_HOST=0.0.0.0 nohup python3 -u -m agent.server > /tmp/agent-server.log 2>&1 &
-# Students open http://<your-mac-LAN-ip>:9000/  (e.g. 192.168.x.x:9000/)
-# llama-server is auto-launched with --host 0.0.0.0 too
-# Note: only one model on the GPU at a time — multiple students switching tabs may compete
-```
-
-**Dependencies**: `llama.cpp` (brew), `huggingface_hub` (`pip install -U "huggingface_hub[cli]"`), Python 3.10+, `requests` (`pip install requests`). No npm, no build step.
-
----
-
-## 🤖 AI-guided mode (Claude Code / Codex)
-
-Don't want to explore alone? Open this repo with an AI coding agent. It reads
-[AGENTS.md](./AGENTS.md), asks whether you're the teacher or a student, then:
+No manual install needed. Open this repo with an AI coding agent (Claude Code / Codex).
+It reads [AGENTS.md](./AGENTS.md), asks whether you're the teacher or a student, then:
 
 - runs `python3 init.py` to check your environment (llama.cpp, models) and guides any
   installs — teaching only needs an HTTP-capable AI plus a browser you open once, no Node
@@ -71,7 +34,32 @@ Don't want to explore alone? Open this repo with an AI coding agent. It reads
   as it goes, and leaves it open for you to try
 - you open the page once (http://localhost:9000/) and leave it up; from there you just watch, listen, and occasionally drive it yourself — the AI does the rest over HTTP
 
-Student usage: clone, open Claude Code in the repo folder, say "hi".
+```bash
+git clone https://github.com/NatChung/llm-no-magic.git
+cd llm-no-magic
+```
+
+Open Claude Code / Codex and say "hi".
+
+**Dependencies** (the AI checks/installs these for you — listed here for reference):
+`llama.cpp` (brew), `huggingface_hub` (`pip install -U "huggingface_hub[cli]"`),
+Python 3.10+, `requests`. No npm, no build step.
+
+---
+
+## Advanced: classroom LAN demo (creator runs manually)
+
+Students on the same WiFi join your Mac, without going through the AI — you start the
+server yourself for multiple people to connect at once:
+
+```bash
+LISTEN_HOST=0.0.0.0 nohup python3 -u -m agent.server > /tmp/agent-server.log 2>&1 &
+# Students open http://<your-mac-LAN-ip>:9000/  (e.g. 192.168.x.x:9000/)
+# llama-server is auto-launched with --host 0.0.0.0 too
+# Note: only one model on the GPU at a time — multiple students switching tabs may compete
+```
+
+When you drive a tab, the server auto-swaps models (tab-switching itself is UI-only) (Tabs 1-3 → 0.6B, Tabs ④/⑥ → 4B; Tabs ⑤/⑦ are static articles). The first swap shows a "Loading X..." banner for ~3-5 seconds.
 
 ---
 
@@ -82,8 +70,8 @@ Student usage: clone, open Claude Code in the repo folder, say "hi".
 1. Open Tab ① (default active)
 2. Preset 1 `床前明月光,疑是地上` + Send → expect the model to continue with `霜`, top-1 at 94%+ (next-best only 3%, high confidence on familiar text)
 3. Preset 2 `祖樹星上最高的山叫做` + Send → expect the model to confidently invent a fake mountain name, top-1 also high — **same peaked shape, but this time it's made up** (peaked ≠ truth / confidence ≠ correctness)
-4. Preset 3 `他打開冰箱,拿出` + Send → expect top-10 spread out (water / eggs / leftovers / beer...flat), the model is "unsure what comes next"
-5. Click any token to see the top-10 bar chart. The "shape comparison" across the three presets is the entire teaching point of Tab ①.
+4. Preset 3 `他打開冰箱,拿出一包` + Send → expect top-10 spread out (candy / chips / chocolate / milk...flat, top-1 barely above 10%), the model is "unsure what comes next"
+5. **Every token the model produces is clickable, not just the first one** — click any of them to see the top-10 bar chart. The "shape comparison" across the three presets is the entire teaching point of Tab ①.
 
 ### Tab ② Product Layer — processed vs raw
 

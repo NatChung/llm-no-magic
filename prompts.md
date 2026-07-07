@@ -9,7 +9,8 @@
 - `祖樹星上最高的山叫做` → the model confidently invents a fake place name (still peaked for a fictional entity → demonstrates "**peaked ≠ truth / confidence ≠ correctness**", the core punchline)
 
 ### Flat (Chinese)
-- `他打開冰箱,拿出` → a low bush of options (water / eggs / leftovers / beer...) — many plausibilities, top-K spreads out
+- `他打開冰箱,拿出一包` → a low bush of options (candy / chips / sugar / cigarettes / chocolate...) — top-1 barely above 10%, many plausibilities, top-K spreads out
+  (stopping at just `拿出` still leaves top-1 at 27%, too high; adding the measure word `一包` forces a concrete item guess and flattens the distribution properly)
 
 ### English equivalents (optional)
 - Peaked: `A year has twelve ` → `months`
