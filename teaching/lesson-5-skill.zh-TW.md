@@ -27,12 +27,14 @@
 
 節拍順序(定案):**先講 skill → 開火 → AI 秀 prompt → 講來回軌跡**。
 
-- **1. 先講 skill**(還沒送出,指著左欄由上而下):
-  - 「Skill 索引(L1)」卡 — 開頁就有:model 唯一常駐看得到的「圖書館目錄」,
-    每包 skill 是什麼、什麼時候用、東西放磁碟哪裡,才幾十個 token
-  - 「Skill 解剖」卡 — 這包 skill 在磁碟上的真面目:一個資料夾三層
-    (L1 frontmatter 常駐 / L2 說明書 body / L3 腳本),點檔名可看實際內容
-  - 收一句:「說明書跟腳本現在都還躺在磁碟上,一個 token 都沒進 context」
+- **1. 先講 skill**(還沒送出,指著左欄「Skill 解剖 — 一個資料夾、三層」卡,
+  由上而下講三層;點檔名可看每層實際內容):
+  - **L1** frontmatter(幾行 yaml)— model 唯一常駐看得到的「圖書館目錄」:
+    這包是什麼、什麼時候用、東西放磁碟哪裡,才幾十個 token
+  - **L2** SKILL.md 正文 — 完整說明書(怎麼查、輸出什麼格式),躺在磁碟
+  - **L3** 腳本 — 真正幹活的 code,躺在磁碟
+  - 收一句:「說明書跟腳本現在都還躺在磁碟上,一個 token 都沒進 context —
+    model 手上只有 L1 那幾行目錄」
 - **2. 開火**:`POST /drive {"tab":"5","user":"台北今天天氣怎樣?"}`
   (第一次會 swap 4B,banner 3-5 秒)
 - **3. AI 秀 prompt**(跑完、講軌跡前):`POST /preview {"tab":"5","user":...,
@@ -52,7 +54,8 @@
   說明書就躺在 messages 裡(琥珀泡泡上那行提示指的就是它)
 
 ## 學員動手 — 無 skill 對照
-勾選「無 skill 對照」,同一句再送一次:索引是空的,model 只能靠自己編
+勾選「無 skill 對照」,同一句再送一次:索引是空的(解剖卡上方的 chip 會顯示
+「索引是空的」提示),model 只能靠自己編
 (或老實說不知道)。對照:同一個 model、同一句話,**差別是有沒有 skill**。
 AI 同時用 `/preview` 把兩種 mode 的 prompt 並排秀出來:no_skills 版連索引
 都沒有 — model 根本不知道 skill 存在,自然拿不到。
@@ -68,7 +71,7 @@ AI 同時用 `/preview` 把兩種 mode 的 prompt 並排秀出來:no_skills 版�
   3. **sent 展開器**(物證):翻開第 2 turn 的 prompt,SKILL.md 就躺在
      messages 裡 — 注入的現場
   先用 1 證明機制存在,Tab ⑤ 展示機制被工程化,2、3 收尾驗屍
-- 左上 token 成本 chip:照著兩個數字唸 — 漸進式現在 ~M tokens,全塞進 system
+- 解剖卡上方的 token 成本 chip:照著兩個數字唸 — 漸進式現在 ~M tokens,全塞進 system
   prompt 要 ~N。(單一小 skill 差距不大 — 重點是**方向**:每加一包差距就拉開;
   全塞跟「所有包」一起長,漸進式只跟「你載的那包」長。)
 - 收尾地圖 — 同一個機制的四種包裝(context 注入改分佈,跟「1+1=3」一模一樣):

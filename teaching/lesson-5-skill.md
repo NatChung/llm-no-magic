@@ -30,15 +30,18 @@ manageable capability package.
 Beat order (settled): **explain the skill first → fire → AI shows the prompt → walk the
 round trips**.
 
-- **1. Explain the skill first** (nothing sent yet — point down the left column):
-  - The "Skill index (L1)" card — populated on page load: the "library catalog", the
-    only thing the model permanently sees; what each skill is, when to use it, where
-    its files live on disk — a few dozen tokens
-  - The "Skill anatomy" card — the skill's true form on disk: one folder, three layers
-    (L1 frontmatter always resident / L2 manual body / L3 script); click a filename to
-    see the real content
+- **1. Explain the skill first** (nothing sent yet — point at the left column's
+  "Skill anatomy — one folder, three layers" card and walk the layers top-down;
+  click a filename to see each layer's real content):
+  - **L1** frontmatter (a few lines of yaml) — the "library catalog", the only thing
+    the model permanently sees: what this pack is, when to use it, where its files
+    live on disk — a few dozen tokens
+  - **L2** the SKILL.md body — the full manual (how to check, what format to output),
+    sitting on disk
+  - **L3** the script — the code that does the real work, sitting on disk
   - Close with one line: "the manual and the script are still sitting on disk — not a
-    single token has entered the context yet"
+    single token has entered the context yet; all the model holds is L1's few catalog
+    lines"
 - **2. Fire**: `POST /drive {"tab":"5","user":"台北今天天氣怎樣?"}`
   (the first drive swaps to 4B — banner 3-5 s)
 - **3. AI shows the prompt** (after the run, before walking the trace): call
@@ -62,7 +65,8 @@ round trips**.
   sitting right inside `messages` (exactly what the amber bubble's hint line points at)
 
 ## Hands-On — no-skill contrast
-Check "no-skill contrast" and send the same line again: the index is empty, so the model
+Check "no-skill contrast" and send the same line again: the index is empty (the chip
+above the anatomy card switches to an "index is empty" note), so the model
 can only make something up (or honestly say it doesn't know). Contrast: same model, same
 line — **the difference is whether there's a skill**. Meanwhile the AI uses `/preview`
 to show both modes' prompts side by side: the no_skills version has no index at all —
@@ -81,7 +85,7 @@ the model doesn't even know skills exist.
   3. **The sent expander** (physical evidence): open turn 2's actual prompt — SKILL.md
      is sitting right inside `messages`, the injection caught red-handed
   Proof 1 shows the mechanism exists, Tab ⑤ shows it engineered, 2 & 3 are the autopsy
-- The token-cost chip at the top left: read the two numbers as-is — progressive
+- The token-cost chip above the anatomy card: read the two numbers as-is — progressive
   loading costs ~M tokens now vs ~N if everything were stuffed into the system
   prompt. (With a single small skill the gap is modest — the POINT is the
   direction: every pack you add widens it, and stuffing scales with ALL packs

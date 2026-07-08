@@ -134,10 +134,6 @@ const I18N = {
     'en':    '💻 runs on your PC · code never enters context',
     'zh-TW': '💻 在你電腦執行 · code 不進 context',
   },
-  skill_index_empty: {
-    'en':    '(not run yet — the model has seen no skills)',
-    'zh-TW': '(還沒跑 — model 目前什麼 skill 都沒看到)',
-  },
   no_skills_run_note: {
     'en':    'no-skill run: the index is empty, the model is on its own',
     'zh-TW': '無 skill 對照:索引是空的,model 只能靠自己',
@@ -858,7 +854,6 @@ function setupSkillTab(panel) {
   const promptEl = panel.querySelector(".prompt");
   const runBtn   = panel.querySelector(".run");
   const turnsEl  = panel.querySelector(".turns");
-  const indexEl  = panel.querySelector(".skill-index");
   const chipEl   = panel.querySelector(".skill-token-chip");
   const noSkillsToggle = panel.querySelector(".no-skills-toggle");
   // 「實際送進 model 的 prompt」由 AI 老師經 POST /preview 取回、在對話裡講解
@@ -887,40 +882,16 @@ function setupSkillTab(panel) {
     return t('context_chip', { n, delta });
   }
 
-  function renderIndexCards(skills) {
-    indexEl.innerHTML = "";
-    indexEl.className = "skill-index divide-y divide-edge-soft";
-    for (const sk of skills) {
-      const card = document.createElement("div");
-      card.className = "py-3 text-xs space-y-1";
-      const name = document.createElement("div");
-      name.className = "font-medium text-ink-soft text-sm";
-      name.textContent = sk.name;
-      const desc = document.createElement("div");
-      desc.className = "text-muted leading-relaxed";
-      desc.textContent = sk.description;
-      const files = document.createElement("div");
-      files.className = "text-faint text-[10px] font-mono";
-      files.textContent = `${sk.dir}/  ${[...(sk.extras || []), ...(sk.scripts || []).map((x) => "scripts/" + x)].join(" · ")}`;
-      card.append(name, desc, files);
-      indexEl.appendChild(card);
-    }
-  }
-
   function onIndex(f) {
     scriptSources = f.script_sources || {};
+    chipEl.classList.remove("hidden");
     if (!f.skills.length) {
-      // no_skills 對照:估算值是對空索引算的、沒意義 — chip 藏起來
-      chipEl.classList.add("hidden");
-      indexEl.innerHTML = "";
-      indexEl.className = "skill-index text-sm text-muted";
-      indexEl.textContent = t('no_skills_run_note');
+      // no_skills 對照:估算值是對空索引算的、沒意義 — chip 改顯示對照提示
+      chipEl.textContent = t('no_skills_run_note');
       return;
     }
-    chipEl.classList.remove("hidden");
     chipEl.textContent = t('token_cost_chip',
       { proper: f.proper_tokens_est, naive: f.naive_tokens_est });
-    renderIndexCards(f.skills);
   }
 
   function onSent(f) { pendingSent = f; }
@@ -1083,9 +1054,6 @@ function setupSkillTab(panel) {
         row.append(label, d);
         anatomyEl.appendChild(row);
       }
-      // L1 索引開頁就填好(新教案:先講 skill、才開火)— drive 的 index
-      // frame 之後會照 mode 重畫(no_skills 會清空)
-      if (j.skills && j.skills.length) renderIndexCards(j.skills);
     }).catch(() => { anatomyEl.textContent = t('anatomy_unavailable'); });
   }
 }
