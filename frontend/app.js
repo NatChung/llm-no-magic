@@ -138,6 +138,22 @@ const I18N = {
     'en':    'no-skill run: the index is empty, the model is on its own',
     'zh-TW': '無 skill 對照:索引是空的,model 只能靠自己',
   },
+  anatomy_l1_caption: {
+    'en':    'L1 · frontmatter (yaml) — always in context (~{n} tokens)',
+    'zh-TW': 'L1 · frontmatter(yaml)— 永遠在 context(~{n} tokens)',
+  },
+  anatomy_l2_caption: {
+    'en':    'L2 · SKILL.md body — injected on load_skill',
+    'zh-TW': 'L2 · SKILL.md body — load_skill 時注入',
+  },
+  anatomy_l3_caption: {
+    'en':    'L3 · script — executed only, code never enters context',
+    'zh-TW': 'L3 · 腳本 — 只執行,code 不進 context',
+  },
+  anatomy_unavailable: {
+    'en':    '(anatomy unavailable)',
+    'zh-TW': '(解剖資料讀不到)',
+  },
   protocol_card_req: { 'en': '→ request',  'zh-TW': '→ 請求' },
   protocol_card_resp:{ 'en': '← response', 'zh-TW': '← 回應' },
   protocol_expand:   { 'en': 'Full JSON-RPC frames', 'zh-TW': '完整 JSON-RPC 內容' },
@@ -1073,6 +1089,33 @@ function setupSkillTab(panel) {
   promptEl.addEventListener("input", schedulePreview);
   noSkillsToggle.addEventListener("change", refreshSkillPreview);
   refreshSkillPreview();  // initial render
+
+  // anatomy card (spec 2026-07-08 §2) — static, fetched once at init
+  const anatomyEl = panel.querySelector(".skill-anatomy");
+  if (anatomyEl) {
+    fetch("/inspect", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ tab: "5" }),
+    }).then((r) => r.json()).then((j) => {
+      const CAPTION = { L1: "anatomy_l1_caption", L2: "anatomy_l2_caption", L3: "anatomy_l3_caption" };
+      const BADGE = {
+        L1: "text-ink-soft border-edge",
+        L2: "text-inject border-inject/40 bg-inject-tint",
+        L3: "text-tool border-tool/40",
+      };
+      for (const f of j.files || []) {
+        const row = document.createElement("div");
+        const label = document.createElement("span");
+        label.className = `inline-block rounded border px-1 mr-2 ${BADGE[f.layer]}`;
+        label.textContent = f.layer;
+        const d = BUBBLE.details(
+          f.path + " — " + t(CAPTION[f.layer], { n: Math.round(f.content.length / 4) }),
+          BUBBLE.pre(f.content));
+        row.append(label, d);
+        anatomyEl.appendChild(row);
+      }
+    }).catch(() => { anatomyEl.textContent = t('anatomy_unavailable'); });
+  }
 }
 
 // ── Tab ⑥ MCP — 真 stdio JSON-RPC 迷你 server,協定幀可視化 ────────────
