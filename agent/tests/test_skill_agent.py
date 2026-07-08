@@ -72,3 +72,16 @@ def test_load_index_multi_skill_fixture(tmp_path, monkeypatch):
     assert set(index.keys()) == {"alpha", "beta"}
     assert index["alpha"]["description"] == "alpha desc"
     assert index["beta"]["scripts"] == ["run.py"]
+
+
+def test_skill_anatomy_three_layers():
+    import agent.skill_agent as sa
+    files = sa.skill_anatomy()
+    by_path = {f["path"]: f for f in files}
+    fm = by_path["skills/check_weather/SKILL.md#frontmatter"]
+    assert fm["layer"] == "L1" and fm["content"].startswith("---")
+    assert "name: check_weather" in fm["content"]
+    body = by_path["skills/check_weather/SKILL.md#body"]
+    assert body["layer"] == "L2" and "---" not in body["content"].splitlines()[0]
+    script = by_path["skills/check_weather/scripts/weather.py"]
+    assert script["layer"] == "L3" and "def " in script["content"]

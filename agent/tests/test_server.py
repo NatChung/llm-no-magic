@@ -1191,3 +1191,30 @@ def test_drive_tab5_cancel_publishes_empty_final(monkeypatch):
 def test_skill_agent_endpoint_removed():
     import agent.server as server
     assert not hasattr(server.AgentHandler, "_handle_skill_agent")
+
+
+def test_inspect_tab5_returns_files_and_does_not_publish(monkeypatch):
+    """/inspect {'tab':'5'} → anatomy data, no relay publish;無 tab → 舊行為。"""
+    import agent.server as server
+
+    published = []
+    monkeypatch.setattr(server, "publish", lambda f: published.append(f))
+
+    srv, port = _start_server_in_thread()
+    try:
+        def post_inspect(body):
+            req = urllib.request.Request(
+                f"http://127.0.0.1:{port}/inspect",
+                data=json.dumps(body).encode("utf-8"),
+                headers={"Content-Type": "application/json"}, method="POST")
+            return json.loads(urllib.request.urlopen(req, timeout=5).read())
+
+        out = post_inspect({"tab": "5"})
+        assert any(f["layer"] == "L2" for f in out["files"])
+        assert published == []
+
+        out = post_inspect({"tokenIndex": 3})
+        assert out["ok"] is True
+        assert published == [{"type": "inspect", "tokenIndex": 3}]
+    finally:
+        srv.shutdown()

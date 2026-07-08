@@ -155,6 +155,32 @@ def load_skill_body(name: str) -> str | None:
     return body.strip()
 
 
+def skill_anatomy() -> list[dict]:
+    """Anatomy card data (spec 2026-07-08 §2): the on-disk three layers.
+
+    SKILL.md is deliberately split into two entries — the pedagogical point
+    is that ONE file carries L1 (frontmatter) and L2 (body).
+    """
+    files = []
+    for skill_dir in sorted(SKILLS_DIR.iterdir()):
+        skill_md = skill_dir / "SKILL.md"
+        if not skill_dir.is_dir() or not skill_md.exists():
+            continue
+        text = skill_md.read_text()
+        m = re.match(r"^(---\s*\n.*?\n---\s*\n)(.*)", text, re.DOTALL)
+        fm, body = (m.group(1), m.group(2)) if m else ("", text)
+        rel = str(skill_dir.relative_to(SKILLS_DIR.parent))
+        files.append({"path": f"{rel}/SKILL.md#frontmatter", "layer": "L1", "content": fm.strip()})
+        files.append({"path": f"{rel}/SKILL.md#body", "layer": "L2", "content": body.strip()})
+        scripts_dir = skill_dir / "scripts"
+        if scripts_dir.exists():
+            for s in sorted(scripts_dir.iterdir()):
+                if s.is_file():
+                    files.append({"path": f"{rel}/scripts/{s.name}", "layer": "L3",
+                                  "content": s.read_text()})
+    return files
+
+
 def read_skill_file(skill: str, filename: str) -> str | None:
     """Read an L3 reference file (markdown) from a skill's directory."""
     if "/" in filename or filename.startswith(".."):

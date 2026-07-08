@@ -36,7 +36,8 @@ from agent.agent import (
 )
 from agent.skill_agent import (skill_agent_loop, load_index, proper_system_prompt,
                                no_skills_system_prompt, LOAD_SKILL_TOOL,
-                               READ_SKILL_FILE_TOOL, RUN_SKILL_SCRIPT_TOOL)
+                               READ_SKILL_FILE_TOOL, RUN_SKILL_SCRIPT_TOOL,
+                               skill_anatomy)
 from agent.mcp_agent import mcp_agent_loop
 
 
@@ -727,9 +728,15 @@ class AgentHandler(SimpleHTTPRequestHandler):
         self._send_json(result, code)
 
     def _handle_inspect(self) -> None:
-        """spec §3.2: pop the probability chart for token N on the page."""
+        """spec §3.2 token-chart popup (legacy), or tab-5 skill anatomy data."""
         body = self._read_body()
         if body is None:
+            return
+        if body.get("tab") == "5":
+            # data response only — no relay publish (spec 2026-07-08 §2:
+            # reusing /inspect keeps the endpoint list unchanged; the tab
+            # discriminator keeps tabs ①-③ tokenIndex behavior intact)
+            self._send_json({"files": skill_anatomy()})
             return
         publish({"type": "inspect", "tokenIndex": body.get("tokenIndex", 0)})
         self._send_json({"ok": True, "subscribers": subscriber_count()})
