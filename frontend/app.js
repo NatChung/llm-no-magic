@@ -141,8 +141,8 @@ function renderProbs(probsEl, topLogprobs) {
 // ── Relay: page is a pure instrument driven by POST /drive, reflecting via
 //    GET /events. Backend GEN_LOCK serializes generation, so exactly one
 //    panel is "active" at a time — a single pointer set on drive_start. ──
-const PANEL_TO_TAB = { basic: "1", advanced: "2", reasoning: "3", agent: "4" };
-const TAB_TO_PANEL = { "1": "basic", "2": "advanced", "3": "reasoning", "4": "agent" };
+const PANEL_TO_TAB = { basic: "1", advanced: "2", reasoning: "3", agent: "4", skill: "5", mcp: "6" };
+const TAB_TO_PANEL = { "1": "basic", "2": "advanced", "3": "reasoning", "4": "agent", "5": "skill", "6": "mcp" };
 const PANELS = {};   // tab id "1".."4" → render callbacks (registered in setup*)
 
 // Switch the visible panel by panel-name (HTML data-panel value), and keep
@@ -164,7 +164,9 @@ let lastPrompt = "";
 document.querySelectorAll('[data-panel] .prompt').forEach((el) =>
   el.addEventListener("input", () => { lastPrompt = el.value; }));
 
+const NO_CARRY_PANELS = new Set(["skill", "mcp"]);   // 接龍串只到 ④;⑤⑥ 各有自己的題型
 function carryPromptInto(panelName) {
+  if (NO_CARRY_PANELS.has(panelName)) return;
   if (!PANEL_TO_TAB[panelName] || !lastPrompt) return;   // interactive tabs only
   const el = document.querySelector(`.tab-panel[data-panel="${panelName}"] .prompt`);
   if (!el) return;
@@ -379,6 +381,15 @@ function connectEvents() {
         break;
       case "token":          active && active.onToken && active.onToken(f); break;
       case "turn_complete":  active && active.onTurnComplete && active.onTurnComplete(f); break;
+      case "index":          active && active.onIndex && active.onIndex(f); break;
+      case "tools_exposed":  active && active.onToolsExposed && active.onToolsExposed(f); break;
+      case "sent":           active && active.onSent && active.onSent(f); break;
+      case "received":       active && active.onReceived && active.onReceived(f); break;
+      case "turn":           active && active.onTurn && active.onTurn(f); break;
+      case "skill_loaded":   active && active.onSkillLoaded && active.onSkillLoaded(f); break;
+      case "l3_loaded":      active && active.onL3Loaded && active.onL3Loaded(f); break;
+      case "tool_result":    active && active.onToolResult && active.onToolResult(f); break;
+      case "protocol":       active && active.onProtocol && active.onProtocol(f); break;
       case "final":
         hideSwapBanner();
         active && active.onFinal && active.onFinal(f);
@@ -774,288 +785,16 @@ function setupAgent(panel) {
 window.addEventListener("DOMContentLoaded", connectEvents);
 
 // Initialize panels — basic/advanced/reasoning go through setupPanel;
-// agent uses setupAgent; skill uses setupSkill; placeholders (mcp) skip.
-// Static-content tabs (no .prompt/.run interactivity → setupPanel skips them):
-// - mcp: full article (⑥ MCP)
-const PLACEHOLDER_PANELS = new Set(["mcp"]);
+// agent → setupAgent; skill → setupSkillTab; mcp → setupMcpTab.
 document.querySelectorAll(".tab-panel").forEach((panel) => {
   const id = panel.dataset.panel;
-  if (PLACEHOLDER_PANELS.has(id)) return;
   if (id === "agent") setupAgent(panel);
-  else if (id === "skill") setupSkill(panel);
+  else if (id === "skill") setupSkillTab(panel);
+  else if (id === "mcp") setupMcpTab(panel);
   else setupPanel(panel);
 });
 
 
-// ── Tab 5: Skill preview ─────────────────────────────────────────────
-const SKILL_BACKEND_URL = "/skill-agent";
-
-function setupSkill(panel) {
-  const preset = panel.querySelector(".skill-preset");
-  const promptEl = panel.querySelector(".skill-prompt");
-  const runBtn = panel.querySelector(".skill-run");
-  const indexEl = panel.querySelector(".skill-index");
-  const toolsEl = panel.querySelector(".skill-tools");
-  const turnsEl = panel.querySelector(".skill-turns");
-  const finalArea = panel.querySelector(".skill-final-area");
-  const finalEl = panel.querySelector(".skill-final");
-  const _isZh2 = LANG.toLowerCase().startsWith("zh");
-
-  // Tab ⑤ always runs with skills. To demo "no skills" contrast, reader
-  // switches to Tab ④ Agent (raw function-calling agent, no skill layer).
-  const mode = "proper";
-  let abortCtl = null;
-
-  preset.addEventListener("change", () => {
-    if (preset.value) promptEl.value = preset.value;
-  });
-
-  const _isZh = LANG.toLowerCase().startsWith("zh");
-
-  function reset() {
-    indexEl.innerHTML = "";
-    toolsEl.textContent = _isZh ? "(尚未啟動)" : "(not yet started)";
-    turnsEl.innerHTML = "";
-    finalArea.classList.add("hidden");
-    finalEl.textContent = "";
-  }
-
-  let _scriptSources = {};
-
-  function renderIndex(skills) {
-    indexEl.innerHTML = "";
-    indexEl.className = "divide-y divide-edge-soft -mt-2";  // override outer space-y-2
-    for (const s of skills) {
-      const card = document.createElement("div");
-      card.className = "py-3 text-xs space-y-1";
-      const extras = (s.extras || []);
-      const scripts = (s.scripts || []);
-      let html = `
-        <div class="font-medium text-ink-soft text-sm">${s.name}</div>
-        <div class="text-muted leading-relaxed">${s.description}</div>
-        <div class="text-faint text-[10px] font-mono">${s.dir}/</div>
-      `;
-      if (extras.length || scripts.length) {
-        html += `<div class="pt-1 space-y-1">`;
-        if (extras.length) {
-          const ext = extras.map(e => `<code class="text-ink-soft">${e}</code>`).join(" · ");
-          html += `<div class="text-muted">docs:&nbsp; ${ext}</div>`;
-        }
-        if (scripts.length) {
-          html += `<div class="text-muted">scripts:`;
-          for (const script of scripts) {
-            const code = _scriptSources[`${s.name}/${script}`] || "(source not loaded)";
-            html += `
-              <details class="mt-0.5 ml-12">
-                <summary class="cursor-pointer text-tool font-mono inline-block -ml-12">${script}</summary>
-                <pre class="text-[10px] mt-1 p-2 bg-surface-2 rounded whitespace-pre-wrap overflow-auto max-h-60 text-ink-soft">${escape(code)}</pre>
-                <p class="text-[10px] text-faint mt-0.5">human view — model 只看 stdout、不看 source</p>
-              </details>
-            `;
-          }
-          html += `</div>`;
-        }
-        html += `</div>`;
-      }
-      card.innerHTML = html;
-      indexEl.appendChild(card);
-    }
-  }
-
-  function renderMessageRow(m) {
-    // De-nested, no card, no role bg — role as small label + indent.
-    // Keeps the established anchor colors (tool 紫 / result 綠) only on
-    // the actual tool_call line per the cross-tab visual vocabulary.
-    let body = "";
-    if (m.content) {
-      body += `<pre class="text-xs whitespace-pre-wrap text-ink-soft leading-relaxed">${escape(m.content)}</pre>`;
-    }
-    if (m.tool_calls && m.tool_calls.length) {
-      for (const tc of m.tool_calls) {
-        body += `<div class="text-xs font-mono text-tool mt-1">↑ ${tc.function.name}(${escape(tc.function.arguments)})</div>`;
-      }
-    }
-    if (m.tool_call_id) {
-      body += `<div class="text-[10px] text-faint mt-0.5">tool_call_id: ${escape(m.tool_call_id)}</div>`;
-    }
-    return `<div class="py-2">
-      <div class="text-[10px] uppercase tracking-wider font-medium text-faint mb-1">${m.role}</div>
-      <div class="pl-3">${body || '<span class="text-faint text-xs">(empty)</span>'}</div>
-    </div>`;
-  }
-
-  function renderTools(tools) {
-    toolsEl.innerHTML = tools.map((t) => `<code class="inline-block bg-surface px-1.5 py-0.5 rounded border border-edge-soft mr-1">${t}</code>`).join("");
-  }
-
-  function ensureTurnHeader(turnNum) {
-    let wrap = turnsEl.querySelector(`[data-turn="${turnNum}"]`);
-    if (wrap) return wrap.querySelector(".turn-body");
-    wrap = document.createElement("div");
-    wrap.className = "rounded-md border border-edge-soft overflow-hidden";
-    wrap.dataset.turn = turnNum;
-    wrap.innerHTML = `
-      <div class="px-3 py-1.5 bg-surface-2 text-xs uppercase tracking-wider text-muted font-medium">Turn ${turnNum}</div>
-      <div class="turn-body p-3 space-y-2 text-sm"></div>
-    `;
-    turnsEl.appendChild(wrap);
-    return wrap.querySelector(".turn-body");
-  }
-
-  function appendToTurn(turnNum, html) {
-    const body = ensureTurnHeader(turnNum);
-    const div = document.createElement("div");
-    div.innerHTML = html;
-    body.appendChild(div);
-  }
-
-  function escape(s) {
-    return String(s).replace(/[&<>]/g, (c) => ({"&": "&amp;", "<": "&lt;", ">": "&gt;"})[c]);
-  }
-
-  let running = false;
-  function setRunning(on) { running = on; runBtn.classList.toggle("running", on); }
-  async function run() {
-    if (!promptEl.value.trim()) return;
-    reset();
-
-    setRunning(true);
-    abortCtl = new AbortController();
-
-    let currentTurn = 0;
-    try {
-      const resp = await fetch(SKILL_BACKEND_URL, {
-        method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({mode, user: promptEl.value}),
-        signal: abortCtl.signal,
-      });
-      if (!resp.ok) throw new Error(`backend HTTP ${resp.status}`);
-
-      const reader = resp.body.getReader();
-      const decoder = new TextDecoder();
-      let buf = "";
-      while (true) {
-        const {done, value} = await reader.read();
-        if (done) break;
-        buf += decoder.decode(value, {stream: true});
-        const lines = buf.split("\n\n");
-        buf = lines.pop();
-        for (const block of lines) {
-          if (!block.startsWith("data: ")) continue;
-          const evt = JSON.parse(block.slice(6));
-
-          if (evt.type === "index") {
-            _scriptSources = evt.script_sources || {};
-            renderIndex(evt.skills);
-          } else if (evt.type === "tools_exposed") {
-            renderTools(evt.tools);
-            if (evt.turn > 0) appendToTurn(evt.turn, `<div class="text-xs text-muted">↻ tools now exposed: <span class="font-mono">${evt.tools.join(", ")}</span></div>`);
-          } else if (evt.type === "sent") {
-            currentTurn = evt.turn;
-            const rows = evt.messages.map(renderMessageRow).join("");
-            const rawJson = JSON.stringify(evt.messages, null, 2);
-            appendToTurn(evt.turn, `
-              <details class="border border-edge-soft rounded">
-                <summary class="cursor-pointer text-xs text-muted px-2 py-1 font-medium">📤 Sent to model (${evt.messages.length} messages, tools=[${evt.tools.join(", ")}])</summary>
-                <div class="px-2 divide-y divide-edge-soft">
-                  ${rows}
-                  <details class="py-1.5">
-                    <summary class="cursor-pointer text-[10px] text-faint">raw JSON</summary>
-                    <pre class="text-[10px] mt-1 p-2 bg-surface-2 rounded whitespace-pre-wrap max-h-80 overflow-auto text-ink-soft">${escape(rawJson)}</pre>
-                  </details>
-                </div>
-              </details>
-            `);
-            // loading indicator while waiting for llama (the slow part)
-            appendToTurn(evt.turn, `
-              <div data-loading-turn="${evt.turn}" class="flex items-center gap-2 text-xs text-muted pl-1">
-                <span class="inline-block w-1.5 h-1.5 rounded-full bg-final animate-pulse"></span>
-                <span>${_isZh2 ? "model 思考中…" : "model thinking…"}</span>
-              </div>
-            `);
-          } else if (evt.type === "received") {
-            currentTurn = evt.turn;
-            // remove the per-turn loading indicator
-            const loadingEl = panel.querySelector(`[data-loading-turn="${evt.turn}"]`);
-            if (loadingEl) loadingEl.remove();
-            const choice = (evt.response.choices || [{}])[0];
-            const reply = choice.message || {};
-            const finish = choice.finish_reason;
-            const usage = evt.response.usage || {};
-            const replyRow = renderMessageRow(reply);
-            const metaLine = `<div class="text-[10px] text-faint py-1.5">finish_reason: <code>${finish || "—"}</code> · usage: prompt=${usage.prompt_tokens ?? "?"}, completion=${usage.completion_tokens ?? "?"}, total=${usage.total_tokens ?? "?"}</div>`;
-            const rawJson = JSON.stringify(evt.response, null, 2);
-            appendToTurn(evt.turn, `
-              <details class="border border-edge-soft rounded">
-                <summary class="cursor-pointer text-xs text-muted px-2 py-1 font-medium">📥 Received from model</summary>
-                <div class="px-2 divide-y divide-edge-soft">
-                  ${replyRow}
-                  ${metaLine}
-                  <details class="py-1.5">
-                    <summary class="cursor-pointer text-[10px] text-faint">raw JSON (含 id / object / system_fingerprint 等 metadata)</summary>
-                    <pre class="text-[10px] mt-1 p-2 bg-surface-2 rounded whitespace-pre-wrap max-h-80 overflow-auto text-ink-soft">${escape(rawJson)}</pre>
-                  </details>
-                </div>
-              </details>
-            `);
-          } else if (evt.type === "turn") {
-            currentTurn = evt.turn;
-            if (evt.content) {
-              appendToTurn(evt.turn, `<div><span class="text-xs uppercase tracking-wider text-muted">Assistant:</span> <span class="text-ink whitespace-pre-wrap">${escape(evt.content)}</span></div>`);
-            }
-            for (const tc of (evt.tool_calls || [])) {
-              const isLoad = tc.name === "load_skill";
-              const cls = isLoad ? "text-final" : "text-tool";
-              appendToTurn(evt.turn, `<div class="font-mono text-xs"><span class="${cls}">↑ ${tc.name}</span>(<span class="text-ink-soft">${escape(tc.args)}</span>)</div>`);
-            }
-          } else if (evt.type === "skill_loaded") {
-            appendToTurn(currentTurn, `
-              <details class="rounded bg-final-tint p-2 border border-final/20">
-                <summary class="cursor-pointer text-xs text-final font-medium">📄 L2 SKILL.md body loaded: <code>${evt.name}</code> (${evt.body.length} chars)</summary>
-                <pre class="mt-2 text-xs whitespace-pre-wrap text-ink-soft">${escape(evt.body)}</pre>
-              </details>
-            `);
-          } else if (evt.type === "l3_loaded") {
-            const kindLabel = evt.kind === "script_output"
-              ? `🛠 L3 script executed: <code>${evt.skill}/${evt.filename}</code>${evt.args ? ` <span class="text-faint">args: ${escape(evt.args)}</span>` : ""} <span class="text-faint">(code not in context)</span>`
-              : `📑 L3 reference loaded: <code>${evt.skill}/${evt.filename}</code> (${evt.content.length} chars)`;
-            appendToTurn(currentTurn, `
-              <details class="rounded bg-result-tint p-2 border border-result/20">
-                <summary class="cursor-pointer text-xs text-result font-medium">${kindLabel}</summary>
-                <pre class="mt-2 text-xs whitespace-pre-wrap text-ink-soft">${escape(evt.content)}</pre>
-              </details>
-            `);
-          } else if (evt.type === "tool_result") {
-            const errCls = evt.error ? "text-tool" : "text-result";
-            appendToTurn(currentTurn, `<div class="font-mono text-xs"><span class="${errCls}">↓ ${evt.name}</span> → <span class="text-ink-soft whitespace-pre-wrap">${escape(evt.result)}</span></div>`);
-          } else if (evt.type === "final") {
-            finalArea.classList.remove("hidden");
-            finalEl.textContent = evt.content;
-          } else if (evt.type === "error") {
-            appendToTurn(currentTurn || 1, `<div class="text-tool text-xs">ERROR: ${escape(evt.message)}</div>`);
-          }
-        }
-      }
-    } catch (err) {
-      if (err.name !== "AbortError") {
-        console.error(err);
-        appendToTurn(currentTurn || 1, `<div class="text-tool text-xs">FETCH ERROR: ${escape(err.message)}</div>`);
-      }
-    } finally {
-      setRunning(false);
-      abortCtl = null;
-    }
-  }
-
-  runBtn.addEventListener("click", () => {
-    if (running) abortCtl?.abort();   // 生成中:按 = 中止 SSE
-    else run();
-  });
-  promptEl.addEventListener("keydown", (e) => {
-    if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
-      e.preventDefault();
-      run();
-    }
-  });
-}
+// ── Tab ⑤ Skill / Tab ⑥ MCP panels(real implementations in Tasks 7/8)──
+function setupSkillTab(panel) { /* Task 7 */ }
+function setupMcpTab(panel) { /* Task 8 */ }
