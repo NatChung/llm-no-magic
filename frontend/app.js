@@ -1029,4 +1029,142 @@ function setupSkillTab(panel) {
   });
 }
 
-function setupMcpTab(panel) { /* Task 8 */ }
+// ── Tab ⑥ MCP — 真 stdio JSON-RPC 迷你 server,協定幀可視化 ────────────
+function setupMcpTab(panel) {
+  const promptEl    = panel.querySelector(".prompt");
+  const runBtn      = panel.querySelector(".run");
+  const turnsEl     = panel.querySelector(".turns");
+  const handshakeEl = panel.querySelector(".handshake");
+
+  let turns = [];
+  let finalDone = false;
+  // phase:"call" protocol frames stream in BEFORE their turn_complete —
+  // buffer them and flush between the blue bubble and the purple results,
+  // so reading order matches the causality (model decides → wire call →
+  // result).
+  let pendingCallCards = [];
+
+  function protocolCard(f) {
+    const card = document.createElement("div");
+    card.className = "rounded-md bg-surface-2 border border-edge px-3 py-2 font-mono text-xs text-ink-soft";
+    const title = document.createElement("div");
+    title.className = "font-semibold text-ink";
+    title.textContent = f.method;
+    const req = document.createElement("div");
+    req.className = "truncate";
+    req.textContent = `${t('protocol_card_req')} ${JSON.stringify(f.request)}`;
+    card.append(title, req);
+    if (f.response) {
+      const resp = document.createElement("div");
+      resp.className = "truncate";
+      resp.textContent = `${t('protocol_card_resp')} ${JSON.stringify(f.response)}`;
+      card.appendChild(resp);
+    }
+    card.appendChild(BUBBLE.details(t('protocol_expand'),
+      BUBBLE.pre(JSON.stringify({ request: f.request, response: f.response }, null, 2))));
+    return card;
+  }
+
+  function onProtocol(f) {
+    if (f.phase === "handshake") {
+      if (handshakeEl.dataset.filled !== "1") {
+        handshakeEl.innerHTML = "";
+        handshakeEl.dataset.filled = "1";
+      }
+      handshakeEl.appendChild(protocolCard(f));
+    } else {
+      pendingCallCards.push(protocolCard(f));   // flushed in onTurnComplete
+    }
+  }
+
+  function onTurnComplete(f) {
+    const hasCalls = (f.tool_calls || []).length > 0;
+    turns.push({ hadTool: hasCalls });
+    if (hasCalls) {
+      const lines = f.tool_calls.map((tc) => {
+        const a = (tc.args || "").trim();
+        return `⟨tool_call⟩ ${tc.name}(${a === "{}" ? "" : a})`;
+      });
+      const { row } = BUBBLE.model({
+        label: t('model_round_label', { n: f.turn }),
+        lines,
+        caption: t('calls_tool_caption'),
+      });
+      if (f.received_chunk) {
+        row.appendChild(BUBBLE.details(t('received_summary'), BUBBLE.pre(f.received_chunk)));
+      }
+      turnsEl.appendChild(row);
+      // flush this turn's wire calls: blue bubble → protocol card(s) → purple results
+      for (const card of pendingCallCards) turnsEl.appendChild(card);
+      pendingCallCards = [];
+      (f.tool_results || []).forEach((tr, i) => {
+        const raw = (tr.result_text || "").trim();
+        const looksJson = raw.startsWith("{") || raw.startsWith("[");
+        const { row: tRow } = BUBBLE.tool({
+          label: t('tool_bubble_label', { name: tr.name }),
+          badge: t('mcp_exec_badge'),
+          body: `${t('tool_returns')} ${looksJson ? raw : JSON.stringify(raw)}`,
+          caption: t('feeds_back_caption'),
+        });
+        if (f.next_prompt && i === f.tool_results.length - 1) {
+          tRow.appendChild(BUBBLE.details(t('next_prompt_summary', { turn: f.turn }), BUBBLE.pre(f.next_prompt)));
+        }
+        turnsEl.appendChild(tRow);
+      });
+    } else {
+      finalDone = true;
+      turnsEl.appendChild(BUBBLE.finalBlock({ caption: t('to_user_caption'), content: f.content }));
+    }
+  }
+
+  function onFinal(f) {
+    if (!finalDone && f.content) {
+      turnsEl.appendChild(BUBBLE.finalBlock({ caption: t('to_user_caption'), content: f.content }));
+      finalDone = true;
+    }
+    const rounds = turns.length;
+    const trips = turns.filter((x) => x.hadTool).length;
+    if (rounds) turnsEl.prepend(BUBBLE.banner(
+      trips === 0 ? t('trace_summary_notool') : t('trace_summary', { trips, rounds })));
+    setRunning(false);
+  }
+
+  let running = false;
+  function setRunning(on) { running = on; runBtn.classList.toggle("running", on); }
+
+  PANELS["6"] = {
+    onDriveStart: (f) => {
+      turns = []; finalDone = false; pendingCallCards = [];
+      turnsEl.innerHTML = "";
+      handshakeEl.innerHTML = "";
+      handshakeEl.dataset.filled = "0";
+      handshakeEl.textContent = t('handshake_empty');
+      setRunning(true);
+      if (f.user != null) promptEl.value = f.user;
+    },
+    onProtocol,
+    onTurnComplete,
+    onFinal,
+    onError: (f) => {
+      const errBox = document.createElement("div");
+      errBox.className = BUBBLE.tw.errorBox;
+      errBox.textContent = `[error] ${f.message}`;
+      turnsEl.appendChild(errBox);
+      setRunning(false);
+    },
+  };
+
+  function driveMcp() {
+    if (!promptEl.value.trim()) return;
+    setRunning(true);
+    postDrive({ tab: "6", user: promptEl.value })
+      .then((r) => { if (!r || !r.ok) setRunning(false); });
+  }
+  runBtn.addEventListener("click", () => {
+    if (running) { postStop(); setRunning(false); }
+    else driveMcp();
+  });
+  promptEl.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && (e.ctrlKey || e.metaKey) && promptEl.value.trim() && !running) driveMcp();
+  });
+}

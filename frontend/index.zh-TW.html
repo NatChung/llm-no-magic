@@ -191,7 +191,34 @@
        Tab 6:placeholder(即將推出)— MCP
        ───────────────────────────────────────────────────────────────── -->
   <main class="tab-panel max-w-6xl mx-auto px-4 md:px-8 py-8 md:py-12" data-panel="mcp">
-    <article class="max-w-3xl mx-auto space-y-10 text-ink-soft leading-relaxed">
+    <div class="panel-header mb-6">
+      <h2 class="text-xl font-semibold text-ink">⑥ MCP — 工具不必寫死在 client 裡</h2>
+      <p class="text-sm text-muted mt-1">一個外部 process 用協定告訴 client 它有什麼工具;client 是「問」出來的,不是寫死的。</p>
+    </div>
+    <div class="space-y-6">
+      <section class="prompt-area space-y-3 max-w-2xl">
+        <label for="prompt-mcp" class="block text-sm font-medium text-ink-soft">問題</label>
+        <div class="relative">
+          <textarea class="prompt w-full rounded-lg shadow-[0_1px_3px_oklch(20%_0.012_280_/_0.06)] border border-edge bg-surface px-3 py-2 pr-12 text-sm font-mono resize-none focus:outline-none focus:border-final focus:ring-1 focus:ring-final" id="prompt-mcp" rows="3" placeholder="例:現在幾點?台北天氣如何?"></textarea>
+          <button class="run absolute bottom-2.5 right-2.5 w-8 h-8 rounded-full bg-ink text-surface flex items-center justify-center hover:bg-ink-soft disabled:bg-faint transition-colors" aria-label="送出 / 停止"><svg class="icon-send" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 13V3M4 7l4-4 4 4"/></svg><svg class="icon-stop" width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><rect x="1" y="1" width="10" height="10" rx="2"/></svg></button>
+        </div>
+      </section>
+      <section class="handshake-area space-y-2">
+        <h3 class="text-xs uppercase tracking-wider text-muted font-medium">握手 — client 啟動時才發現工具</h3>
+        <div class="handshake space-y-2 text-sm text-muted">(還沒跑 — 送出一句話,看 client 跟 MCP server 的第一次對話)</div>
+      </section>
+      <section class="turns-area space-y-3">
+        <h2 class="text-xs uppercase tracking-wider text-muted font-medium">代理跑的軌跡</h2>
+        <div class="flex justify-between text-xs text-ink-soft">
+          <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-final" aria-hidden="true"></span>模型</span>
+          <span class="flex items-center gap-1.5">協定幀(JSON-RPC)<span class="w-2.5 h-2.5 rounded-full border border-edge bg-surface-2" aria-hidden="true"></span></span>
+          <span class="flex items-center gap-1.5">工具(外部 process)<span class="w-2.5 h-2.5 rounded-full bg-tool" aria-hidden="true"></span></span>
+        </div>
+        <div class="turns space-y-3"></div>
+      </section>
+      <details class="mt-8">
+        <summary class="cursor-pointer text-sm text-muted hover:text-ink-soft">📖 完整文章:MCP 是什麼、為什麼需要它</summary>
+        <article class="max-w-3xl space-y-10 text-ink-soft leading-relaxed mt-4">
       <header class="space-y-2">
         <h2 class="text-2xl font-semibold text-ink">⑥ MCP</h2>
         <p class="text-muted">工具不固定的時候、AI 自己選工具。</p>
@@ -267,6 +294,8 @@
         <p>這就是「<strong>一個 protocol、所有工具</strong>」的價值。</p>
       </section>
     </article>
+      </details>
+    </div>
   </main>
 
   <!-- ─────────────────────────────────────────────────────────────────
@@ -307,6 +336,6 @@
     </div>
   </main>
 
-  <script src="app.js?v=80"></script>
+  <script src="app.js?v=81"></script>
 </body>
 </html>
