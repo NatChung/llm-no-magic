@@ -18,9 +18,10 @@ Skill structure on disk:
 Modes:
   - "naive":  ALL skill bodies + L3 contents pre-loaded into the system
               prompt at startup. No lazy loading. Token cost balloons.
-  - "proper": only L1 metadata pre-loaded. Model uses load_skill /
-              read_skill_file / run_skill_script to bring L2 + L3 in on
-              demand.
+  - "proper": only L1 metadata pre-loaded. Model uses the generic
+              read_file / run_script tools to bring L2 + L3 in on
+              demand (the Anthropic Agent Skills shape: no bespoke
+              skill tools, just filesystem + convention).
 """
 
 import json
@@ -37,62 +38,54 @@ MAX_TURNS = 8
 
 
 # ── tool specs (always-exposed in proper mode) ───────────────────────
-LOAD_SKILL_TOOL = {
+# 正規做法(Anthropic Agent Skills):不做專用 skill 工具,agent 用通用的
+# 檔案工具讀 SKILL.md、跑腳本 — skill 只是「檔案結構 + 慣例」。
+READ_FILE_TOOL = {
     "type": "function",
     "function": {
-        "name": "load_skill",
+        "name": "read_file",
         "description": (
-            "把指定 skill 的 L2 SKILL.md body(操作說明)載入對話 context。"
-            "要做相關工作之前,一定先載入對應的 skill。"
+            "讀取磁碟上的檔案,回傳原始內容。skill 的說明書(SKILL.md)"
+            "和參考檔都用這支工具讀。"
         ),
         "parameters": {
             "type": "object",
             "properties": {
-                "name": {"type": "string", "description": "索引裡的 skill 名稱"}
+                "path": {"type": "string", "description": "檔案路徑(例如 skills/check_weather/SKILL.md)"},
             },
-            "required": ["name"],
+            "required": ["path"],
         },
     },
 }
 
-READ_SKILL_FILE_TOOL = {
+RUN_SCRIPT_TOOL = {
     "type": "function",
     "function": {
-        "name": "read_skill_file",
+        "name": "run_script",
         "description": (
-            "讀取 skill 附帶的 L3 參考檔(例如 REFERENCE.md、FORMS.md)。"
-            "只有在 SKILL.md body 指示時才使用。"
+            "執行一個腳本並回傳輸出。腳本的程式碼不會進入對話 context — "
+            "只有 stdout 會。"
         ),
         "parameters": {
             "type": "object",
             "properties": {
-                "skill": {"type": "string", "description": "skill 名稱"},
-                "filename": {"type": "string", "description": "skill 目錄內的檔名(例如 REFERENCE.md)"},
+                "path": {"type": "string", "description": "腳本路徑(例如 skills/check_weather/scripts/weather.py)"},
+                "args": {"type": "string", "description": "接在腳本後的單一字串參數"},
             },
-            "required": ["skill", "filename"],
+            "required": ["path"],
         },
     },
 }
 
-RUN_SKILL_SCRIPT_TOOL = {
-    "type": "function",
-    "function": {
-        "name": "run_skill_script",
-        "description": (
-            "執行 L3 附帶腳本並回傳輸出。腳本的程式碼永遠不會進入對話 "
-            "context — 只有 stdout 會。SKILL.md body 指示時使用。"
-        ),
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "skill": {"type": "string", "description": "skill 名稱"},
-                "script": {"type": "string", "description": "skill 的 scripts/ 目錄內的檔名(例如 weather.py)"},
-                "args": {"type": "string", "description": "接在檔名後傳給腳本的單一字串參數"},
-            },
-            "required": ["skill", "script"],
-        },
-    },
-}
+
+def _resolve_skill_path(path: str):
+    """把 model 給的路徑解析到 skills/ 底下;越界回 None(安全與教學都單純)。"""
+    p = (SKILLS_DIR.parent / path).resolve()
+    try:
+        p.relative_to(SKILLS_DIR.resolve())
+    except ValueError:
+        return None
+    return p
 
 
 # ── skill loading ────────────────────────────────────────────────────
@@ -218,30 +211,23 @@ def run_skill_script(skill: str, script: str, args: str = "") -> str:
 # ── system prompt builders ───────────────────────────────────────────
 def proper_system_prompt(index: dict) -> str:
     lines = [
-        "你是一個 agent。下方列出的 skill 提供你專門能力。",
-        "",
-        "**三層漸進式載入**(lazy-load 約定):",
-        "  L1 中繼資料 — 就是下面這份索引;永遠在 context 裡",
-        "  L2 SKILL.md body — 需要時用 `load_skill(name=...)` 載入",
-        "  L3 資源與腳本 — 用 `read_skill_file(skill, file)` 讀額外的 .md、"
-        "用 `run_skill_script(skill, script, args)` 執行附帶腳本",
+        "你是一個 agent,有兩支通用工具:`read_file`(讀檔案)、`run_script`(跑腳本)。",
+        "下方是 skill 索引(L1)— 每包 skill 的說明書和腳本都在磁碟上,要用就自己拿。",
         "",
         "規則:",
-        "- 只要有 skill 適用,一定先 `load_skill`,不要自己即興發揮。",
-        "- 順序永遠是:先 `load_skill`,再照 SKILL.md 指示執行,最後才回答 user。",
-        "- 嚴格遵守載入的 SKILL.md body(格式、規則等)。",
-        "- SKILL.md 叫你讀 REFERENCE.md 或跑腳本,就照著做。",
+        "- 有 skill 適用時,先用 `read_file` 讀它的 SKILL.md,再嚴格照裡面的指示做。",
         "- 沒有 skill 適用時,直接回答 user。",
         "",
         "## Skill 索引(L1)",
         "",
     ]
     for name, meta in index.items():
-        lines.append(f"- **{name}** ({meta['dir']}/): {meta['description']}")
-        if meta.get("extras"):
-            lines.append(f"  - L3 文件:{', '.join(meta['extras'])}")
-        if meta.get("scripts"):
-            lines.append(f"  - L3 腳本:{', '.join(meta['scripts'])}")
+        lines.append(f"- **{name}**:{meta['description']}")
+        lines.append(f"  - 說明書:{meta['dir']}/SKILL.md")
+        for extra in meta.get("extras", []):
+            lines.append(f"  - 參考檔:{meta['dir']}/{extra}")
+        for script in meta.get("scripts", []):
+            lines.append(f"  - 腳本:{meta['dir']}/scripts/{script}")
     return "\n".join(lines)
 
 
@@ -347,7 +333,7 @@ def skill_agent_loop(user_query, mode):
 
     # tool exposure
     if mode == "proper":
-        active_tools = [LOAD_SKILL_TOOL, READ_SKILL_FILE_TOOL, RUN_SKILL_SCRIPT_TOOL]
+        active_tools = [READ_FILE_TOOL, RUN_SCRIPT_TOOL]
     else:
         # no_skills + naive: no fetch tools needed
         active_tools = []
@@ -434,57 +420,59 @@ def skill_agent_loop(user_query, mode):
             except Exception:
                 args = {}
 
-            if name == "load_skill":
-                skill_name = args.get("name", "")
-                body = load_skill_body(skill_name)
-                if body is not None:
+            if name == "read_file":
+                path = args.get("path", "")
+                p = _resolve_skill_path(path)
+                if p is None or not p.is_file():
+                    result = f"ERROR: 檔案 '{path}' 不存在(這個 demo 只能讀 skills/ 底下的檔案)"
+                    yield {"type": "tool_result", "name": name, "result": result, "error": True}
+                elif p.name == "SKILL.md":
+                    # 讀到說明書 = L2 注入的瞬間(read_file 回傳原始檔案內容,
+                    # 沒有任何加工 — skill 沒有魔法)
+                    text = p.read_text()
+                    skill_name = p.parent.name
                     result = (
-                        f"=== '{skill_name}' 的 L2 SKILL.md body(已載入 context)===\n\n"
-                        f"{body}\n\n"
-                        f"=== 下一步 ===\n現在照 body 的指示完成 user 原本的請求。"
-                        f"body 說要跑腳本,就立刻呼叫 `run_skill_script`;"
-                        f"說要讀參考檔,就立刻呼叫 `read_skill_file`。"
-                        f"不要停在這裡 — 一直做到給出 user 要的最終回答為止。"
+                        f"=== {path}(原樣讀出,已進入 context)===\n\n{text}\n\n"
+                        f"=== 下一步 ===\n照上面說明書的指示完成 user 原本的請求;"
+                        f"說明書說要跑腳本,就立刻用 `run_script`。"
+                        f"不要停在這裡 — 一直做到給出最終回答為止。"
                     )
                     yield {
                         "type": "skill_loaded",
                         "name": skill_name,
-                        "body": body,
+                        "body": text,
                         "layer": "L2",
                     }
                 else:
-                    result = f"ERROR: skill '{skill_name}' not found"
-                    yield {"type": "tool_result", "name": name, "result": result, "error": True}
-            elif name == "read_skill_file":
-                skill = args.get("skill", "")
-                fname = args.get("filename", "")
-                content_out = read_skill_file(skill, fname)
-                if content_out is not None:
-                    result = f"=== L3 file '{fname}' from skill '{skill}' ===\n\n{content_out}"
+                    text = p.read_text()
+                    skill_name = p.relative_to(SKILLS_DIR).parts[0]
+                    result = f"=== {path} ===\n\n{text}"
                     yield {
                         "type": "l3_loaded",
-                        "skill": skill,
-                        "filename": fname,
+                        "skill": skill_name,
+                        "filename": p.name,
                         "kind": "reference",
-                        "content": content_out,
+                        "content": text,
                     }
-                else:
-                    result = f"ERROR: file '{fname}' not found in skill '{skill}'"
-                    yield {"type": "tool_result", "name": name, "result": result, "error": True}
-            elif name == "run_skill_script":
-                skill = args.get("skill", "")
-                script = args.get("script", "")
+            elif name == "run_script":
+                path = args.get("path", "")
                 script_args = args.get("args", "")
-                output = run_skill_script(skill, script, script_args)
-                result = f"=== L3 script output (code itself NOT in context) ===\n\n{output}"
-                yield {
-                    "type": "l3_loaded",
-                    "skill": skill,
-                    "filename": f"scripts/{script}",
-                    "kind": "script_output",
-                    "content": output,
-                    "args": script_args,
-                }
+                p = _resolve_skill_path(path)
+                if p is None or not p.is_file():
+                    result = f"ERROR: 腳本 '{path}' 不存在(這個 demo 只能跑 skills/*/scripts/ 底下的腳本)"
+                    yield {"type": "tool_result", "name": name, "result": result, "error": True}
+                else:
+                    skill_name = p.relative_to(SKILLS_DIR).parts[0]
+                    output = run_skill_script(skill_name, p.name, script_args)
+                    result = f"=== 腳本輸出(程式碼本身沒進 context)===\n\n{output}"
+                    yield {
+                        "type": "l3_loaded",
+                        "skill": skill_name,
+                        "filename": f"scripts/{p.name}",
+                        "kind": "script_output",
+                        "content": output,
+                        "args": script_args,
+                    }
             else:
                 result = f"ERROR: unknown tool '{name}'"
                 yield {"type": "tool_result", "name": name, "result": result, "error": True}

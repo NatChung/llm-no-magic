@@ -35,19 +35,50 @@ def test_no_skills_mode_empty_index(monkeypatch):
     assert events[-1] == {"type": "final", "content": "guess"}
 
 
-def test_load_skill_error_yields_tool_result(monkeypatch):
+def test_read_file_error_yields_tool_result(monkeypatch):
     import agent.skill_agent as sa
     calls = iter([
         _resp(tool_calls=[{"id": "c1", "type": "function",
-                           "function": {"name": "load_skill",
-                                        "arguments": '{"name": "nope"}'}}]),
+                           "function": {"name": "read_file",
+                                        "arguments": '{"path": "skills/nope/SKILL.md"}'}}]),
         _resp(content="sorry"),
     ])
     monkeypatch.setattr(sa.requests, "post", lambda *a, **kw: next(calls))
     events = list(sa.skill_agent_loop("x", "proper"))
     tr = next(e for e in events if e["type"] == "tool_result")
     assert tr["error"] is True
-    assert "not found" in tr["result"]
+    assert "不存在" in tr["result"]
+
+
+def test_read_file_escapes_are_blocked(monkeypatch):
+    """路徑越界(../)不能讀出 skills/ 以外的檔案。"""
+    import agent.skill_agent as sa
+    calls = iter([
+        _resp(tool_calls=[{"id": "c1", "type": "function",
+                           "function": {"name": "read_file",
+                                        "arguments": '{"path": "skills/../agent.py"}'}}]),
+        _resp(content="ok"),
+    ])
+    monkeypatch.setattr(sa.requests, "post", lambda *a, **kw: next(calls))
+    events = list(sa.skill_agent_loop("x", "proper"))
+    tr = next(e for e in events if e["type"] == "tool_result")
+    assert tr["error"] is True
+
+
+def test_read_skill_md_yields_skill_loaded(monkeypatch):
+    """read_file 讀到 SKILL.md → skill_loaded frame(琥珀注入塊的來源)。"""
+    import agent.skill_agent as sa
+    calls = iter([
+        _resp(tool_calls=[{"id": "c1", "type": "function",
+                           "function": {"name": "read_file",
+                                        "arguments": '{"path": "skills/check_weather/SKILL.md"}'}}]),
+        _resp(content="done"),
+    ])
+    monkeypatch.setattr(sa.requests, "post", lambda *a, **kw: next(calls))
+    events = list(sa.skill_agent_loop("台北天氣?", "proper"))
+    loaded = next(e for e in events if e["type"] == "skill_loaded")
+    assert loaded["name"] == "check_weather"
+    assert "name: check_weather" in loaded["body"]  # 原始檔案內容,含 frontmatter
 
 
 def test_repo_index_is_single_skill():

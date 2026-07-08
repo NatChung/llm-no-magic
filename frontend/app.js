@@ -99,16 +99,16 @@ const I18N = {
     'zh-TW': '→ 展開下一個 turn 的 sent,看它躺在 messages 裡',
   },
   l2_injected_label: {
-    'en':    'SKILL.md body injected into context',
-    'zh-TW': 'SKILL.md body 注入 context',
+    'en':    'SKILL.md injected into context',
+    'zh-TW': 'SKILL.md 注入 context',
   },
   l2_injected_sub: {
     'en':    'the L2 manual now reweights everything that follows',
     'zh-TW': 'L2 說明書進來了,接下來每一步都被它改寫機率',
   },
   l2_body_summary: {
-    'en':    'The injected SKILL.md body',
-    'zh-TW': '注入的 SKILL.md body 內容',
+    'en':    'The injected SKILL.md content (verbatim file read)',
+    'zh-TW': '注入的 SKILL.md 內容(原樣讀出的檔案)',
   },
   context_chip: {
     'en':    'context: {n} tokens ({delta})',
@@ -123,8 +123,8 @@ const I18N = {
     'zh-TW': '腳本原始碼(你看得到,model 從頭到尾沒看過)',
   },
   skill_read_file_label: {
-    'en':    'Tool · read_skill_file',
-    'zh-TW': '工具 · read_skill_file',
+    'en':    'Tool · read_file',
+    'zh-TW': '工具 · read_file',
   },
   no_l3_badge: {
     'en':    '💻 runs on your PC · code never enters context',
@@ -143,8 +143,8 @@ const I18N = {
     'zh-TW': 'L1 · frontmatter(yaml)— 永遠在 context(~{n} tokens)',
   },
   anatomy_l2_caption: {
-    'en':    'L2 · SKILL.md body — injected on load_skill',
-    'zh-TW': 'L2 · SKILL.md body — load_skill 時注入',
+    'en':    'L2 · SKILL.md body — enters context when read via read_file',
+    'zh-TW': 'L2 · SKILL.md body — read_file 讀到時進 context',
   },
   anatomy_l3_caption: {
     'en':    'L3 · script — executed only, code never enters context',

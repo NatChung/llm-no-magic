@@ -27,10 +27,12 @@
 - 預告:「model 一開始只看得到左邊的索引(L1,~幾十 token)。看它自己決定
   要載入哪包、載入瞬間 context 計數怎麼跳。」
 - 驅動:`POST /drive {"tab":"5","user":"台北今天天氣怎樣?"}`(第一次會 swap 4B,banner 3-5 秒)
-- 讀回應:藍色泡泡 `⟨tool_call⟩ load_skill("check_weather")` → 琥珀色塊
-  「SKILL.md body 注入 context」(context 計數跳一截)→ 藍色泡泡呼叫
-  `run_skill_script` → 紫色泡泡回 `{"city":"台北","temp_c":28,...}`(code 沒進
+- 讀回應:藍色泡泡 `⟨tool_call⟩ read_file("skills/check_weather/SKILL.md")` →
+  琥珀色塊「SKILL.md 注入 context」(context 計數跳一截)→ 藍色泡泡呼叫
+  `run_script` → 紫色泡泡回 `{"city":"台北","temp_c":28,...}`(code 沒進
   context,只有輸出)→ 綠色「台北:28°C, 晴」— 格式是 SKILL.md 規定的
+- 講重點:model 用的是**通用工具**(讀檔、跑腳本),沒有任何 skill 專用機制 —
+  這正是 Anthropic 的正規做法:skill = 檔案結構 + 慣例,沒有魔法
 - 點深看:展開琥珀塊看注入的說明書全文;展開紫色泡泡下的「腳本原始碼」—
   你看得到,model 從頭到尾沒看過
 - 三個新儀器:送出前看左欄「實際送進 model 的 prompt」框,勾/取消「無 skill 對照」看

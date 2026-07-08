@@ -30,11 +30,14 @@ manageable capability package.
   tokens). Watch it decide by itself which package to load, and watch the context counter
   jump the moment it loads."
 - Drive: `POST /drive {"tab":"5","user":"台北今天天氣怎樣?"}` (the first drive swaps to 4B — banner 3-5 s)
-- Read: blue bubble `⟨tool_call⟩ load_skill("check_weather")` → amber block
-  "SKILL.md body injected into context" (the context counter jumps a notch) → blue bubble
-  calls `run_skill_script` → purple bubble returns `{"city":"台北","temp_c":28,...}` (the
+- Read: blue bubble `⟨tool_call⟩ read_file("skills/check_weather/SKILL.md")` → amber
+  block "SKILL.md injected into context" (the context counter jumps a notch) → blue bubble
+  calls `run_script` → purple bubble returns `{"city":"台北","temp_c":28,...}` (the
   code never enters the context — only its output does) → green "台北:28°C, 晴" — the
   format is what SKILL.md dictated
+- Key point to narrate: the model is using **generic tools** (read a file, run a script) —
+  there is no skill-specific machinery at all. This is exactly Anthropic's official
+  approach: a skill = file structure + convention, no magic
 - For details: expand the amber block to see the full injected manual; expand "script
   source" under the purple bubble — you can see it, but the model never did
 - Three new instruments: before sending, watch the left-column "Prompt actually sent

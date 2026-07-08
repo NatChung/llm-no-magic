@@ -35,9 +35,8 @@ from agent.agent import (
     LLAMA_URL,
 )
 from agent.skill_agent import (skill_agent_loop, load_index, proper_system_prompt,
-                               no_skills_system_prompt, LOAD_SKILL_TOOL,
-                               READ_SKILL_FILE_TOOL, RUN_SKILL_SCRIPT_TOOL,
-                               skill_anatomy)
+                               no_skills_system_prompt, READ_FILE_TOOL,
+                               RUN_SCRIPT_TOOL, skill_anatomy)
 from agent.mcp_agent import mcp_agent_loop
 
 
@@ -684,7 +683,7 @@ class AgentHandler(SimpleHTTPRequestHandler):
                 tools = []
             else:
                 system = proper_system_prompt(load_index())
-                tools = [LOAD_SKILL_TOOL, READ_SKILL_FILE_TOOL, RUN_SKILL_SCRIPT_TOOL]
+                tools = [READ_FILE_TOOL, RUN_SCRIPT_TOOL]
             messages = [
                 {"role": "system", "content": system},
                 {"role": "user",   "content": body.get("user", "")},
