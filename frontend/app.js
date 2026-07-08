@@ -211,6 +211,125 @@ function renderPromptPreview(previewEl, text) {
   previewEl.innerHTML = html;
 }
 
+
+// ── Shared chat-bubble builders (tabs ④⑤⑥) ──────────────────────────
+// 視覺語彙:模型=藍(左)、工具=紫(右)、給使用者=綠(全寬)。
+const BUBBLE = {
+  tw: {
+    block:      "turn-block space-y-1",
+    mRow:       "max-w-[88%] md:max-w-[75%]",
+    mLabel:     "text-xs font-semibold text-final mb-1",
+    mChip:      "ml-1.5 font-normal text-muted",
+    mBubble:    "w-fit rounded-2xl rounded-tl-sm bg-final-tint border border-final/15 px-4 py-3 font-mono text-sm break-all leading-relaxed text-ink",
+    mCaption:   "text-xs text-muted mt-1 ml-1",
+    tRow:       "ml-auto max-w-[88%] md:max-w-[75%] flex flex-col items-end",
+    tLabel:     "text-xs font-semibold text-tool mb-1",
+    tBadge:     "ml-1.5 font-normal text-muted",
+    tBubble:    "rounded-2xl rounded-tr-sm bg-tool-tint border border-tool/15 px-4 py-3 font-mono text-sm break-all leading-relaxed text-ink text-left",
+    tCaption:   "text-xs text-tool mt-1 mr-1",
+    fCaption:   "text-center text-xs font-semibold text-result pt-2 mb-2",
+    fBubble:    "rounded-xl bg-result-tint border border-result/15 px-4 py-3.5 text-center text-base md:text-lg leading-relaxed text-ink",
+    banner:     "rounded-lg bg-surface-2 border border-edge-soft px-4 py-3 flex items-center gap-3 text-sm text-ink-soft",
+    bannerIcon: "w-7 h-7 rounded-full bg-final-tint text-final flex items-center justify-center flex-shrink-0",
+    tokensBox:  "mt-1.5 rounded-md bg-surface border border-edge-soft p-3 font-mono text-xs break-all leading-relaxed max-h-48 overflow-auto",
+    npDetails:  "mt-1.5 w-full text-left",
+    npSummary:  "cursor-pointer text-xs text-muted hover:text-ink-soft py-1 list-none [&::-webkit-details-marker]:hidden before:content-['▸_'] [&[open]]:before:content-['▾_']",
+    npPre:      "mt-1.5 rounded-md bg-surface border border-edge-soft p-3 text-xs font-mono whitespace-pre-wrap break-all max-h-64 overflow-auto text-ink-soft",
+    errorBox:   "mt-3 rounded-md bg-surface-2 border border-edge p-3 text-sm font-mono text-ink-soft",
+  },
+  details(summaryText, contentEl) {
+    const details = document.createElement("details");
+    details.className = BUBBLE.tw.npDetails;
+    const summary = document.createElement("summary");
+    summary.className = BUBBLE.tw.npSummary;
+    summary.textContent = summaryText;
+    details.append(summary, contentEl);
+    return details;
+  },
+  pre(text) {
+    const pre = document.createElement("pre");
+    pre.className = BUBBLE.tw.npPre;
+    pre.textContent = text;
+    return pre;
+  },
+  model({ label, lines, caption, chip }) {
+    const row = document.createElement("div");
+    row.className = BUBBLE.tw.mRow;
+    const labelEl = document.createElement("div");
+    labelEl.className = BUBBLE.tw.mLabel;
+    labelEl.textContent = label;
+    if (chip) {
+      const chipEl = document.createElement("span");
+      chipEl.className = BUBBLE.tw.mChip;
+      chipEl.textContent = chip;
+      labelEl.appendChild(chipEl);
+    }
+    const bubble = document.createElement("div");
+    bubble.className = BUBBLE.tw.mBubble;
+    for (const line of lines) {
+      const div = document.createElement("div");
+      div.textContent = line;
+      bubble.appendChild(div);
+    }
+    row.append(labelEl, bubble);
+    if (caption) {
+      const cap = document.createElement("div");
+      cap.className = BUBBLE.tw.mCaption;
+      cap.textContent = caption;
+      row.appendChild(cap);
+    }
+    return { row, bubble };
+  },
+  tool({ label, badge, body, caption }) {
+    const row = document.createElement("div");
+    row.className = BUBBLE.tw.tRow;
+    const labelEl = document.createElement("div");
+    labelEl.className = BUBBLE.tw.tLabel;
+    labelEl.textContent = label;
+    if (badge) {
+      const badgeEl = document.createElement("span");
+      badgeEl.className = BUBBLE.tw.tBadge;
+      badgeEl.textContent = badge;
+      labelEl.appendChild(badgeEl);
+    }
+    const bubble = document.createElement("div");
+    bubble.className = BUBBLE.tw.tBubble;
+    bubble.textContent = body;
+    row.append(labelEl, bubble);
+    if (caption) {
+      const cap = document.createElement("div");
+      cap.className = BUBBLE.tw.tCaption;
+      cap.textContent = caption;
+      row.appendChild(cap);
+    }
+    return { row, bubble };
+  },
+  finalBlock({ caption, content }) {
+    const block = document.createElement("div");
+    block.className = BUBBLE.tw.block;
+    const capEl = document.createElement("div");
+    capEl.className = BUBBLE.tw.fCaption;
+    capEl.textContent = caption;
+    const bubble = document.createElement("div");
+    bubble.className = BUBBLE.tw.fBubble;
+    bubble.textContent = content || "(no final content)";
+    block.append(capEl, bubble);
+    return block;
+  },
+  banner(text) {
+    const el = document.createElement("div");
+    el.className = BUBBLE.tw.banner;
+    const icon = document.createElement("span");
+    icon.className = BUBBLE.tw.bannerIcon;
+    icon.setAttribute("aria-hidden", "true");
+    icon.textContent = "⟳";
+    const span = document.createElement("span");
+    span.textContent = text;
+    el.append(icon, span);
+    return el;
+  },
+};
+
 // Returns the fetch Response (or null on network error) so callers can detect
 // a rejected/failed drive (409 busy, or a 5xx e.g. swap failure) and re-enable
 // their Send button — no drive_start/final will arrive for it. On 200 the
@@ -521,48 +640,9 @@ function setupAgent(panel) {
     turnsEl.innerHTML = "";
   }
 
-  // ── Tailwind utility class strings,集中管理(chat-bubble layout:
-  //     模型=藍(左)、工具=紫(右)、給使用者=綠(全寬);.turn-block / .tok
-  //     等必留 class 給 CSS,其餘全 utility) ──
-  const TW = {
-    block:        "turn-block space-y-1",
-    // 模型泡泡(藍,靠左)
-    mRow:         "max-w-[88%] md:max-w-[75%]",
-    mLabel:       "text-xs font-semibold text-final mb-1",
-    mBubble:      "w-fit rounded-2xl rounded-tl-sm bg-final-tint border border-final/15 px-4 py-3 font-mono text-sm break-all leading-relaxed text-ink",
-    mCaption:     "text-xs text-muted mt-1 ml-1",
-    // 工具泡泡(紫,靠右)
-    tRow:         "ml-auto max-w-[88%] md:max-w-[75%] flex flex-col items-end",
-    tLabel:       "text-xs font-semibold text-tool mb-1",
-    tBubble:      "rounded-2xl rounded-tr-sm bg-tool-tint border border-tool/15 px-4 py-3 font-mono text-sm break-all leading-relaxed text-ink text-left",
-    tCaption:     "text-xs text-tool mt-1 mr-1",
-    // 給使用者(綠,全寬置中)
-    fCaption:     "text-center text-xs font-semibold text-result pt-2 mb-2",
-    fBubble:      "rounded-xl bg-result-tint border border-result/15 px-4 py-3.5 text-center text-base md:text-lg leading-relaxed text-ink",
-    // 頂端摘要 banner(final 後 prepend)
-    banner:       "rounded-lg bg-surface-2 border border-edge-soft px-4 py-3 flex items-center gap-3 text-sm text-ink-soft",
-    bannerIcon:   "w-7 h-7 rounded-full bg-final-tint text-final flex items-center justify-center flex-shrink-0",
-    // 泡泡下的小展開(token 流 / 收到 / 再送出)
-    tokensBox:    "mt-1.5 rounded-md bg-surface border border-edge-soft p-3 font-mono text-xs break-all leading-relaxed max-h-48 overflow-auto",
-    npDetails:    "mt-1.5 w-full text-left",
-    npSummary:    "cursor-pointer text-xs text-muted hover:text-ink-soft py-1 list-none [&::-webkit-details-marker]:hidden before:content-['▸_'] [&[open]]:before:content-['▾_']",
-    npPre:        "mt-1.5 rounded-md bg-surface border border-edge-soft p-3 text-xs font-mono whitespace-pre-wrap break-all max-h-64 overflow-auto text-ink-soft",
-    errorBox:     "mt-3 rounded-md bg-surface-2 border border-edge p-3 text-sm font-mono text-ink-soft",
-  };
-
-  function makeDetails(summaryText, contentEl) {
-    const details = document.createElement("details");
-    details.className = TW.npDetails;
-    const summary = document.createElement("summary");
-    summary.className = TW.npSummary;
-    summary.textContent = summaryText;
-    details.append(summary, contentEl);
-    return details;
-  }
-
   function makeTokensBox(turn, message_tokens) {
     const box = document.createElement("div");
-    box.className = TW.tokensBox;
+    box.className = BUBBLE.tw.tokensBox;
     const turnIdx = turns.length;  // 0-based array index for turns[]
     message_tokens.forEach((step, tokIdx) => {
       // `.tok` + `.tok-static` 是 styles.css 邏輯依賴(必留)
@@ -579,81 +659,49 @@ function setupAgent(panel) {
 
   function renderTurnBlock(turn, message_tokens, tool_calls, tool_results, received_chunk, next_prompt) {
     const block = document.createElement("div");
-    block.className = TW.block;
+    block.className = BUBBLE.tw.block;
     block.dataset.turn = String(turn);
     const hasToolCalls = (tool_calls || []).length > 0;
 
     if (hasToolCalls) {
-      // ── 模型泡泡(藍,左):⟨tool_call⟩ name(args) ──
-      const mRow = document.createElement("div");
-      mRow.className = TW.mRow;
-      const mLabel = document.createElement("div");
-      mLabel.className = TW.mLabel;
-      mLabel.textContent = t('model_round_label', { n: turn });
-      const mBubble = document.createElement("div");
-      mBubble.className = TW.mBubble;
-      for (const tc of tool_calls) {
-        const line = document.createElement("div");
+      const lines = tool_calls.map((tc) => {
         const argsStr = (tc.args || "").trim();
-        line.textContent = `⟨tool_call⟩ ${tc.name}(${argsStr === "{}" ? "" : argsStr})`;
-        mBubble.appendChild(line);
-      }
-      const mCaption = document.createElement("div");
-      mCaption.className = TW.mCaption;
-      mCaption.textContent = t('calls_tool_caption');
-      mRow.append(mLabel, mBubble, mCaption);
+        return `⟨tool_call⟩ ${tc.name}(${argsStr === "{}" ? "" : argsStr})`;
+      });
+      const { row: mRow } = BUBBLE.model({
+        label: t('model_round_label', { n: turn }),
+        lines,
+        caption: t('calls_tool_caption'),
+      });
       if (message_tokens && message_tokens.length) {
-        mRow.appendChild(makeDetails(t('raw_tokens_summary'), makeTokensBox(turn, message_tokens)));
+        mRow.appendChild(BUBBLE.details(t('raw_tokens_summary'), makeTokensBox(turn, message_tokens)));
       }
       if (received_chunk) {
-        const rcPre = document.createElement("pre");
-        rcPre.className = TW.npPre;
-        rcPre.textContent = received_chunk;
-        mRow.appendChild(makeDetails(t('received_summary'), rcPre));
+        mRow.appendChild(BUBBLE.details(t('received_summary'), BUBBLE.pre(received_chunk)));
       }
       block.appendChild(mRow);
 
-      // ── 工具泡泡(紫,右):回傳 + 結果餵回模型 ──
       (tool_results || []).forEach((tr, i) => {
-        const tRow = document.createElement("div");
-        tRow.className = TW.tRow;
-        const tLabel = document.createElement("div");
-        tLabel.className = TW.tLabel;
-        tLabel.textContent = t('tool_bubble_label', { name: tr.name });
-        const tBadge = document.createElement("span");
-        tBadge.className = "ml-1.5 font-normal text-muted";
-        tBadge.textContent = t('local_exec_badge');
-        tLabel.appendChild(tBadge);
-        const tBubble = document.createElement("div");
-        tBubble.className = TW.tBubble;
         const raw = (tr.result_text || "").trim();
         const looksJson = raw.startsWith("{") || raw.startsWith("[");
-        tBubble.textContent = `${t('tool_returns')} ${looksJson ? raw : JSON.stringify(raw)}`;
-        const tCaption = document.createElement("div");
-        tCaption.className = TW.tCaption;
-        tCaption.textContent = t('feeds_back_caption');
-        tRow.append(tLabel, tBubble, tCaption);
-        // 再送出的累積 prompt 掛在「結果餵回模型」下面(最後一個 tool 泡泡)
+        const { row: tRow } = BUBBLE.tool({
+          label: t('tool_bubble_label', { name: tr.name }),
+          badge: t('local_exec_badge'),
+          body: `${t('tool_returns')} ${looksJson ? raw : JSON.stringify(raw)}`,
+          caption: t('feeds_back_caption'),
+        });
         if (next_prompt && i === tool_results.length - 1) {
-          const npPre = document.createElement("pre");
-          npPre.className = TW.npPre;
-          npPre.textContent = next_prompt;
-          tRow.appendChild(makeDetails(t('next_prompt_summary', { turn }), npPre));
+          tRow.appendChild(BUBBLE.details(t('next_prompt_summary', { turn }), BUBBLE.pre(next_prompt)));
         }
         block.appendChild(tRow);
       });
     } else {
       // ── final 回合:沒有 tool_call → 綠色全寬「給使用者」 ──
       finalRendered = true;
-      const fCaption = document.createElement("div");
-      fCaption.className = TW.fCaption;
-      fCaption.textContent = t('to_user_caption');
-      const fBubble = document.createElement("div");
-      fBubble.className = TW.fBubble;
-      fBubble.textContent = (message_tokens || []).map((s) => s.token).join("") || "(no final content)";
-      block.append(fCaption, fBubble);
+      const content = (message_tokens || []).map((s) => s.token).join("");
+      block.appendChild(BUBBLE.finalBlock({ caption: t('to_user_caption'), content }));
       if (message_tokens && message_tokens.length) {
-        block.appendChild(makeDetails(t('raw_tokens_summary'), makeTokensBox(turn, message_tokens)));
+        block.appendChild(BUBBLE.details(t('raw_tokens_summary'), makeTokensBox(turn, message_tokens)));
       }
     }
 
@@ -670,39 +718,20 @@ function setupAgent(panel) {
     const rounds = turns.length;
     if (!rounds) return;
     const trips = turns.filter((tn) => tn.hadTool).length;
-    const banner = document.createElement("div");
-    banner.className = TW.banner;
-    const icon = document.createElement("span");
-    icon.className = TW.bannerIcon;
-    icon.setAttribute("aria-hidden", "true");
-    icon.textContent = "⟳";
-    const text = document.createElement("span");
-    text.textContent = trips === 0
-      ? t('trace_summary_notool')
-      : t('trace_summary', { trips, rounds });
-    banner.append(icon, text);
-    turnsEl.prepend(banner);
+    turnsEl.prepend(BUBBLE.banner(
+      trips === 0 ? t('trace_summary_notool') : t('trace_summary', { trips, rounds })));
   }
 
   function renderFinal(content) {
     // 正常流程綠色泡泡已在 final turn 的 turn_complete 渲染;這裡只補
     // 「最後一 turn 仍在 tool_call 就被截停」的 fallback(如 max-turns cap)
     if (finalRendered || !content) return;
-    const fCaption = document.createElement("div");
-    fCaption.className = TW.fCaption;
-    fCaption.textContent = t('to_user_caption');
-    const fBubble = document.createElement("div");
-    fBubble.className = TW.fBubble;
-    fBubble.textContent = content;
-    const block = document.createElement("div");
-    block.className = TW.block;
-    block.append(fCaption, fBubble);
-    turnsEl.appendChild(block);
+    turnsEl.appendChild(BUBBLE.finalBlock({ caption: t('to_user_caption'), content }));
   }
 
   function renderError(msg) {
     const errBox = document.createElement("div");
-    errBox.className = TW.errorBox;
+    errBox.className = BUBBLE.tw.errorBox;
     errBox.textContent = `[error] ${msg}`;
     turnsEl.appendChild(errBox);
   }
