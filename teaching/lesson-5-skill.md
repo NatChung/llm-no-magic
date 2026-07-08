@@ -48,9 +48,20 @@ line — **the difference is whether there's a skill**.
   context into the prompt to change probabilities; the difference is that a skill is a
   **controlled** injection: who wrote it, whether it loads, which package loads —
   all visible
-- The token-cost chip at the top left: stuffing everything into the system prompt costs
-  ~N tokens, progressive disclosure only ~M — context is powerful, but tokens are
-  expensive, so load on demand
+- The token-cost chip at the top left: read the two numbers as-is — progressive
+  loading costs ~M tokens now vs ~N if everything were stuffed into the system
+  prompt. (With a single small skill the gap is modest — the POINT is the
+  direction: every pack you add widens it, and stuffing scales with ALL packs
+  while progressive scales with the ONE you load.)
+- One map to close the loop — four packagings of the SAME mechanism (context
+  injection changes the distribution, exactly like "1+1=3"):
+  - prompt engineering = hand-written injection
+  - RAG = retrieved injection
+  - a skill = governed, on-demand injection (who wrote it, whether and what
+    loads — all visible)
+  - context management = deciding what to inject and what to evict
+  Expand verbally only if a student asks; a real RAG demo needs
+  embeddings/retrieval and is out of scope for this tool (課後延伸).
 - Teaser for the next lesson: so far every tool lives on your machine (the skill's script,
   Tab ④'s get_time). Next lesson: what if the tool lives in **someone else's process**?
   → Lesson 6

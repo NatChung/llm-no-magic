@@ -42,8 +42,15 @@
 - 回到段落 1:skill 的 L2 注入跟「1+1=3」是同一件事 — 都是把 context 塞進
   prompt 改機率;差別是 skill 是**受控的**注入:誰寫的、載不載、載哪包,
   都看得見
-- 左上 token 成本 chip:全塞進 system prompt 要 ~N tokens、漸進式只要 ~M —
-  context 影響力大,但 token 也貴,所以按需載入
+- 左上 token 成本 chip:照著兩個數字唸 — 漸進式現在 ~M tokens,全塞進 system
+  prompt 要 ~N。(單一小 skill 差距不大 — 重點是**方向**:每加一包差距就拉開;
+  全塞跟「所有包」一起長,漸進式只跟「你載的那包」長。)
+- 收尾地圖 — 同一個機制的四種包裝(context 注入改分佈,跟「1+1=3」一模一樣):
+  - prompt engineering = 手寫的注入
+  - RAG = 檢索來的注入
+  - skill = 受控、按需的注入(誰寫的、載不載、載哪包,全部看得見)
+  - context management = 決定注入什麼、丟掉什麼
+  學生問到再口頭展開;真的 RAG demo 需要 embedding/檢索,超出本工具範圍(課後延伸)。
 - 課後預告:工具目前都住在你電腦裡(skill 的腳本、Tab ④ 的 get_time)。
   下一課:工具住在**別人的 process** 裡怎麼辦?→ Lesson 6
 
