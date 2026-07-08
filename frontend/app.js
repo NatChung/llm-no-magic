@@ -90,6 +90,57 @@ const I18N = {
     'en':    'Sent again: the prompt sent to the model after accumulating {turn} turn(s)',
     'zh-TW': '再送出,累積 {turn} turn 後送進下次 model 的 prompt',
   },
+  l2_injected_label: {
+    'en':    'SKILL.md body injected into context',
+    'zh-TW': 'SKILL.md body 注入 context',
+  },
+  l2_injected_sub: {
+    'en':    'the L2 manual now reweights everything that follows',
+    'zh-TW': 'L2 說明書進來了,接下來每一步都被它改寫機率',
+  },
+  l2_body_summary: {
+    'en':    'The injected SKILL.md body',
+    'zh-TW': '注入的 SKILL.md body 內容',
+  },
+  context_chip: {
+    'en':    'context: {n} tokens ({delta})',
+    'zh-TW': 'context: {n} tokens({delta})',
+  },
+  token_cost_chip: {
+    'en':    'Progressive loading: ~{proper} tokens now vs ~{naive} if everything were stuffed into the system prompt',
+    'zh-TW': '漸進式載入 ~{proper} tokens;全塞進 system prompt 要 ~{naive} tokens',
+  },
+  script_source_summary: {
+    'en':    'The script source (you can read it — the model never does)',
+    'zh-TW': '腳本原始碼(你看得到,model 從頭到尾沒看過)',
+  },
+  skill_read_file_label: {
+    'en':    'Tool · read_skill_file',
+    'zh-TW': '工具 · read_skill_file',
+  },
+  no_l3_badge: {
+    'en':    '💻 runs on your PC · code never enters context',
+    'zh-TW': '💻 在你電腦執行 · code 不進 context',
+  },
+  skill_index_empty: {
+    'en':    '(not run yet — the model has seen no skills)',
+    'zh-TW': '(還沒跑 — model 目前什麼 skill 都沒看到)',
+  },
+  no_skills_run_note: {
+    'en':    'no-skill run: the index is empty, the model is on its own',
+    'zh-TW': '無 skill 對照:索引是空的,model 只能靠自己',
+  },
+  protocol_card_req: { 'en': '→ request',  'zh-TW': '→ 請求' },
+  protocol_card_resp:{ 'en': '← response', 'zh-TW': '← 回應' },
+  protocol_expand:   { 'en': 'Full JSON-RPC frames', 'zh-TW': '完整 JSON-RPC 內容' },
+  mcp_exec_badge: {
+    'en':    '🔌 runs in the external process',
+    'zh-TW': '🔌 在外部 process 執行',
+  },
+  handshake_empty: {
+    'en':    '(not run yet)',
+    'zh-TW': '(還沒跑)',
+  },
 };
 function t(key, vars = {}) {
   let s = (I18N[key] && I18N[key][LANG]) || (I18N[key] && I18N[key].en) || key;
@@ -795,6 +846,187 @@ document.querySelectorAll(".tab-panel").forEach((panel) => {
 });
 
 
-// ── Tab ⑤ Skill / Tab ⑥ MCP panels(real implementations in Tasks 7/8)──
-function setupSkillTab(panel) { /* Task 7 */ }
+// ── Tab ⑤ Skill — 三層漸進式揭露,drive 經 /drive relay ────────────────
+function setupSkillTab(panel) {
+  const promptEl = panel.querySelector(".prompt");
+  const runBtn   = panel.querySelector(".run");
+  const turnsEl  = panel.querySelector(".turns");
+  const indexEl  = panel.querySelector(".skill-index");
+  const chipEl   = panel.querySelector(".skill-token-chip");
+  const noSkillsToggle = panel.querySelector(".no-skills-toggle");
+
+  let turns = [];               // {hadTool} for the banner
+  let lastPromptTokens = null;  // context-chip delta
+  let scriptSources = {};
+  let finalDone = false;
+  // `sent`/`received` arrive BEFORE their `turn` frame (loop yield order) —
+  // buffer them here and attach the ▸ expanders when onTurn builds the row.
+  let pendingSent = null;
+  let pendingReceived = null;
+
+  function clearAll() {
+    turns = []; lastPromptTokens = null; finalDone = false;
+    pendingSent = null; pendingReceived = null;
+    turnsEl.innerHTML = "";
+  }
+
+  function contextChip(usage) {
+    if (!usage || usage.prompt_tokens == null) return null;
+    const n = usage.prompt_tokens;
+    const delta = lastPromptTokens == null ? "—" : `+${n - lastPromptTokens}`;
+    lastPromptTokens = n;
+    return t('context_chip', { n, delta });
+  }
+
+  function onIndex(f) {
+    scriptSources = f.script_sources || {};
+    indexEl.innerHTML = "";
+    if (!f.skills.length) {
+      // no_skills 對照:估算值是對空索引算的、沒意義 — chip 藏起來
+      chipEl.classList.add("hidden");
+      indexEl.className = "skill-index text-sm text-muted";
+      indexEl.textContent = t('no_skills_run_note');
+      return;
+    }
+    chipEl.classList.remove("hidden");
+    chipEl.textContent = t('token_cost_chip',
+      { proper: f.proper_tokens_est, naive: f.naive_tokens_est });
+    indexEl.className = "skill-index divide-y divide-edge-soft";
+    for (const sk of f.skills) {
+      const card = document.createElement("div");
+      card.className = "py-3 text-xs space-y-1";
+      const name = document.createElement("div");
+      name.className = "font-medium text-ink-soft text-sm";
+      name.textContent = sk.name;
+      const desc = document.createElement("div");
+      desc.className = "text-muted leading-relaxed";
+      desc.textContent = sk.description;
+      const files = document.createElement("div");
+      files.className = "text-faint text-[10px] font-mono";
+      files.textContent = `${sk.dir}/  ${[...(sk.extras || []), ...(sk.scripts || []).map((x) => "scripts/" + x)].join(" · ")}`;
+      card.append(name, desc, files);
+      indexEl.appendChild(card);
+    }
+  }
+
+  function onSent(f) { pendingSent = f; }
+  function onReceived(f) { pendingReceived = f; }
+
+  function onTurn(f) {
+    const hasCalls = (f.tool_calls || []).length > 0;
+    turns.push({ hadTool: hasCalls });
+    if (!hasCalls) { pendingSent = null; pendingReceived = null; return; }  // content-only turn renders at `final`
+    const lines = f.tool_calls.map((tc) => {
+      const a = (tc.args || "").trim();
+      return `⟨tool_call⟩ ${tc.name}(${a === "{}" ? "" : a})`;
+    });
+    const { row } = BUBBLE.model({
+      label: t('model_round_label', { n: f.turn }),
+      lines,
+      caption: t('calls_tool_caption'),
+      chip: contextChip(f.usage),
+    });
+    row.dataset.turn = String(f.turn);
+    // attach the buffered wire views for THIS turn (sent/received preceded us)
+    if (pendingSent) {
+      row.appendChild(BUBBLE.details(t('next_prompt_summary', { turn: f.turn }),
+        BUBBLE.pre(JSON.stringify(pendingSent.messages, null, 2))));
+      pendingSent = null;
+    }
+    if (pendingReceived) {
+      row.appendChild(BUBBLE.details(t('received_summary'),
+        BUBBLE.pre(JSON.stringify(pendingReceived.response, null, 2))));
+      pendingReceived = null;
+    }
+    turnsEl.appendChild(row);
+  }
+
+  function onSkillLoaded(f) {
+    const block = document.createElement("div");
+    block.className = "rounded-lg bg-inject-tint border border-inject/25 px-4 py-3";
+    const head = document.createElement("div");
+    head.className = "text-sm font-semibold text-inject";
+    head.textContent = `📥 ${t('l2_injected_label')} — ${f.name}`;
+    const sub = document.createElement("div");
+    sub.className = "text-xs text-muted mt-0.5";
+    sub.textContent = t('l2_injected_sub');
+    block.append(head, sub);
+    block.appendChild(BUBBLE.details(t('l2_body_summary'), BUBBLE.pre(f.body)));
+    turnsEl.appendChild(block);
+  }
+
+  function onL3Loaded(f) {
+    const isScript = f.kind === "script_output";
+    const { row } = BUBBLE.tool({
+      label: isScript ? t('tool_bubble_label', { name: f.filename }) : t('skill_read_file_label'),
+      badge: isScript ? t('no_l3_badge') : null,
+      body: `${t('tool_returns')} ${f.content}`,
+      caption: t('feeds_back_caption'),
+    });
+    if (isScript) {
+      const key = `${f.skill}/${f.filename.replace(/^scripts\//, "")}`;
+      if (scriptSources[key]) {
+        row.appendChild(BUBBLE.details(t('script_source_summary'), BUBBLE.pre(scriptSources[key])));
+      }
+    }
+    turnsEl.appendChild(row);
+  }
+
+  function onToolResult(f) {
+    const errBox = document.createElement("div");
+    errBox.className = BUBBLE.tw.errorBox;
+    errBox.textContent = `[error] ${f.result}`;
+    turnsEl.appendChild(errBox);
+  }
+
+  function onFinal(f) {
+    // f.content 空字串 = cancel/stop 的 terminal-final(§3.6)— 只解鎖按鈕,
+    // 不畫空的綠泡泡(同 tab4 renderFinal 的 guard)
+    if (!finalDone && f.content) {
+      turnsEl.appendChild(BUBBLE.finalBlock({ caption: t('to_user_caption'), content: f.content }));
+      const rounds = turns.length;
+      const trips = turns.filter((x) => x.hadTool).length;
+      if (rounds) turnsEl.prepend(BUBBLE.banner(
+        trips === 0 ? t('trace_summary_notool') : t('trace_summary', { trips, rounds })));
+      finalDone = true;
+    }
+    setRunning(false);
+  }
+
+  let running = false;
+  function setRunning(on) { running = on; runBtn.classList.toggle("running", on); }
+
+  PANELS["5"] = {
+    onDriveStart: (f) => {
+      clearAll(); setRunning(true);
+      if (f.user != null) promptEl.value = f.user;
+      noSkillsToggle.checked = f.mode === "no_skills";
+    },
+    onIndex, onSent, onReceived, onTurn, onSkillLoaded, onL3Loaded, onToolResult,
+    onFinal,
+    onError: (f) => {
+      const errBox = document.createElement("div");
+      errBox.className = BUBBLE.tw.errorBox;
+      errBox.textContent = `[error] ${f.message}`;
+      turnsEl.appendChild(errBox);
+      setRunning(false);
+    },
+  };
+
+  function driveSkill() {
+    if (!promptEl.value.trim()) return;
+    setRunning(true);
+    postDrive({ tab: "5", user: promptEl.value,
+                mode: noSkillsToggle.checked ? "no_skills" : "proper" })
+      .then((r) => { if (!r || !r.ok) setRunning(false); });
+  }
+  runBtn.addEventListener("click", () => {
+    if (running) { postStop(); setRunning(false); }
+    else driveSkill();
+  });
+  promptEl.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && (e.ctrlKey || e.metaKey) && promptEl.value.trim() && !running) driveSkill();
+  });
+}
+
 function setupMcpTab(panel) { /* Task 8 */ }

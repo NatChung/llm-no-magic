@@ -26,6 +26,8 @@
             'result-tint':'oklch(96% 0.026 145)',
             final:        'oklch(55% 0.20 255)',  // 藍 final-answer 高亮
             'final-tint': 'oklch(96% 0.045 255)',
+            inject:        'oklch(60% 0.14 75)',   // amber — L2 注入時刻
+            'inject-tint': 'oklch(96% 0.045 85)',
           },
           fontFamily: {
             sans: ['ui-sans-serif', 'system-ui', '"PingFang TC"', '"Helvetica Neue"', 'sans-serif'],
@@ -271,63 +273,40 @@
        Tab 5: Skill (preview) — lazy-loaded skill body + bundled tools
        ───────────────────────────────────────────────────────────────── -->
   <main class="tab-panel max-w-6xl mx-auto px-4 md:px-8 py-6 md:py-10" data-panel="skill">
-    <div class="mb-6 p-4 rounded-lg bg-final-tint border border-final/20">
-      <h2 class="text-base font-semibold text-final mb-1">⑤ Skill — Preview (P1 spike artifact)</h2>
-      <p class="text-sm text-ink-soft leading-relaxed">
-        Faithful to Claude Code's <strong>3-layer progressive disclosure</strong>:
-        <strong>L1</strong> metadata (always in system prompt, ~100 tokens/skill) ·
-        <strong>L2</strong> SKILL.md body (load on demand via <code>load_skill</code>, &lt;5k tokens) ·
-        <strong>L3</strong> reference docs + bundled scripts (read on demand; script <em>code</em> never enters context).
-        Toggle <strong>Naive</strong> ↔ <strong>Proper</strong> to see token-explosion vs lazy disclosure.
-      </p>
+    <div class="panel-header mb-6">
+      <h2 class="text-xl font-semibold text-ink">⑤ Skill — capability packs loaded on demand</h2>
+      <p class="text-sm text-muted mt-1">L1 index always present → L2 manual loaded when needed → L3 scripts return output only, code never enters context</p>
     </div>
-
-    <div class="lg:grid lg:grid-cols-[1fr_2fr] lg:gap-6">
-      <!-- LEFT: controls + skill index -->
+    <div class="lg:grid lg:grid-cols-[1fr_2fr] lg:gap-6 space-y-6 lg:space-y-0">
       <section class="space-y-4">
         <div>
-          <label class="block text-sm font-medium text-ink-soft mb-1.5">Preset query</label>
-          <select class="skill-preset w-full rounded-md border border-edge bg-surface px-3 py-2 text-sm focus:outline-none focus:border-final focus:ring-1 focus:ring-final">
-            <option value="">(Pick a preset or type your own)</option>
-            <option value="幫我整理 ~/Downloads 的檔案,分類一下">1. 整理檔案 → should load organize_files skill</option>
-            <option value="台北今天天氣怎樣?">2. 台北天氣 → should load check_weather skill</option>
-            <option value="1 加 1 等於多少?">3. 1+1 → no skill matches, model answers directly</option>
-          </select>
-        </div>
-
-        <div>
-          <label for="prompt-skill" class="block text-sm font-medium text-ink-soft mb-1.5">Query</label>
+          <label for="prompt-skill" class="block text-sm font-medium text-ink-soft mb-1.5">Question</label>
           <div class="relative">
-            <textarea class="skill-prompt w-full rounded-md border border-edge bg-surface px-3 py-2 pr-12 text-sm font-mono resize-none focus:outline-none focus:border-final focus:ring-1 focus:ring-final" id="prompt-skill" rows="3" placeholder="Ask something..."></textarea>
-            <button class="skill-run absolute bottom-2.5 right-2.5 w-8 h-8 rounded-full bg-ink text-surface flex items-center justify-center hover:bg-ink-soft disabled:bg-faint transition-colors" aria-label="Send / Stop"><svg class="icon-send" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 13V3M4 7l4-4 4 4"/></svg><svg class="icon-stop" width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><rect x="1" y="1" width="10" height="10" rx="2"/></svg></button>
+            <textarea class="prompt w-full rounded-lg shadow-[0_1px_3px_oklch(20%_0.012_280_/_0.06)] border border-edge bg-surface px-3 py-2 pr-12 text-sm font-mono resize-none focus:outline-none focus:border-final focus:ring-1 focus:ring-final" id="prompt-skill" rows="3" placeholder="e.g. What's the weather in Taipei?"></textarea>
+            <button class="run absolute bottom-2.5 right-2.5 w-8 h-8 rounded-full bg-ink text-surface flex items-center justify-center hover:bg-ink-soft disabled:bg-faint transition-colors" aria-label="Send / Stop"><svg class="icon-send" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 13V3M4 7l4-4 4 4"/></svg><svg class="icon-stop" width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><rect x="1" y="1" width="10" height="10" rx="2"/></svg></button>
           </div>
+          <label class="mt-2 flex items-center gap-2 text-sm text-ink-soft cursor-pointer">
+            <input type="checkbox" class="no-skills-toggle rounded border-edge">
+            No-skill contrast (re-run without the index)
+          </label>
         </div>
-
-
-        <div class="pt-2">
-          <h3 class="text-xs uppercase tracking-wider text-muted font-medium mb-2">Skill index</h3>
-          <div class="skill-index space-y-2"></div>
-        </div>
-
         <div>
-          <h3 class="text-xs uppercase tracking-wider text-muted font-medium mb-2">Tools currently exposed</h3>
-          <div class="skill-tools rounded-md bg-surface-2 border border-edge-soft p-3 text-xs font-mono text-ink-soft">(not yet started)</div>
+          <h3 class="text-xs uppercase tracking-wider text-muted font-medium mb-2">Skill index (L1 — everything the model sees)</h3>
+          <div class="skill-token-chip hidden rounded-md bg-surface-2 border border-edge-soft px-3 py-2 text-xs text-ink-soft mb-2"></div>
+          <div class="skill-index text-sm text-muted">(not run yet — the model has seen no skills)</div>
         </div>
       </section>
-
-      <!-- RIGHT: turn-by-turn output -->
-      <section class="mt-8 lg:mt-0 space-y-3">
-        <h3 class="text-xs uppercase tracking-wider text-muted font-medium">Agent trace</h3>
-        <div class="skill-turns space-y-3"></div>
-
-        <div class="skill-final-area hidden mt-6 rounded-lg bg-final-tint p-5 space-y-2">
-          <h3 class="text-sm font-semibold text-final uppercase tracking-wider">Final answer</h3>
-          <div class="skill-final text-base leading-relaxed text-ink"></div>
+      <section class="turns-area space-y-3">
+        <h2 class="text-xs uppercase tracking-wider text-muted font-medium">Agent trace</h2>
+        <div class="flex justify-between text-xs text-ink-soft">
+          <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-final" aria-hidden="true"></span>Model</span>
+          <span class="flex items-center gap-1.5">Tools (your PC)<span class="w-2.5 h-2.5 rounded-full bg-tool" aria-hidden="true"></span></span>
         </div>
+        <div class="turns space-y-3"></div>
       </section>
     </div>
   </main>
 
-  <script src="app.js?v=79"></script>
+  <script src="app.js?v=80"></script>
 </body>
 </html>
