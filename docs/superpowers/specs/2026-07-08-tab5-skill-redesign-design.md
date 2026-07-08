@@ -46,10 +46,17 @@ Decisions made in brainstorming (all approved by Nat):
 
 - Delete `agent/skills/organize_files/` (SKILL.md, REFERENCE.md, scripts/organize.py).
 - `load_index()` and the loop stay generic (no hardcoding of one skill).
-- Update tests that reference `organize_files` (index size, selection cases) to
-  assert the single-skill index; keep a fixture-based test for multi-skill index
-  parsing so the generic path stays covered (fixture lives under
-  `agent/tests/`, not `agent/skills/`).
+- No existing test references `organize_files` (verified: agent/tests are mocked
+  and index-size agnostic). New tests to ADD: single-skill index assertion, and a
+  fixture-based multi-skill parse test (fixture under `agent/tests/`,
+  monkeypatching `SKILLS_DIR`) so the generic path stays covered.
+- `skill_agent.py` RUN_SKILL_SCRIPT_TOOL parameter description says
+  "e.g. organize.py" — change to "e.g. weather.py" (this text is sent to the
+  model every proper-mode turn and visible in the sent expanders).
+- Known trade-off (accepted): deleting organize_files shrinks the naive-vs-proper
+  token contrast chip from roughly ~5x to ~2x. Direction still teaches the point;
+  Lesson 5 揭曉 copy must stop promising a big multiplier and just narrate the
+  two numbers.
 - The three tools (`load_skill`, `read_skill_file`, `run_skill_script`) all stay
   exposed in proper mode. `check_weather` has no extra files, so `read_skill_file`
   is simply unused at runtime — acceptable; it keeps the loop generic and the
@@ -79,6 +86,15 @@ skills/check_weather/
 - Data source: extend existing `POST /inspect` with `{"tab":"5"}` to return
   `{files: [{path, layer, content}]}` read live from `agent/skills/` (no caching,
   so edits to the skill show up on reload). No model call involved.
+- Discriminator is explicit: body contains `"tab":"5"` → data response only, do
+  NOT publish anything to the relay; body without it → legacy behavior exactly as
+  today (publish `{"type":"inspect","tokenIndex":...}`). Rationale for reusing
+  /inspect instead of a new endpoint: keeps the endpoint list in AGENTS.md and
+  the stdlib router unchanged.
+- Badge numbers: the L1 badge quotes THIS skill's frontmatter cost
+  (name+description, ~chars/4), not the whole system prompt — so the card and the
+  existing token chip (which measures the full system prompt) can't show
+  contradicting figures for the same label.
 - Bilingual card copy in both HTML files.
 
 ### 3. Prompt preview, Option B
@@ -101,13 +117,23 @@ skills/check_weather/
 - Frontend: debounce ~300 ms on input/toggle change, same as Tab ④ refresh wiring.
 - Preview never triggers a model swap; it uses whichever llama is up (0.6B and 4B
   are both Qwen3 — identical chat template, so the preview text is correct even
-  before the first Tab ⑤ drive). If llama isn't up yet, show the same
-  "尚未啟動" placeholder Tab ④ uses.
+  before the first Tab ⑤ drive). If llama isn't up yet, the request fails the
+  same way Tab ④'s does — reuse Tab ④'s `[preview error] <ExcName>: <msg>`
+  fallback text (no new placeholder).
+- Response shape: same as today's `/preview` — `{"prompt": <expanded text>}`.
+  Note the current handler has no tab dispatch (hardcodes tab4 system+tools);
+  this change introduces the first branch. Tab ④'s existing `{user, system}`
+  body without `tab` must keep working unchanged.
 
-**3b. Per-turn actual prompt (existing, polish only):**
+**3b. Per-turn actual prompt (existing + one real fix):**
 
 - Keep the `sent`-frame wire views; rename the expander label to
   「此 turn 實際送出的 prompt」/ "actual prompt sent this turn".
+- Fix: the frontend currently DROPS sent/received frames for turns without tool
+  calls (app.js `if (!hasCalls) ...` early return) — so the final-answer turn,
+  whose accumulated messages are the fullest and most valuable pedagogically,
+  gets no expander. Change: render the wire views on the final turn too, so
+  EVERY turn has one (this is what Acceptance #4 requires).
 - In the turn that follows a `load_skill`, the expander is where the L2 body is
   visibly sitting inside `messages` — add a one-line hint on the amber injection
   block pointing at it:「展開下一個 turn 的 sent,看它躺在 messages 裡」.
