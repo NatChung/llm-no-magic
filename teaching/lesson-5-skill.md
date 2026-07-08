@@ -26,27 +26,40 @@ manageable capability package.
   SOPs, rules) is exactly how answers get made right
 
 ### Segment 2 — skill: turning "inject context" into a capability package (Tab ⑤)
-- Preview: "At the start the model can only see the index on the left (L1, ~a few dozen
-  tokens). Watch it decide by itself which package to load, and watch the context counter
-  jump the moment it loads."
-- Drive: `POST /drive {"tab":"5","user":"台北今天天氣怎樣?"}` (the first drive swaps to 4B — banner 3-5 s)
-- Read: blue bubble `⟨tool_call⟩ read_file("skills/check_weather/SKILL.md")` → amber
-  block "SKILL.md injected into context" (the context counter jumps a notch) → blue bubble
-  calls `run_script` → purple bubble returns `{"city":"台北","temp_c":28,...}` (the
-  code never enters the context — only its output does) → green "台北:28°C, 晴" — the
-  format is what SKILL.md dictated
+
+Beat order (settled): **explain the skill first → fire → AI shows the prompt → walk the
+round trips**.
+
+- **1. Explain the skill first** (nothing sent yet — point down the left column):
+  - The "Skill index (L1)" card — populated on page load: the "library catalog", the
+    only thing the model permanently sees; what each skill is, when to use it, where
+    its files live on disk — a few dozen tokens
+  - The "Skill anatomy" card — the skill's true form on disk: one folder, three layers
+    (L1 frontmatter always resident / L2 manual body / L3 script); click a filename to
+    see the real content
+  - Close with one line: "the manual and the script are still sitting on disk — not a
+    single token has entered the context yet"
+- **2. Fire**: `POST /drive {"tab":"5","user":"台北今天天氣怎樣?"}`
+  (the first drive swaps to 4B — banner 3-5 s)
+- **3. AI shows the prompt** (after the run, before walking the trace): call
+  `POST /preview {"tab":"5","user":...,"mode":"proper"}`, paste the prompt into the
+  chat colored as a ```diff block — the one-line takeaway: "the green parts contain not
+  a single word of weather knowledge — just a catalog and two generic tools". (Coloring:
+  `+` green = ours/editable, `-` red = training-time convention/immutable, unprefixed
+  gray = template markers. Always inline in the chat — never a separate HTML/artifact)
+- **4. Walk the round trips** (ping-pong reading: left = the model thinking, right =
+  something coming in): blue `read_file("skills/check_weather/SKILL.md")` → right amber
+  "SKILL.md injected into context ← stuffed back into the prompt" (the context counter
+  jumps a notch) → blue `run_script` → right purple returns
+  `{"city":"台北","temp_c":28,...}` (the code never enters the context — only its
+  output does) → green "台北:28°C, 晴" — the format is what SKILL.md dictated
 - Key point to narrate: the model is using **generic tools** (read a file, run a script) —
   there is no skill-specific machinery at all. This is exactly Anthropic's official
   approach: a skill = file structure + convention, no magic
-- For details: expand the amber block to see the full injected manual; expand "script
-  source" under the purple bubble — you can see it, but the model never did
-- Two instruments + one AI performance: the "Skill anatomy" card expands the three
-  on-disk layers (L1 frontmatter / L2 body / L3 script); after a run, expand turn 2's
-  "actual prompt sent this turn" — the freshly injected L2 manual is sitting right
-  inside `messages`, which is exactly what the amber bubble's hint line points at.
-  The "prompt actually sent to the model" has no box on the page — **the AI performs
-  it**: call `POST /preview {"tab":"5","user":...,"mode":"proper"}`, paste it into the
-  chat and annotate it (which parts are protocol, which parts we wrote). (Coloring: use a ```diff code block — `+` green = ours/editable, `-` red = training-time convention/immutable, unprefixed gray = template markers. Always inline in the chat — never a separate HTML/artifact)
+- For details: expand the amber bubble to see the full injected manual; expand "script
+  source" under the purple bubble — you can see it, but the model never did; expand the
+  green bubble's "actual prompt sent this turn" — the freshly injected L2 manual is
+  sitting right inside `messages` (exactly what the amber bubble's hint line points at)
 
 ## Hands-On — no-skill contrast
 Check "no-skill contrast" and send the same line again: the index is empty, so the model

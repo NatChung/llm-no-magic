@@ -1236,6 +1236,7 @@ def test_inspect_tab5_returns_files_and_does_not_publish(monkeypatch):
 
         out = post_inspect({"tab": "5"})
         assert any(f["layer"] == "L2" for f in out["files"])
+        assert [s["name"] for s in out["skills"]] == ["check_weather"]
         assert published == []
 
         out = post_inspect({"tokenIndex": 3})

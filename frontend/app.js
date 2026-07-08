@@ -887,21 +887,10 @@ function setupSkillTab(panel) {
     return t('context_chip', { n, delta });
   }
 
-  function onIndex(f) {
-    scriptSources = f.script_sources || {};
+  function renderIndexCards(skills) {
     indexEl.innerHTML = "";
-    if (!f.skills.length) {
-      // no_skills 對照:估算值是對空索引算的、沒意義 — chip 藏起來
-      chipEl.classList.add("hidden");
-      indexEl.className = "skill-index text-sm text-muted";
-      indexEl.textContent = t('no_skills_run_note');
-      return;
-    }
-    chipEl.classList.remove("hidden");
-    chipEl.textContent = t('token_cost_chip',
-      { proper: f.proper_tokens_est, naive: f.naive_tokens_est });
     indexEl.className = "skill-index divide-y divide-edge-soft";
-    for (const sk of f.skills) {
+    for (const sk of skills) {
       const card = document.createElement("div");
       card.className = "py-3 text-xs space-y-1";
       const name = document.createElement("div");
@@ -916,6 +905,22 @@ function setupSkillTab(panel) {
       card.append(name, desc, files);
       indexEl.appendChild(card);
     }
+  }
+
+  function onIndex(f) {
+    scriptSources = f.script_sources || {};
+    if (!f.skills.length) {
+      // no_skills 對照:估算值是對空索引算的、沒意義 — chip 藏起來
+      chipEl.classList.add("hidden");
+      indexEl.innerHTML = "";
+      indexEl.className = "skill-index text-sm text-muted";
+      indexEl.textContent = t('no_skills_run_note');
+      return;
+    }
+    chipEl.classList.remove("hidden");
+    chipEl.textContent = t('token_cost_chip',
+      { proper: f.proper_tokens_est, naive: f.naive_tokens_est });
+    renderIndexCards(f.skills);
   }
 
   function onSent(f) { pendingSent = f; }
@@ -1078,6 +1083,9 @@ function setupSkillTab(panel) {
         row.append(label, d);
         anatomyEl.appendChild(row);
       }
+      // L1 索引開頁就填好(新教案:先講 skill、才開火)— drive 的 index
+      // frame 之後會照 mode 重畫(no_skills 會清空)
+      if (j.skills && j.skills.length) renderIndexCards(j.skills);
     }).catch(() => { anatomyEl.textContent = t('anatomy_unavailable'); });
   }
 }

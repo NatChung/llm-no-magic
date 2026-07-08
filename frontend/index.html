@@ -304,6 +304,15 @@
     <div class="lg:grid lg:grid-cols-[1fr_2fr] lg:gap-6 space-y-6 lg:space-y-0">
       <section class="space-y-4">
         <div>
+          <h3 class="text-xs uppercase tracking-wider text-muted font-medium mb-2">Skill index (L1 — everything the model sees)</h3>
+          <div class="skill-token-chip hidden rounded-md bg-surface-2 border border-edge-soft px-3 py-2 text-xs text-ink-soft mb-2"></div>
+          <div class="skill-index text-sm text-muted">(not run yet — the model has seen no skills)</div>
+        </div>
+        <div>
+          <h3 class="text-xs uppercase tracking-wider text-muted font-medium mb-2">Skill anatomy — one folder, three layers</h3>
+          <div class="skill-anatomy rounded-lg border border-edge bg-surface p-3 text-xs font-mono space-y-1"></div>
+        </div>
+        <div>
           <label for="prompt-skill" class="block text-sm font-medium text-ink-soft mb-1.5">Question</label>
           <div class="relative">
             <textarea class="prompt w-full rounded-lg shadow-[0_1px_3px_oklch(20%_0.012_280_/_0.06)] border border-edge bg-surface px-3 py-2 pr-12 text-sm font-mono resize-none focus:outline-none focus:border-final focus:ring-1 focus:ring-final" id="prompt-skill" rows="3" placeholder="e.g. What's the weather in Taipei?"></textarea>
@@ -313,15 +322,6 @@
             <input type="checkbox" class="no-skills-toggle rounded border-edge">
             No-skill contrast (re-run without the index)
           </label>
-        </div>
-        <div>
-          <h3 class="text-xs uppercase tracking-wider text-muted font-medium mb-2">Skill index (L1 — everything the model sees)</h3>
-          <div class="skill-token-chip hidden rounded-md bg-surface-2 border border-edge-soft px-3 py-2 text-xs text-ink-soft mb-2"></div>
-          <div class="skill-index text-sm text-muted">(not run yet — the model has seen no skills)</div>
-        </div>
-        <div>
-          <h3 class="text-xs uppercase tracking-wider text-muted font-medium mb-2">Skill anatomy — one folder, three layers</h3>
-          <div class="skill-anatomy rounded-lg border border-edge bg-surface p-3 text-xs font-mono space-y-1"></div>
         </div>
       </section>
       <section class="turns-area space-y-3">
@@ -335,6 +335,6 @@
     </div>
   </main>
 
-  <script src="app.js?v=84"></script>
+  <script src="app.js?v=85"></script>
 </body>
 </html>

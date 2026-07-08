@@ -24,22 +24,32 @@
   錯的答案,對的 context(你公司的 SOP、規則)就是這樣讓答案變對的
 
 ### 段落 2 — skill:把「注入 context」變成能力包(Tab ⑤)
-- 預告:「model 一開始只看得到左邊的索引(L1,~幾十 token)。看它自己決定
-  要載入哪包、載入瞬間 context 計數怎麼跳。」
-- 驅動:`POST /drive {"tab":"5","user":"台北今天天氣怎樣?"}`(第一次會 swap 4B,banner 3-5 秒)
-- 讀回應:藍色泡泡 `⟨tool_call⟩ read_file("skills/check_weather/SKILL.md")` →
-  琥珀色塊「SKILL.md 注入 context」(context 計數跳一截)→ 藍色泡泡呼叫
-  `run_script` → 紫色泡泡回 `{"city":"台北","temp_c":28,...}`(code 沒進
-  context,只有輸出)→ 綠色「台北:28°C, 晴」— 格式是 SKILL.md 規定的
+
+節拍順序(定案):**先講 skill → 開火 → AI 秀 prompt → 講來回軌跡**。
+
+- **1. 先講 skill**(還沒送出,指著左欄由上而下):
+  - 「Skill 索引(L1)」卡 — 開頁就有:model 唯一常駐看得到的「圖書館目錄」,
+    每包 skill 是什麼、什麼時候用、東西放磁碟哪裡,才幾十個 token
+  - 「Skill 解剖」卡 — 這包 skill 在磁碟上的真面目:一個資料夾三層
+    (L1 frontmatter 常駐 / L2 說明書 body / L3 腳本),點檔名可看實際內容
+  - 收一句:「說明書跟腳本現在都還躺在磁碟上,一個 token 都沒進 context」
+- **2. 開火**:`POST /drive {"tab":"5","user":"台北今天天氣怎樣?"}`
+  (第一次會 swap 4B,banner 3-5 秒)
+- **3. AI 秀 prompt**(跑完、講軌跡前):`POST /preview {"tab":"5","user":...,
+  "mode":"proper"}` 取回剛剛那份 prompt,用 ```diff 染色貼進對話 — 重點一句:
+  「綠色部分沒有半個字的天氣知識,只有目錄跟兩支通用工具」。(上色:`+` 綠=我們寫的、
+  `-` 紅=訓練約定改不掉、無前綴灰=template 標記。一律直接貼在對話裡,不要另出
+  HTML/artifact)
+- **4. 講來回軌跡**(乒乓讀法:左=model 在想、右=東西進來):
+  藍 `read_file("skills/check_weather/SKILL.md")` → 右琥珀「SKILL.md 注入 context
+  ← 塞回 prompt」(context 計數跳一截)→ 藍 `run_script` → 右紫回
+  `{"city":"台北","temp_c":28,...}`(code 沒進 context,只有輸出)→
+  綠「台北:28°C, 晴」— 格式是 SKILL.md 規定的
 - 講重點:model 用的是**通用工具**(讀檔、跑腳本),沒有任何 skill 專用機制 —
   這正是 Anthropic 的正規做法:skill = 檔案結構 + 慣例,沒有魔法
-- 點深看:展開琥珀塊看注入的說明書全文;展開紫色泡泡下的「腳本原始碼」—
-  你看得到,model 從頭到尾沒看過
-- 兩個儀器 + 一段 AI 演示:「Skill 解剖」卡展開三層檔案(L1 frontmatter / L2 body /
-  L3 腳本);跑完之後展開第 2 turn 的「此 turn 實際送出的 prompt」— 剛注入的 L2
-  說明書就躺在 messages 裡,琥珀泡泡上那行提示指的就是它。「實際送進 model 的
-  prompt」頁面上沒有框 — **由 AI 演**:`POST /preview {"tab":"5","user":...,
-  "mode":"proper"}` 取回、貼進對話上色講解(哪段是協定、哪段是我們寫的)。(上色:用 ```diff code block — `+` 綠=我們寫的、`-` 紅=訓練約定改不掉、無前綴灰=template 標記。一律直接貼在對話裡,不要另出 HTML/artifact)
+- 點深看:展開琥珀泡泡看注入的說明書全文;展開紫泡泡下的「腳本原始碼」— 你看得到,
+  model 從頭到尾沒看過;展開綠泡泡的「此 turn 實際送出的 prompt」— 剛注入的 L2
+  說明書就躺在 messages 裡(琥珀泡泡上那行提示指的就是它)
 
 ## 學員動手 — 無 skill 對照
 勾選「無 skill 對照」,同一句再送一次:索引是空的,model 只能靠自己編

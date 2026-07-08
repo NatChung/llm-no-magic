@@ -744,7 +744,10 @@ class AgentHandler(SimpleHTTPRequestHandler):
             # data response only — no relay publish (spec 2026-07-08 §2:
             # reusing /inspect keeps the endpoint list unchanged; the tab
             # discriminator keeps tabs ①-③ tokenIndex behavior intact)
-            self._send_json({"files": skill_anatomy()})
+            # skills = L1 index for page-load rendering(新教案:先講 skill
+            # 才開火,索引卡不能等第一次 drive 才出現)
+            self._send_json({"files": skill_anatomy(),
+                             "skills": list(load_index().values())})
             return
         publish({"type": "inspect", "tokenIndex": body.get("tokenIndex", 0)})
         self._send_json({"ok": True, "subscribers": subscriber_count()})
