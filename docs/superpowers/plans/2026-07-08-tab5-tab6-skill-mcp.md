@@ -688,9 +688,14 @@ def test_model_for_tab_5_and_6_are_4b():
 
 
 def _drive_ready(monkeypatch, server):
-    """Neutralize swap + relay so drive() runs the loop synchronously."""
+    """Neutralize swap + relay so drive() runs the loop synchronously.
+    handle_swap MUST be stubbed: in the red phase MODEL_FOR_TAB lacks "5"/"6"
+    so drive() would call the REAL handle_swap (pkill llama-server + port
+    polling) — slow and destructive to the dev environment."""
     monkeypatch.setitem(server.GLOBAL_STATE, "model", "4B")
     monkeypatch.setattr(server, "publish", lambda ev: None)
+    monkeypatch.setattr(server, "handle_swap",
+                        lambda wanted: {"status": "ready", "model": wanted})
 
 
 def test_drive_tab5_aggregates_skills_turns_final(monkeypatch):
@@ -741,6 +746,8 @@ def test_drive_tab5_loop_error_returns_error(monkeypatch):
 def test_drive_tab5_cancel_publishes_empty_final(monkeypatch):
     import agent.server as server
     monkeypatch.setitem(server.GLOBAL_STATE, "model", "4B")
+    monkeypatch.setattr(server, "handle_swap",
+                        lambda wanted: {"status": "ready", "model": wanted})
     published = []
     monkeypatch.setattr(server, "publish", lambda ev: published.append(ev))
 
@@ -752,17 +759,20 @@ def test_drive_tab5_cancel_publishes_empty_final(monkeypatch):
                "usage": {}}
         yield {"type": "final", "content": "never"}
     monkeypatch.setattr(server, "skill_agent_loop", loop)
-    out = server.drive("5", "x")
+    try:
+        out = server.drive("5", "x")
+    finally:
+        server.CANCEL.clear()   # never leak a set CANCEL into later tests
     assert out["final"] == ""
     assert published[-1] == {"type": "final", "content": ""}
 
 
 def test_skill_agent_endpoint_removed():
     import agent.server as server
-    assert not hasattr(server.Handler, "_handle_skill_agent")
+    assert not hasattr(server.AgentHandler, "_handle_skill_agent")
 ```
 
-Note: check the actual handler class name at the top of `test_server.py` (existing tests reference it) — use the same symbol; if the class is named differently (e.g. `AgentHandler`), adjust `test_skill_agent_endpoint_removed` to match.
+(The handler class is `AgentHandler` — `server.py:479`, same symbol existing tests use.)
 
 - [ ] **Step 2: Run tests to verify they fail**
 
@@ -1012,7 +1022,7 @@ const BUBBLE = {
 
 - [ ] **Step 2: Rewrite `setupAgent`'s render functions on the helpers**
 
-Inside `setupAgent`: delete the closure `TW` object, `makeDetails`, and rewrite `renderTurnBlock` / `renderTraceSummary` / `renderFinal` / `renderError` as below. `makeTokensBox` stays (tab-4-only; change its two class references to `BUBBLE.tw.tokensBox` and keep `.tok tok-static` spans):
+Inside `setupAgent`: delete the closure `TW` object, `makeDetails`, and rewrite `renderTurnBlock` / `renderTraceSummary` / `renderFinal` / `renderError` as below. `makeTokensBox` stays (tab-4-only; change its single `TW.tokensBox` class reference to `BUBBLE.tw.tokensBox`; the `.tok tok-static` span classes are string literals — leave them):
 
 ```js
   function renderTurnBlock(turn, message_tokens, tool_calls, tool_results, received_chunk, next_prompt) {
@@ -1123,6 +1133,19 @@ const TAB_TO_PANEL = { "1": "basic", "2": "advanced", "3": "reasoning", "4": "ag
 ```
 
 (Match the actual current declaration shape — if they're built by inversion, just add the skill/mcp entries to the source map.)
+
+**⚠ carryPromptInto guard (spec §3.3 exclusion — adding skill/mcp to
+`PANEL_TO_TAB` + the new panels using `.prompt` would otherwise activate
+cross-lesson carry-over for them; lesson 5 would carry `1+1=3。1+1=3。1+1=`
+into the skill query box).** In `carryPromptInto` (around line 162), add a
+guard at the top:
+
+```js
+const NO_CARRY_PANELS = new Set(["skill", "mcp"]);   // 接龍串只到 ④;⑤⑥ 各有自己的題型
+function carryPromptInto(panelName) {
+  if (NO_CARRY_PANELS.has(panelName)) return;
+  // ... existing body unchanged ...
+```
 
 - [ ] **Step 2: Dispatcher cases** — in `connectEvents`' switch, after the `turn_complete` case add:
 
@@ -1284,9 +1307,14 @@ function setupSkillTab(panel) {
   let lastPromptTokens = null;  // context-chip delta
   let scriptSources = {};
   let finalDone = false;
+  // `sent`/`received` arrive BEFORE their `turn` frame (loop yield order) —
+  // buffer them here and attach the ▸ expanders when onTurn builds the row.
+  let pendingSent = null;
+  let pendingReceived = null;
 
   function clearAll() {
     turns = []; lastPromptTokens = null; finalDone = false;
+    pendingSent = null; pendingReceived = null;
     turnsEl.innerHTML = "";
   }
 
@@ -1300,14 +1328,17 @@ function setupSkillTab(panel) {
 
   function onIndex(f) {
     scriptSources = f.script_sources || {};
-    chipEl.classList.remove("hidden");
-    chipEl.textContent = t('token_cost_chip',
-      { proper: f.proper_tokens_est, naive: f.naive_tokens_est });
     indexEl.innerHTML = "";
     if (!f.skills.length) {
+      // no_skills 對照:估算值是對空索引算的、沒意義 — chip 藏起來
+      chipEl.classList.add("hidden");
+      indexEl.className = "skill-index text-sm text-muted";
       indexEl.textContent = t('no_skills_run_note');
       return;
     }
+    chipEl.classList.remove("hidden");
+    chipEl.textContent = t('token_cost_chip',
+      { proper: f.proper_tokens_est, naive: f.naive_tokens_est });
     indexEl.className = "skill-index divide-y divide-edge-soft";
     for (const s of f.skills) {
       const card = document.createElement("div");
@@ -1326,10 +1357,13 @@ function setupSkillTab(panel) {
     }
   }
 
+  function onSent(f) { pendingSent = f; }
+  function onReceived(f) { pendingReceived = f; }
+
   function onTurn(f) {
     const hasCalls = (f.tool_calls || []).length > 0;
     turns.push({ hadTool: hasCalls });
-    if (!hasCalls) return;   // content-only turn renders at `final`
+    if (!hasCalls) { pendingSent = null; pendingReceived = null; return; }  // content-only turn renders at `final`
     const lines = f.tool_calls.map((tc) => {
       const a = (tc.args || "").trim();
       return `⟨tool_call⟩ ${tc.name}(${a === "{}" ? "" : a})`;
@@ -1341,14 +1375,18 @@ function setupSkillTab(panel) {
       chip: contextChip(f.usage),
     });
     row.dataset.turn = String(f.turn);
+    // attach the buffered wire views for THIS turn (sent/received preceded us)
+    if (pendingSent) {
+      row.appendChild(BUBBLE.details(t('next_prompt_summary', { turn: f.turn }),
+        BUBBLE.pre(JSON.stringify(pendingSent.messages, null, 2))));
+      pendingSent = null;
+    }
+    if (pendingReceived) {
+      row.appendChild(BUBBLE.details(t('received_summary'),
+        BUBBLE.pre(JSON.stringify(pendingReceived.response, null, 2))));
+      pendingReceived = null;
+    }
     turnsEl.appendChild(row);
-  }
-
-  function onReceived(f) {
-    const row = turnsEl.querySelector(`[data-turn="${f.turn}"]`);
-    if (!row) return;
-    row.appendChild(BUBBLE.details(t('received_summary'),
-      BUBBLE.pre(JSON.stringify(f.response, null, 2))));
   }
 
   function onSkillLoaded(f) {
@@ -1390,7 +1428,9 @@ function setupSkillTab(panel) {
   }
 
   function onFinal(f) {
-    if (!finalDone) {
+    // f.content 空字串 = cancel/stop 的 terminal-final(§3.6)— 只解鎖按鈕,
+    // 不畫空的綠泡泡(同 tab4 renderFinal 的 guard)
+    if (!finalDone && f.content) {
       turnsEl.appendChild(BUBBLE.finalBlock({ caption: t('to_user_caption'), content: f.content }));
       const rounds = turns.length;
       const trips = turns.filter((x) => x.hadTool).length;
@@ -1410,7 +1450,7 @@ function setupSkillTab(panel) {
       if (f.user != null) promptEl.value = f.user;
       noSkillsToggle.checked = f.mode === "no_skills";
     },
-    onIndex, onTurn, onReceived, onSkillLoaded, onL3Loaded, onToolResult,
+    onIndex, onSent, onReceived, onTurn, onSkillLoaded, onL3Loaded, onToolResult,
     onFinal,
     onError: (f) => {
       const errBox = document.createElement("div");
@@ -1438,7 +1478,7 @@ function setupSkillTab(panel) {
 }
 ```
 
-Note `final` events with an empty green bubble double as re-enable (terminal-final invariant); `finalDone` guards double-render when a content-only `turn` preceded `final`.
+Note the `onFinal` content guard: an empty-content `final` (cancel/stop path) only re-enables Send — no empty green bubble (same contract as tab 4's `renderFinal`).
 
 - [ ] **Step 4: Tailwind color slot** — in BOTH HTML files' `tailwind.config` `colors`, after `'final-tint'`:
 
@@ -1541,6 +1581,11 @@ function setupMcpTab(panel) {
 
   let turns = [];
   let finalDone = false;
+  // phase:"call" protocol frames stream in BEFORE their turn_complete —
+  // buffer them and flush between the blue bubble and the purple results,
+  // so reading order matches the causality (model decides → wire call →
+  // result). Spec §3.3 + lesson 6 both narrate this order.
+  let pendingCallCards = [];
 
   function protocolCard(f) {
     const card = document.createElement("div");
@@ -1571,7 +1616,7 @@ function setupMcpTab(panel) {
       }
       handshakeEl.appendChild(protocolCard(f));
     } else {
-      turnsEl.appendChild(protocolCard(f));   // interleaves after the blue bubble
+      pendingCallCards.push(protocolCard(f));   // flushed in onTurnComplete
     }
   }
 
@@ -1591,13 +1636,10 @@ function setupMcpTab(panel) {
       if (f.received_chunk) {
         row.appendChild(BUBBLE.details(t('received_summary'), BUBBLE.pre(f.received_chunk)));
       }
-      // protocol cards for this turn already streamed in BEFORE turn_complete —
-      // move them below the model bubble for reading order
-      const pending = turnsEl.querySelectorAll(":scope > .rounded-md.font-mono, :scope > div[data-proto]");
       turnsEl.appendChild(row);
-      // (acceptable simplification: cards arrive before the bubble; visual
-      // order = cards then bubble then results. If reading order matters
-      // more, buffer cards in onProtocol and flush here instead.)
+      // flush this turn's wire calls: blue bubble → protocol card(s) → purple results
+      for (const card of pendingCallCards) turnsEl.appendChild(card);
+      pendingCallCards = [];
       (f.tool_results || []).forEach((tr, i) => {
         const raw = (tr.result_text || "").trim();
         const looksJson = raw.startsWith("{") || raw.startsWith("[");
@@ -1635,7 +1677,7 @@ function setupMcpTab(panel) {
 
   PANELS["6"] = {
     onDriveStart: (f) => {
-      turns = []; finalDone = false;
+      turns = []; finalDone = false; pendingCallCards = [];
       turnsEl.innerHTML = "";
       handshakeEl.innerHTML = "";
       handshakeEl.dataset.filled = "0";
@@ -1700,10 +1742,13 @@ interactive Skill demo (3-layer progressive disclosure); ⑥ is an interactive M
 
 And the architecture bullet's endpoint list drops `/skill-agent` (the `/drive` list now covers tabs 1–6). `AGENTS.zh-TW.md` gets the same two edits in Chinese: 「⑤ 是互動式 Skill demo(三層漸進式揭露);⑥ 是互動式 MCP demo(真 stdio JSON-RPC 迷你 server),文章收在展開段」.
 
+Also drop `/skill-agent` from the endpoint inventories in `agent/SETUP.md:15`
+and `agent/SETUP.zh-TW.md:15` (they list it too).
+
 - [ ] **Step 2: Commit**
 
 ```bash
-git add AGENTS.md AGENTS.zh-TW.md
+git add AGENTS.md AGENTS.zh-TW.md agent/SETUP.md agent/SETUP.zh-TW.md
 git commit -m "docs(agents): tab 5/6 now interactive demos; drop /skill-agent"
 ```
 
@@ -1838,14 +1883,14 @@ get_time、只有一張 tools/call 卡。工具用不用、用哪個,還是 mode
 
 - [ ] **Step 3: English mirrors** — `lesson-5-skill.md` and `lesson-6-mcp.md`: same headings/structure, `> 中文版:` backlink first line, translate faithfully (keep the drive commands and the verified numbers identical).
 
-- [ ] **Step 4: teaching README index** — add to the lesson list in both `teaching/README.zh-TW.md` and `teaching/README.md`:
+- [ ] **Step 4: teaching README index** — the lesson index in `teaching/README.zh-TW.md` (lines ~12–15) is a markdown **table** (`| 1 | ① 基礎 | … | lesson-1-basics.zh-TW.md |`); append two rows in the same format:
 
 ```
-5. lesson-5-skill — context 翻轉答案 → skill 三層漸進式揭露(Tab ①+⑤)
-6. lesson-6-mcp — MCP 握手與跨 process 工具(Tab ⑥)
+| 5 | ①+⑤ context→Skill | context 翻轉答案 → 三層漸進式揭露 | lesson-5-skill.zh-TW.md |
+| 6 | ⑥ MCP | 握手發現工具、跨 process tools/call | lesson-6-mcp.zh-TW.md |
 ```
 
-(Match the existing list format in those files — read them first.)
+Also update the 「順序固定 1→4」 line (~line 17) to 「順序固定 1→6」. Mirror both edits in `teaching/README.md` (English table + "fixed order 1→6").
 
 - [ ] **Step 5: Commit**
 
@@ -1869,8 +1914,9 @@ git commit -m "docs(teaching): lessons 5 (skill) + 6 (mcp), bilingual"
 
 ---
 
-## Self-review notes (done at write time)
+## Self-review notes (updated after plan review, rev 2)
 
-- Spec coverage: §3.1→Tasks 1-2, §3.2→Task 4, §3.3→Tasks 5-8, §3.4→Tasks 3/6, §4→Task 10, §5→Tasks 1-4+11, AGENTS sync (I4)→Task 9. Cache bump→Task 8. carryPromptInto already excludes skill/mcp (verified line ~162) — no task needed.
+- Spec coverage: §3.1→Tasks 1-2, §3.2→Task 4, §3.3→Tasks 5-8, §3.4→Tasks 3/6, §4→Task 10, §5→Tasks 1-4+11, AGENTS/SETUP sync→Task 9. Cache bump→Task 8. carryPromptInto exclusion is an explicit guard added in Task 6 (the old implicit exclusion breaks once skill/mcp join `PANEL_TO_TAB` and use `.prompt`).
 - Type consistency: `BUBBLE.finalBlock({caption, content})` used identically in Tasks 5/7/8; `turn` frame `usage` key shape identical in Tasks 2/3/4/7; `protocol` frame keys identical in Tasks 2/4/8.
-- Known simplification (documented in Task 8 code comment): tab-6 protocol cards for a turn stream in before the turn's bubble; visual order is cards→bubble→results. Acceptable; buffer-and-flush noted as the alternative if reading order matters.
+- Ordering fixes from review: tab-5 `sent`/`received` buffered and attached in `onTurn` (frames precede their `turn`); tab-6 `phase:"call"` cards buffered and flushed in `onTurnComplete` (blue bubble → wire card → purple result, matching spec §3.3 and lesson 6's narration).
+- Cancel path: tab-5/6 `onFinal` guards on `f.content` — empty terminal-final only re-enables Send, no empty green bubble.
