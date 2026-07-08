@@ -20,6 +20,11 @@
   去呼叫 get_time 拿到真實時間** — 這就是①→②→③→④整條接龍要收的線
 - 預告:「model 沒有時鐘。猜它怎麼知道現在幾點?看『代理跑的軌跡』:左邊藍色泡泡是模型、
   右邊紫色泡泡是工具,像聊天記錄一樣來回。」
+- **AI 秀 prompt**(頁面沒有 preview 框 — 這段由 AI 演):驅動前先
+  `POST /preview {"user":"現在幾點?"}` 取回實際 prompt,貼進對話、分三層講:
+  `<|im_start|>` 角色標記 = chat template 的約定(Lesson 2 教過)、英文的 `# Tools`
+  骨架 = 模型訓練時燒死的約定(改不掉)、`<tools>` JSON 裡的中文工具描述 = 我們
+  (產品層)寫的、可以改的部分
 - 驅動:`POST /drive {"tab":"4","user":"現在幾點?"}` → 頁面自動切到 Tab ④ 並渲染;**第一次會 0.6B→4B swap,banner 等 3-5s**(swap 在 `/drive` 內、頁面收 `swap_start` 顯示 banner)
 - 讀回應:泡泡軌跡 — 第 1 回合藍色模型泡泡「⟨tool_call⟩ get_time()」→ 右邊紫色工具泡泡
   「回傳 "HH:MM:SS"」(↩ 結果餵回模型)→ 綠色全寬泡泡「沒有 tool_call → 給使用者」(現在是

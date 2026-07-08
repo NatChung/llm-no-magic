@@ -37,7 +37,7 @@ from agent.agent import (
 from agent.skill_agent import (skill_agent_loop, load_index, proper_system_prompt,
                                no_skills_system_prompt, READ_FILE_TOOL,
                                RUN_SCRIPT_TOOL, skill_anatomy)
-from agent.mcp_agent import mcp_agent_loop
+from agent.mcp_agent import mcp_agent_loop, mcp_preview_tools
 
 
 def sse(event: dict) -> bytes:
@@ -691,6 +691,15 @@ class AgentHandler(SimpleHTTPRequestHandler):
             payload = {"messages": messages, "add_generation_prompt": True}
             if tools:
                 payload["tools"] = tools
+        elif body.get("tab") == "6":
+            # Tab ⑥ pre-send preview:跟 mcp_agent_loop 的 turn-1 同構 —
+            # system 只有 /no_think,tools 是跟 mini MCP server 握手問來的。
+            messages = [
+                {"role": "system", "content": "/no_think"},
+                {"role": "user",   "content": body.get("user", "")},
+            ]
+            payload = {"messages": messages, "tools": mcp_preview_tools(),
+                       "add_generation_prompt": True}
         else:
             messages = [
                 {"role": "system", "content": tab4_system(body.get("system", ""))},

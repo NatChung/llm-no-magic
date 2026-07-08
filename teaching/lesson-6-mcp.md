@@ -25,6 +25,11 @@ MCP solves.
 - Narration: these three cards are the heart of MCP; each `tools/call` card below is the
   client making a cross-process phone call on the model's behalf whenever the model
   decides to use a tool
+- **AI shows the prompt** (no preview box on the page — the AI performs it):
+  `POST /preview {"tab":"6","user":"現在幾點?台北天氣如何?"}` — the server really
+  spawns a mini MCP server, handshakes for the tool list, then expands the prompt.
+  Contrast with the last two lessons: the get_time + get_weather inside `<tools>`
+  were **asked for** — not hard-coded (④), not files on disk (⑤)
 
 ### Segment 2 — reading bubbles and protocol cards interleaved
 - Read: blue bubble (model emits a tool_call) → protocol card (tools/call

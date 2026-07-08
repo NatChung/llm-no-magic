@@ -40,17 +40,20 @@ manageable capability package.
   approach: a skill = file structure + convention, no magic
 - For details: expand the amber block to see the full injected manual; expand "script
   source" under the purple bubble — you can see it, but the model never did
-- Three new instruments: before sending, watch the left-column "Prompt actually sent
-  to the model" box — tick/untick "no-skill contrast" and the whole L1 index section
-  disappears/reappears; the "Skill anatomy" card expands the three on-disk layers
-  (L1 frontmatter / L2 body / L3 script); after a run, expand turn 2's "actual prompt
-  sent this turn" — the freshly injected L2 manual is sitting right inside `messages`,
-  which is exactly what the amber block's hint line points at
+- Two instruments + one AI performance: the "Skill anatomy" card expands the three
+  on-disk layers (L1 frontmatter / L2 body / L3 script); after a run, expand turn 2's
+  "actual prompt sent this turn" — the freshly injected L2 manual is sitting right
+  inside `messages`, which is exactly what the amber bubble's hint line points at.
+  The "prompt actually sent to the model" has no box on the page — **the AI performs
+  it**: call `POST /preview {"tab":"5","user":...,"mode":"proper"}`, paste it into the
+  chat and annotate it (which parts are protocol, which parts we wrote)
 
 ## Hands-On — no-skill contrast
 Check "no-skill contrast" and send the same line again: the index is empty, so the model
 can only make something up (or honestly say it doesn't know). Contrast: same model, same
-line — **the difference is whether there's a skill**.
+line — **the difference is whether there's a skill**. Meanwhile the AI uses `/preview`
+to show both modes' prompts side by side: the no_skills version has no index at all —
+the model doesn't even know skills exist.
 
 ## Reveal and Wrap-Up
 - Back to Segment 1: a skill's L2 injection and "1+1=3" are the same thing — both stuff
@@ -89,8 +92,9 @@ line — **the difference is whether there's a skill**.
   hard-coded in the client, so adding an ability = code change + redeploy. A skill is the
   kitchen consulting its own recipe shelf: the code ships only two generic tools (read a
   file, run a script) forever; adding an ability = dropping a folder into skills/, zero
-  code changes. Check the preview's `<tools>` block: **abilities grow, the tool list
-  doesn't** — that's exactly why skills keep context cheap
+  code changes. Ask the AI to show the prompt via `/preview` and check the `<tools>`
+  block: **abilities grow, the tool list doesn't** — that's exactly why skills keep
+  context cheap
 - "How is L2 injection different from me pasting an SOP into the chat box myself?" —
   Essentially the same thing! A skill turns "you paste it by hand every time" into "the
   model fetches it on demand by itself", and it ships an executable script too

@@ -106,6 +106,10 @@ const I18N = {
     'en':    'the L2 manual now reweights everything that follows',
     'zh-TW': 'L2 說明書進來了,接下來每一步都被它改寫機率',
   },
+  inject_back_caption: {
+    'en':    '← stuffed back into the prompt',
+    'zh-TW': '← 塞回 prompt',
+  },
   l2_body_summary: {
     'en':    'The injected SKILL.md content (verbatim file read)',
     'zh-TW': '注入的 SKILL.md 內容(原樣讀出的檔案)',
@@ -304,6 +308,10 @@ const BUBBLE = {
     tBadge:     "ml-1.5 font-normal text-muted",
     tBubble:    "rounded-2xl rounded-tr-sm bg-tool-tint border border-tool/15 px-4 py-3 font-mono text-sm break-all leading-relaxed text-ink text-left",
     tCaption:   "text-xs text-tool mt-1 mr-1",
+    // 琥珀變體(tab⑤ L2 注入):同右側工具泡泡的節奏,顏色標「這一發是注入」
+    iLabel:     "text-xs font-semibold text-inject mb-1",
+    iBubble:    "rounded-2xl rounded-tr-sm bg-inject-tint border border-inject/25 px-4 py-3 text-sm break-all leading-relaxed text-ink text-left",
+    iCaption:   "text-xs text-inject mt-1 mr-1",
     fCaption:   "text-center text-xs font-semibold text-result pt-2 mb-2",
     fBubble:    "rounded-xl bg-result-tint border border-result/15 px-4 py-3.5 text-center text-base md:text-lg leading-relaxed text-ink",
     banner:     "rounded-lg bg-surface-2 border border-edge-soft px-4 py-3 flex items-center gap-3 text-sm text-ink-soft",
@@ -357,11 +365,12 @@ const BUBBLE = {
     }
     return { row, bubble };
   },
-  tool({ label, badge, body, caption }) {
+  tool({ label, badge, body, caption, tone }) {
+    const inject = tone === "inject";
     const row = document.createElement("div");
     row.className = BUBBLE.tw.tRow;
     const labelEl = document.createElement("div");
-    labelEl.className = BUBBLE.tw.tLabel;
+    labelEl.className = inject ? BUBBLE.tw.iLabel : BUBBLE.tw.tLabel;
     labelEl.textContent = label;
     if (badge) {
       const badgeEl = document.createElement("span");
@@ -370,12 +379,12 @@ const BUBBLE = {
       labelEl.appendChild(badgeEl);
     }
     const bubble = document.createElement("div");
-    bubble.className = BUBBLE.tw.tBubble;
+    bubble.className = inject ? BUBBLE.tw.iBubble : BUBBLE.tw.tBubble;
     bubble.textContent = body;
     row.append(labelEl, bubble);
     if (caption) {
       const cap = document.createElement("div");
-      cap.className = BUBBLE.tw.tCaption;
+      cap.className = inject ? BUBBLE.tw.iCaption : BUBBLE.tw.tCaption;
       cap.textContent = caption;
       row.appendChild(cap);
     }
@@ -681,39 +690,13 @@ function setupPanel(panel) {
 // ── Tab ④ Agent — 真執行 tool,SSE per-turn render ─────────────────────
 function setupAgent(panel) {
   const promptEl   = panel.querySelector(".prompt");
-  const previewEl  = panel.querySelector(".final-prompt-preview");
   const runBtn     = panel.querySelector(".run");
   const turnsEl    = panel.querySelector(".turns");
   // Note: Tab ④ 拿掉 probs-area,token 不再 clickable(教學焦點移到 turn-level
   // 累積 prompt,不在 per-token 機率)— renderProbs 仍在 Tab 1-3 用
   // final answer 不再有獨立 section:綠色「給使用者」泡泡直接渲染在 turns 流裡
-
-  // 即時 preview「實際送到 model 的 prompt」— 跟 Tab 2/3 一致(chat template
-  // 包好的 text);呼叫 backend /preview,由 llama.cpp /apply-template 算出。
-  const AGENT_PREVIEW_URL = "/preview";
-  async function refreshPreview() {
-    if (!previewEl) return;
-    try {
-      const res = await fetch(AGENT_PREVIEW_URL, {
-        method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body:   JSON.stringify({ user: promptEl.value }),
-      });
-      if (!res.ok) { previewEl.textContent = `[preview HTTP ${res.status}]`; return; }
-      const d = await res.json();
-      renderPromptPreview(previewEl, d.prompt || "(no prompt)");
-    } catch (err) {
-      previewEl.textContent = `[preview error] ${err.message}`;
-    }
-  }
-  // Debounce input events 300ms 避免每按一鍵都打 backend
-  let previewTimer = null;
-  function debouncedRefreshPreview() {
-    clearTimeout(previewTimer);
-    previewTimer = setTimeout(refreshPreview, 300);
-  }
-  refreshPreview();
-  promptEl.addEventListener("input", debouncedRefreshPreview);
+  // 「實際送進 model 的 prompt」不再放頁面 — AI 老師用 POST /preview 取回,
+  // 在對話裡上色講解(頁面愈來愈滿,這塊由 AI 演比較清楚)。
 
   // Per-turn token storage(避免不同 turn 的 token index 衝突)
   // turns[i] = { tokenSteps: [{token, top_logprobs}, ...], el: HTMLElement, hadTool: bool }
@@ -878,7 +861,8 @@ function setupSkillTab(panel) {
   const indexEl  = panel.querySelector(".skill-index");
   const chipEl   = panel.querySelector(".skill-token-chip");
   const noSkillsToggle = panel.querySelector(".no-skills-toggle");
-  const previewEl = panel.querySelector(".final-prompt-preview");
+  // 「實際送進 model 的 prompt」由 AI 老師經 POST /preview 取回、在對話裡講解
+  // (同 tab④)— 頁面不再放 preview 框。
 
   let turns = [];               // {hadTool} for the banner
   let lastPromptTokens = null;  // context-chip delta
@@ -967,20 +951,20 @@ function setupSkillTab(panel) {
   }
 
   function onSkillLoaded(f) {
-    const block = document.createElement("div");
-    block.className = "rounded-lg bg-inject-tint border border-inject/25 px-4 py-3";
-    const head = document.createElement("div");
-    head.className = "text-sm font-semibold text-inject";
-    head.textContent = `📥 ${t('l2_injected_label')} — ${f.name}`;
-    const sub = document.createElement("div");
-    sub.className = "text-xs text-muted mt-0.5";
-    sub.textContent = t('l2_injected_sub');
+    // 右側琥珀泡泡 — 注入就是 read_file 的「回傳」,跟 tab④ 的紫泡泡同節奏,
+    // 琥珀色標出「這一發塞的是說明書」。
+    const { row } = BUBBLE.tool({
+      label: `📥 ${t('l2_injected_label')} — ${f.name}`,
+      body: t('l2_injected_sub'),
+      caption: t('inject_back_caption'),
+      tone: "inject",
+    });
+    row.appendChild(BUBBLE.details(t('l2_body_summary'), BUBBLE.pre(f.body)));
     const hint = document.createElement("div");
     hint.className = "text-xs text-inject mt-0.5";
     hint.textContent = t('l2_see_sent_hint');
-    block.append(head, sub, hint);
-    block.appendChild(BUBBLE.details(t('l2_body_summary'), BUBBLE.pre(f.body)));
-    turnsEl.appendChild(block);
+    row.appendChild(hint);
+    turnsEl.appendChild(row);
   }
 
   function onL3Loaded(f) {
@@ -1069,26 +1053,6 @@ function setupSkillTab(panel) {
   promptEl.addEventListener("keydown", (e) => {
     if (e.key === "Enter" && (e.ctrlKey || e.metaKey) && promptEl.value.trim() && !running) driveSkill();
   });
-
-  // live pre-send preview (spec 2026-07-08 §3a): server-built, template-expanded
-  let previewTimer = null;
-  function refreshSkillPreview() {
-    if (!previewEl) return;
-    fetch("/preview", {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ tab: "5", user: promptEl.value,
-                             mode: noSkillsToggle.checked ? "no_skills" : "proper" }),
-    }).then((r) => r.json())
-      .then((j) => renderPromptPreview(previewEl, j.prompt || ""))
-      .catch((e) => { previewEl.textContent = `[preview error] ${e}`; });
-  }
-  function schedulePreview() {
-    clearTimeout(previewTimer);
-    previewTimer = setTimeout(refreshSkillPreview, 300);
-  }
-  promptEl.addEventListener("input", schedulePreview);
-  noSkillsToggle.addEventListener("change", refreshSkillPreview);
-  refreshSkillPreview();  // initial render
 
   // anatomy card (spec 2026-07-08 §2) — static, fetched once at init
   const anatomyEl = panel.querySelector(".skill-anatomy");

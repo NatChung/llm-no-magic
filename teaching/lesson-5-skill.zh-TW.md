@@ -35,14 +35,17 @@
   這正是 Anthropic 的正規做法:skill = 檔案結構 + 慣例,沒有魔法
 - 點深看:展開琥珀塊看注入的說明書全文;展開紫色泡泡下的「腳本原始碼」—
   你看得到,model 從頭到尾沒看過
-- 三個新儀器:送出前看左欄「實際送進 model 的 prompt」框,勾/取消「無 skill 對照」看
-  L1 索引整段消失/出現;「Skill 解剖」卡展開三層檔案(L1 frontmatter / L2 body /
+- 兩個儀器 + 一段 AI 演示:「Skill 解剖」卡展開三層檔案(L1 frontmatter / L2 body /
   L3 腳本);跑完之後展開第 2 turn 的「此 turn 實際送出的 prompt」— 剛注入的 L2
-  說明書就躺在 messages 裡,琥珀塊上那行提示指的就是它
+  說明書就躺在 messages 裡,琥珀泡泡上那行提示指的就是它。「實際送進 model 的
+  prompt」頁面上沒有框 — **由 AI 演**:`POST /preview {"tab":"5","user":...,
+  "mode":"proper"}` 取回、貼進對話上色講解(哪段是協定、哪段是我們寫的)
 
 ## 學員動手 — 無 skill 對照
 勾選「無 skill 對照」,同一句再送一次:索引是空的,model 只能靠自己編
 (或老實說不知道)。對照:同一個 model、同一句話,**差別是有沒有 skill**。
+AI 同時用 `/preview` 把兩種 mode 的 prompt 並排秀出來:no_skills 版連索引
+都沒有 — model 根本不知道 skill 存在,自然拿不到。
 
 ## 揭曉與回顧
 - 回到段落 1:skill 的 L2 注入跟「1+1=3」是同一件事 — 都是把 context 塞進
@@ -71,8 +74,8 @@
 - 「skill 跟 Tab ④ 的工具差在哪?」— 差在**能力清單怎麼註冊**。Tab ④ 是
   菜單印死在店裡:工具 schema 寫死在 client code,加一個能力 = 改 code、重新
   部署。skill 是廚房自己看食譜櫃:code 裡永遠只有兩支通用工具(讀檔、跑腳本),
-  加能力 = 丟一個資料夾進 skills/,不改半行 code。看 preview 的 `<tools>`
-  區塊就知道:**能力變多,工具清單不變** — 這就是 skill 省 context 的關鍵
+  加能力 = 丟一個資料夾進 skills/,不改半行 code。請 AI 用 `/preview` 秀 prompt
+  看 `<tools>` 區塊就知道:**能力變多,工具清單不變** — 這就是 skill 省 context 的關鍵
 - 「L2 注入跟我自己貼 SOP 進聊天框差在哪?」— 本質一樣!skill 就是把「你每
   次手貼」變成「model 自己按需取用」,還帶了可執行的腳本
 - 「為什麼 code 不進 context?」— model 不需要看 code,只需要結果;code 進

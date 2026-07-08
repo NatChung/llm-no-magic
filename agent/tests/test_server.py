@@ -213,6 +213,31 @@ def test_preview_tab5_proper_vs_no_skills(monkeypatch):
         srv.shutdown()
 
 
+def test_preview_tab6_discovers_mcp_tools(monkeypatch):
+    """POST /preview tab=6:tools 是跟 mini MCP server 真握手問來的;system=/no_think。"""
+    import agent.server as server
+
+    captured = {}
+    def fake_post(url, **kw):
+        captured["json"] = kw.get("json")
+        return _mock_template_resp(prompt="TPL6")
+    monkeypatch.setattr(server.requests, "post", fake_post)
+
+    srv, port = _start_server_in_thread()
+    try:
+        req = urllib.request.Request(
+            f"http://127.0.0.1:{port}/preview",
+            data=json.dumps({"tab": "6", "user": "現在幾點?"}).encode("utf-8"),
+            headers={"Content-Type": "application/json"}, method="POST")
+        out = json.loads(urllib.request.urlopen(req, timeout=15).read())
+        assert out["prompt"] == "TPL6"
+        sent = captured["json"]
+        assert sent["messages"][0] == {"role": "system", "content": "/no_think"}
+        assert {t["function"]["name"] for t in sent["tools"]} == {"get_time", "get_weather"}
+    finally:
+        srv.shutdown()
+
+
 def test_do_post_agent_streams_events_via_sse(monkeypatch):
     """End-to-end: POST /agent → SSE body 含 turn_complete + final 兩 frame。"""
     import agent.server as server

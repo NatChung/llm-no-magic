@@ -80,6 +80,26 @@ def mcp_tools_to_openai(tools: list[dict]) -> list[dict]:
     ]
 
 
+def mcp_preview_tools() -> list[dict]:
+    """Spawn the mini server, handshake, return OpenAI-format tools.
+
+    Used by POST /preview {"tab":"6"} so the AI teacher can show the
+    exact turn-1 prompt (tools included) without running a generation.
+    """
+    client = McpClient()
+    try:
+        client.request("initialize", {
+            "protocolVersion": "2025-03-26",
+            "capabilities": {},
+            "clientInfo": {"name": "llm-no-magic-preview", "version": "0.1"},
+        })
+        client.notify("notifications/initialized")
+        _, resp = client.request("tools/list")
+        return mcp_tools_to_openai(resp["result"]["tools"])
+    finally:
+        client.close()
+
+
 def mcp_agent_loop(user_query: str):
     """Yield protocol / turn_complete / final / error frames (see module doc)."""
     global _LAST_CLIENT
