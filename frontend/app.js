@@ -862,6 +862,7 @@ function setupSkillTab(panel) {
   const indexEl  = panel.querySelector(".skill-index");
   const chipEl   = panel.querySelector(".skill-token-chip");
   const noSkillsToggle = panel.querySelector(".no-skills-toggle");
+  const previewEl = panel.querySelector(".final-prompt-preview");
 
   let turns = [];               // {hadTool} for the banner
   let lastPromptTokens = null;  // context-chip delta
@@ -1052,6 +1053,26 @@ function setupSkillTab(panel) {
   promptEl.addEventListener("keydown", (e) => {
     if (e.key === "Enter" && (e.ctrlKey || e.metaKey) && promptEl.value.trim() && !running) driveSkill();
   });
+
+  // live pre-send preview (spec 2026-07-08 §3a): server-built, template-expanded
+  let previewTimer = null;
+  function refreshSkillPreview() {
+    if (!previewEl) return;
+    fetch("/preview", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ tab: "5", user: promptEl.value,
+                             mode: noSkillsToggle.checked ? "no_skills" : "proper" }),
+    }).then((r) => r.json())
+      .then((j) => renderPromptPreview(previewEl, j.prompt || ""))
+      .catch((e) => { previewEl.textContent = `[preview error] ${e}`; });
+  }
+  function schedulePreview() {
+    clearTimeout(previewTimer);
+    previewTimer = setTimeout(refreshSkillPreview, 300);
+  }
+  promptEl.addEventListener("input", schedulePreview);
+  noSkillsToggle.addEventListener("change", refreshSkillPreview);
+  refreshSkillPreview();  // initial render
 }
 
 // ── Tab ⑥ MCP — 真 stdio JSON-RPC 迷你 server,協定幀可視化 ────────────
