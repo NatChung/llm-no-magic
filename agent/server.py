@@ -3,8 +3,8 @@
 Architecture: stdlib http.server only (no FastAPI). One process on :9000
 serves both:
   - GET /, /index.html, /app.js, /styles.css ... → static files from frontend/
-  - POST /agent, /skill-agent, /preview → API handlers (SSE for /agent
-    and /skill-agent, plain proxy for /preview)
+  - POST /agent, /preview → API handlers (SSE for /agent, plain proxy for /preview)
+  - POST /drive /inspect /stop → relay teaching commands (tabs 1-6)
 
 This collapses what used to be two separate ports (frontend :9000 via
 http.server, backend :8082 via this file) into one. Reduces ports the
@@ -35,6 +35,7 @@ from agent.agent import (
     LLAMA_URL,
 )
 from agent.skill_agent import skill_agent_loop
+from agent.mcp_agent import mcp_agent_loop
 
 
 def sse(event: dict) -> bytes:
@@ -219,7 +220,8 @@ LLAMA_COMPLETION_URL = LLAMA_URL.replace("/v1/chat/completions", "/completion")
 CANCEL = threading.Event()   # set by POST /stop; checked each token by generators
 
 GEN_LOCK = threading.Lock()   # serialize /drive: one generation fans out at a time
-MODEL_FOR_TAB = {"1": "0.6B", "2": "0.6B", "3": "0.6B", "4": "4B"}
+MODEL_FOR_TAB = {"1": "0.6B", "2": "0.6B", "3": "0.6B", "4": "4B",
+                 "5": "4B", "6": "4B"}
 
 # Tab ④ 教學用瘦身配置(spec 2026-07-07-tab4-simplify):頁面只教 get_time,
 # system 只留 /no_think。CLI(agent.py)與 Tab ⑤ 仍用完整 SYSTEM_PROMPT /
@@ -459,6 +461,42 @@ def drive(tab: str, user: str, system: str = "", mode: str = "") -> dict:
                 return {"subscribers": subscriber_count(), "tab": tab,
                         "turns": turns, "final": final}
 
+            if tab in ("5", "6"):
+                # Tab ⑤ skill / Tab ⑥ mcp — same cancel/terminal-final
+                # contract as tab 4 above.
+                turns = []
+                extra_key = "skills" if tab == "5" else "protocol_frames"
+                extra = []
+                saw_final = False
+                if tab == "5":
+                    loop = skill_agent_loop(user, mode or "proper")
+                else:
+                    loop = mcp_agent_loop(user)
+                for ev in loop:
+                    publish(ev)
+                    et = ev["type"]
+                    if et in ("turn", "turn_complete"):
+                        turns.append(ev)
+                    elif et == "index" and tab == "5":
+                        extra = ev["skills"]
+                    elif et == "protocol" and tab == "6":
+                        extra.append(ev)
+                    elif et == "final":
+                        final = ev["content"]
+                        saw_final = True
+                    elif et == "error":
+                        return _fail(ev["message"], error_already_published=True)
+                    if CANCEL.is_set():
+                        break
+                if not saw_final:
+                    # terminal-final invariant (§3.6): cancel broke the loop
+                    # before its own final — emit one so Send re-enables.
+                    # (breaking out closes the generator → mcp child reaped
+                    # in its finally)
+                    publish({"type": "final", "content": ""})
+                return {"subscribers": subscriber_count(), "tab": tab,
+                        extra_key: extra, "turns": turns, "final": final}
+
             tokens = []
             for ev in completion_generate(tab, user, system, mode):
                 publish(ev)
@@ -479,7 +517,7 @@ def drive(tab: str, user: str, system: str = "", mode: str = "") -> dict:
 class AgentHandler(SimpleHTTPRequestHandler):
     """One handler:
       - GET → SimpleHTTPRequestHandler serves static files from STATIC_ROOT
-      - POST → /agent / /skill-agent / /preview / /drive / /inspect / /stop API endpoints (below)
+      - POST → /agent / /preview / /drive / /inspect / /stop API endpoints (below)
       - OPTIONS → CORS preflight
     """
 
@@ -575,8 +613,6 @@ class AgentHandler(SimpleHTTPRequestHandler):
     def do_POST(self) -> None:
         if self.path == "/agent":
             self._handle_agent()
-        elif self.path == "/skill-agent":
-            self._handle_skill_agent()
         elif self.path == "/preview":
             self._handle_preview()
         elif self.path == "/drive":
@@ -589,32 +625,6 @@ class AgentHandler(SimpleHTTPRequestHandler):
             self.send_response(404)
             self._send_cors()
             self.end_headers()
-
-    def _handle_skill_agent(self) -> None:
-        """Tab ⑤ preview: skill simulator with naive/proper toggle."""
-        body = self._read_body()
-        if body is None:
-            return
-
-        self.send_response(200)
-        self.send_header("Content-Type", "text/event-stream")
-        self.send_header("Cache-Control", "no-cache")
-        self._send_cors()
-        self.end_headers()
-
-        mode = body.get("mode", "proper")  # "naive" or "proper"
-        user = body.get("user", "")
-
-        try:
-            for event in skill_agent_loop(user, mode):
-                self.wfile.write(sse(event))
-                self.wfile.flush()
-        except Exception as exc:
-            try:
-                self.wfile.write(sse({"type": "error", "message": f"{type(exc).__name__}: {exc}"}))
-                self.wfile.flush()
-            except Exception:
-                pass
 
     def _read_body(self) -> dict | None:
         """Read + parse JSON body. On error, send 400 + return None."""

@@ -1064,3 +1064,95 @@ def test_post_stop_sets_cancel(monkeypatch):
     finally:
         server.CANCEL.clear()
         srv.shutdown()
+
+
+# ── Tab 5/6 drive routing(spec 2026-07-08 tab5/6)──────────────────────
+def test_model_for_tab_5_and_6_are_4b():
+    import agent.server as server
+    assert server.MODEL_FOR_TAB["5"] == "4B"
+    assert server.MODEL_FOR_TAB["6"] == "4B"
+
+
+def _drive_ready(monkeypatch, server):
+    """Neutralize swap + relay so drive() runs the loop synchronously.
+    handle_swap MUST be stubbed: in the red phase MODEL_FOR_TAB lacks "5"/"6"
+    so drive() would call the REAL handle_swap (pkill llama-server + port
+    polling) — slow and destructive to the dev environment."""
+    monkeypatch.setitem(server.GLOBAL_STATE, "model", "4B")
+    monkeypatch.setattr(server, "publish", lambda ev: None)
+    monkeypatch.setattr(server, "handle_swap",
+                        lambda wanted: {"status": "ready", "model": wanted})
+
+
+def test_drive_tab5_aggregates_skills_turns_final(monkeypatch):
+    import agent.server as server
+    _drive_ready(monkeypatch, server)
+    fake_events = [
+        {"type": "index", "skills": [{"name": "check_weather"}], "mode": "proper"},
+        {"type": "turn", "turn": 1, "content": "hi", "tool_calls": [],
+         "usage": {"prompt_tokens": 5, "completion_tokens": 1}},
+        {"type": "final", "content": "hi"},
+    ]
+    monkeypatch.setattr(server, "skill_agent_loop",
+                        lambda user, mode: iter(fake_events))
+    out = server.drive("5", "hello")
+    assert out["tab"] == "5"
+    assert out["skills"] == [{"name": "check_weather"}]
+    assert out["turns"][0]["usage"]["prompt_tokens"] == 5
+    assert out["final"] == "hi"
+
+
+def test_drive_tab6_aggregates_protocol_and_turns(monkeypatch):
+    import agent.server as server
+    _drive_ready(monkeypatch, server)
+    fake_events = [
+        {"type": "protocol", "phase": "handshake", "method": "initialize",
+         "request": {}, "response": {}},
+        {"type": "turn_complete", "turn": 1, "content": "ans", "tool_calls": [],
+         "tool_results": [], "received_chunk": "", "next_prompt": "",
+         "usage": {"prompt_tokens": 9, "completion_tokens": 2}},
+        {"type": "final", "content": "ans"},
+    ]
+    monkeypatch.setattr(server, "mcp_agent_loop", lambda user: iter(fake_events))
+    out = server.drive("6", "q")
+    assert out["protocol_frames"][0]["method"] == "initialize"
+    assert out["turns"][0]["turn"] == 1
+    assert out["final"] == "ans"
+
+
+def test_drive_tab5_loop_error_returns_error(monkeypatch):
+    import agent.server as server
+    _drive_ready(monkeypatch, server)
+    monkeypatch.setattr(server, "skill_agent_loop",
+                        lambda user, mode: iter([{"type": "error", "message": "boom"}]))
+    out = server.drive("5", "x")
+    assert out["error"] == "boom"
+
+
+def test_drive_tab5_cancel_publishes_empty_final(monkeypatch):
+    import agent.server as server
+    monkeypatch.setitem(server.GLOBAL_STATE, "model", "4B")
+    monkeypatch.setattr(server, "handle_swap",
+                        lambda wanted: {"status": "ready", "model": wanted})
+    published = []
+    monkeypatch.setattr(server, "publish", lambda ev: published.append(ev))
+
+    def loop(user, mode):
+        yield {"type": "turn", "turn": 1, "content": "", "tool_calls": [],
+               "usage": {}}
+        server.CANCEL.set()
+        yield {"type": "turn", "turn": 2, "content": "", "tool_calls": [],
+               "usage": {}}
+        yield {"type": "final", "content": "never"}
+    monkeypatch.setattr(server, "skill_agent_loop", loop)
+    try:
+        out = server.drive("5", "x")
+    finally:
+        server.CANCEL.clear()   # never leak a set CANCEL into later tests
+    assert out["final"] == ""
+    assert published[-1] == {"type": "final", "content": ""}
+
+
+def test_skill_agent_endpoint_removed():
+    import agent.server as server
+    assert not hasattr(server.AgentHandler, "_handle_skill_agent")
