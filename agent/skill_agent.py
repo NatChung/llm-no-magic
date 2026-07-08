@@ -42,14 +42,13 @@ LOAD_SKILL_TOOL = {
     "function": {
         "name": "load_skill",
         "description": (
-            "Load the L2 SKILL.md body (instructions) for a named skill "
-            "into the conversation context. ALWAYS load the relevant "
-            "skill before attempting downstream work."
+            "把指定 skill 的 L2 SKILL.md body(操作說明)載入對話 context。"
+            "要做相關工作之前,一定先載入對應的 skill。"
         ),
         "parameters": {
             "type": "object",
             "properties": {
-                "name": {"type": "string", "description": "Skill name from the index"}
+                "name": {"type": "string", "description": "索引裡的 skill 名稱"}
             },
             "required": ["name"],
         },
@@ -61,15 +60,14 @@ READ_SKILL_FILE_TOOL = {
     "function": {
         "name": "read_skill_file",
         "description": (
-            "Read an L3 reference file bundled with a skill (e.g. "
-            "REFERENCE.md, FORMS.md). Only use when the SKILL.md body "
-            "tells you to."
+            "讀取 skill 附帶的 L3 參考檔(例如 REFERENCE.md、FORMS.md)。"
+            "只有在 SKILL.md body 指示時才使用。"
         ),
         "parameters": {
             "type": "object",
             "properties": {
-                "skill": {"type": "string", "description": "Skill name"},
-                "filename": {"type": "string", "description": "Filename inside the skill dir (e.g. REFERENCE.md)"},
+                "skill": {"type": "string", "description": "skill 名稱"},
+                "filename": {"type": "string", "description": "skill 目錄內的檔名(例如 REFERENCE.md)"},
             },
             "required": ["skill", "filename"],
         },
@@ -81,16 +79,15 @@ RUN_SKILL_SCRIPT_TOOL = {
     "function": {
         "name": "run_skill_script",
         "description": (
-            "Execute an L3 bundled script and return its output. The "
-            "script's code never enters the conversation context — only "
-            "its stdout. Use this when SKILL.md body tells you to."
+            "執行 L3 附帶腳本並回傳輸出。腳本的程式碼永遠不會進入對話 "
+            "context — 只有 stdout 會。SKILL.md body 指示時使用。"
         ),
         "parameters": {
             "type": "object",
             "properties": {
-                "skill": {"type": "string"},
-                "script": {"type": "string", "description": "Filename inside the skill's scripts/ dir (e.g. weather.py)"},
-                "args": {"type": "string", "description": "Single-string argument(s) passed to the script after the filename"},
+                "skill": {"type": "string", "description": "skill 名稱"},
+                "script": {"type": "string", "description": "skill 的 scripts/ 目錄內的檔名(例如 weather.py)"},
+                "args": {"type": "string", "description": "接在檔名後傳給腳本的單一字串參數"},
             },
             "required": ["skill", "script"],
         },
@@ -221,29 +218,30 @@ def run_skill_script(skill: str, script: str, args: str = "") -> str:
 # ── system prompt builders ───────────────────────────────────────────
 def proper_system_prompt(index: dict) -> str:
     lines = [
-        "You are an agent. Skills listed below give you specialised capabilities.",
+        "你是一個 agent。下方列出的 skill 提供你專門能力。",
         "",
-        "**Three-layer progressive disclosure** (the lazy-load contract):",
-        "  L1 metadata — the entries you see below; always in context",
-        "  L2 SKILL.md body — load on demand via `load_skill(name=...)`",
-        "  L3 resources & scripts — read additional .md via `read_skill_file(skill, file)`, "
-        "execute bundled scripts via `run_skill_script(skill, script, args)`",
+        "**三層漸進式載入**(lazy-load 約定):",
+        "  L1 中繼資料 — 就是下面這份索引;永遠在 context 裡",
+        "  L2 SKILL.md body — 需要時用 `load_skill(name=...)` 載入",
+        "  L3 資源與腳本 — 用 `read_skill_file(skill, file)` 讀額外的 .md、"
+        "用 `run_skill_script(skill, script, args)` 執行附帶腳本",
         "",
-        "Rules:",
-        "- If a skill applies, ALWAYS `load_skill` first; never improvise.",
-        "- Follow the loaded SKILL.md body strictly (formats, rules, etc).",
-        "- If SKILL.md tells you to read a REFERENCE.md or run a script, do that next.",
-        "- If no skill matches, answer the user directly.",
+        "規則:",
+        "- 只要有 skill 適用,一定先 `load_skill`,不要自己即興發揮。",
+        "- 順序永遠是:先 `load_skill`,再照 SKILL.md 指示執行,最後才回答 user。",
+        "- 嚴格遵守載入的 SKILL.md body(格式、規則等)。",
+        "- SKILL.md 叫你讀 REFERENCE.md 或跑腳本,就照著做。",
+        "- 沒有 skill 適用時,直接回答 user。",
         "",
-        "## Skill index (L1)",
+        "## Skill 索引(L1)",
         "",
     ]
     for name, meta in index.items():
         lines.append(f"- **{name}** ({meta['dir']}/): {meta['description']}")
         if meta.get("extras"):
-            lines.append(f"  - L3 docs: {', '.join(meta['extras'])}")
+            lines.append(f"  - L3 文件:{', '.join(meta['extras'])}")
         if meta.get("scripts"):
-            lines.append(f"  - L3 scripts: {', '.join(meta['scripts'])}")
+            lines.append(f"  - L3 腳本:{', '.join(meta['scripts'])}")
     return "\n".join(lines)
 
 
@@ -255,10 +253,7 @@ def no_skills_system_prompt() -> str:
     load_skill, and just answers naively (often wrong for tasks that
     need real-time data or specific tooling).
     """
-    return (
-        "You are a helpful assistant. Answer the user's question directly "
-        "using your own knowledge."
-    )
+    return "你是一個樂於助人的助理。直接用你自己的知識回答 user 的問題。"
 
 
 def naive_system_prompt(index: dict) -> str:
@@ -267,14 +262,14 @@ def naive_system_prompt(index: dict) -> str:
     Shows the token-explosion problem that progressive disclosure solves.
     """
     lines = [
-        "You are an agent. All skill knowledge is pre-loaded below — use any of it as needed.",
+        "你是一個 agent。所有 skill 知識已全部預載在下方 — 需要就直接用。",
         "",
-        "## All skills (pre-loaded, no lazy disclosure)",
+        "## 所有 skill(全部預載、沒有漸進式載入)",
         "",
     ]
     for name, meta in index.items():
         lines.append(f"### Skill: {name}")
-        lines.append(f"Description: {meta['description']}")
+        lines.append(f"說明:{meta['description']}")
         # L2 body
         body = load_skill_body(name) or ""
         lines.append("\n#### SKILL.md body:\n" + body)
@@ -291,8 +286,8 @@ def naive_system_prompt(index: dict) -> str:
                 code = "(unreadable)"
             lines.append(f"\n#### scripts/{script}:\n```python\n{code}\n```")
         lines.append("")
-    lines.append("(Note: this naive layout dumps everything up front — token cost balloons. "
-                 "Toggle to Proper to see lazy disclosure.)")
+    lines.append("(注意:naive 排法把所有東西一次全塞進來 — token 成本爆炸。"
+                 "切回 Proper 看漸進式載入。)")
     return "\n".join(lines)
 
 
@@ -363,11 +358,15 @@ def skill_agent_loop(user_query, mode):
         "tools": [t["function"]["name"] for t in active_tools],
     }
 
+    empty_final_retry = 1   # 空回應護欄:見下方 not tool_calls 分支
     for turn in range(1, MAX_TURNS + 1):
         req_body = {
             "model": "any",
             "messages": messages,
             "temperature": 0.3,
+            # 同 tab4 agent_loop:壓掉 Qwen3 thinking — 中文輸入特別容易觸發
+            # <think>,token 全花在思考、content 變空(空 final 偶發的主因)
+            "chat_template_kwargs": {"enable_thinking": False},
         }
         if active_tools:
             req_body["tools"] = active_tools
@@ -417,6 +416,12 @@ def skill_agent_loop(user_query, mode):
         }
 
         if not tool_calls:
+            if not content.strip() and empty_final_retry > 0:
+                # 4B 偶發:L2 注入後直接吐空字串(無 tool call、無內容)。
+                # 不把空訊息塞進 messages,原樣重問一次 — 教學 demo 斷在
+                # 這裡比多花一個 turn 更傷。
+                empty_final_retry -= 1
+                continue
             yield {"type": "final", "content": content}
             return
 
@@ -434,12 +439,12 @@ def skill_agent_loop(user_query, mode):
                 body = load_skill_body(skill_name)
                 if body is not None:
                     result = (
-                        f"=== L2 SKILL.md body for '{skill_name}' (loaded into context) ===\n\n"
+                        f"=== '{skill_name}' 的 L2 SKILL.md body(已載入 context)===\n\n"
                         f"{body}\n\n"
-                        f"=== NEXT ACTION ===\nNow follow the body's instructions to complete the user's original request. "
-                        f"If the body says to run a script, call `run_skill_script` now. "
-                        f"If it says to read a reference file, call `read_skill_file` now. "
-                        f"Do not stop here — continue until you have a final answer for the user."
+                        f"=== 下一步 ===\n現在照 body 的指示完成 user 原本的請求。"
+                        f"body 說要跑腳本,就立刻呼叫 `run_skill_script`;"
+                        f"說要讀參考檔,就立刻呼叫 `read_skill_file`。"
+                        f"不要停在這裡 — 一直做到給出 user 要的最終回答為止。"
                     )
                     yield {
                         "type": "skill_loaded",

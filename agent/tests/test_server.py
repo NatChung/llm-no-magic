@@ -200,14 +200,14 @@ def test_preview_tab5_proper_vs_no_skills(monkeypatch):
         out = post_preview({"tab": "5", "user": "台北天氣?", "mode": "proper"})
         assert out["prompt"] == "TPL5"
         sent = captured["json"]
-        assert "## Skill index (L1)" in sent["messages"][0]["content"]
+        assert "## Skill 索引(L1)" in sent["messages"][0]["content"]
         assert sent["messages"][1] == {"role": "user", "content": "台北天氣?"}
         assert [t["function"]["name"] for t in sent["tools"]] == [
             "load_skill", "read_skill_file", "run_skill_script"]
 
         post_preview({"tab": "5", "user": "台北天氣?", "mode": "no_skills"})
         sent = captured["json"]
-        assert "Skill index" not in sent["messages"][0]["content"]
+        assert "Skill 索引" not in sent["messages"][0]["content"]
         assert "tools" not in sent
     finally:
         srv.shutdown()

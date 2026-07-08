@@ -74,6 +74,31 @@ def test_load_index_multi_skill_fixture(tmp_path, monkeypatch):
     assert index["beta"]["scripts"] == ["run.py"]
 
 
+def test_empty_final_retried_once(monkeypatch):
+    """4B 偶發空回應(無 tool call、無內容)→ 原樣重問一次,不塞空訊息進 messages。"""
+    import agent.skill_agent as sa
+    sent_bodies = []
+    calls = iter([_resp(content=""), _resp(content="answer!")])
+    def fake_post(url, **kw):
+        sent_bodies.append(kw.get("json"))
+        return next(calls)
+    monkeypatch.setattr(sa.requests, "post", fake_post)
+    events = list(sa.skill_agent_loop("hi", "proper"))
+    finals = [e for e in events if e["type"] == "final"]
+    assert finals == [{"type": "final", "content": "answer!"}]
+    # retry 是原樣重問:兩次送出的 messages 一模一樣(空訊息沒被 append)
+    assert sent_bodies[0]["messages"] == sent_bodies[1]["messages"]
+
+
+def test_empty_final_gives_up_after_one_retry(monkeypatch):
+    """護欄只重試一次:連兩次空回應 → 第二次照實 yield 空 final(不無限重試)。"""
+    import agent.skill_agent as sa
+    calls = iter([_resp(content=""), _resp(content="")])
+    monkeypatch.setattr(sa.requests, "post", lambda *a, **kw: next(calls))
+    events = list(sa.skill_agent_loop("hi", "proper"))
+    assert events[-1] == {"type": "final", "content": ""}
+
+
 def test_skill_anatomy_three_layers():
     import agent.skill_agent as sa
     files = sa.skill_anatomy()
