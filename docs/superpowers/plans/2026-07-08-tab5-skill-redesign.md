@@ -18,6 +18,7 @@
 - Mode strings are exactly `proper` / `no_skills` (NOT `no_skill`).
 - `/preview` and `/inspect` must keep their existing tab-④/①–③ behavior byte-identical (existing tests enforce this).
 - Working branch: `feat/tab5-tab6-finish`. Commit after every task, message style `feat(tab5): …` / `test(tab5): …` / `docs(teaching): …`, each ending with the `Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>` trailer.
+- Conscious deviations from the spec (do NOT "fix" these): toggle change refreshes the preview immediately (only typing is debounced); the multi-skill regression test uses pytest `tmp_path` instead of a checked-in fixture dir; the anatomy card renders flat badge rows, not a pictorial `├──` tree — same information.
 
 ---
 
@@ -308,6 +309,12 @@ In `agent/server.py`: add `skill_anatomy` to the Task-2 import list, and replace
         self._send_json({"ok": True, "subscribers": subscriber_count()})
 ```
 
+Also update `_handle_inspect`'s docstring (it currently only describes the legacy branch) to:
+
+```python
+        """spec §3.2 token-chart popup (legacy), or tab-5 skill anatomy data."""
+```
+
 - [ ] **Step 4: Run the whole suite**
 
 Run: `pytest agent/tests -q`
@@ -333,12 +340,16 @@ Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
 - Consumes: `sent`/`received` frames buffered in `pendingSent`/`pendingReceived` (existing), `BUBBLE.details`, `BUBBLE.pre`, `BUBBLE.finalBlock` (existing helpers).
 - Produces: every turn — including the content-only final turn — carries the「此 turn 實際送出的 prompt」expander. New I18N key `sent_prompt_summary` (tab ⑤ only; tabs ④/⑥ keep `next_prompt_summary` untouched).
 
-- [ ] **Step 1: Add the I18N key** (after the `next_prompt_summary` entry, app.js ~line 92):
+- [ ] **Step 1: Add the I18N keys** (after the `next_prompt_summary` entry, app.js ~line 92):
 
 ```js
   sent_prompt_summary: {
     'en':    'Actual prompt sent this turn (turn {turn})',
     'zh-TW': '此 turn 實際送出的 prompt(turn {turn})',
+  },
+  l2_see_sent_hint: {
+    'en':    '→ expand the next turn\'s sent prompt to see it sitting inside messages',
+    'zh-TW': '→ 展開下一個 turn 的 sent,看它躺在 messages 裡',
   },
 ```
 
@@ -354,7 +365,18 @@ to
 
 and in the same function switch the expander label from `t('next_prompt_summary', { turn: f.turn })` to `t('sent_prompt_summary', { turn: f.turn })`.
 
-- [ ] **Step 3: Attach them in `onFinal`.** Replace the `if (!finalDone && f.content) { … }` block with:
+- [ ] **Step 3: Amber-block hint (spec §3b).** In `onSkillLoaded` (app.js:944-956), after the `sub` element's `textContent` assignment add a third line pointing at the sent expander:
+
+```js
+    const hint = document.createElement("div");
+    hint.className = "text-xs text-inject mt-0.5";
+    hint.textContent = t('l2_see_sent_hint');
+    block.append(head, sub, hint);
+```
+
+(and drop the original `block.append(head, sub);` line — `hint` rides in the same append.)
+
+- [ ] **Step 4: Attach the final turn's views in `onFinal`.** Replace the FULL body of `onFinal` (everything between `function onFinal(f) {` and its closing `}`, app.js:983-994 — note the existing `setRunning(false);` is part of what's replaced, don't end up with two) with:
 
 ```js
   if (!finalDone && f.content) {
@@ -384,16 +406,16 @@ and in the same function switch the expander label from `t('next_prompt_summary'
 
 (`BUBBLE.finalBlock` returns a bare DOM node — app.js:360-371 — so `fb.appendChild(...)` works directly.)
 
-- [ ] **Step 4: Verify by driving.** Server up (`nohup python3 -u -m agent.server > /tmp/agent-server.log 2>&1 &`), page open at http://localhost:9000/, then:
+- [ ] **Step 5: Verify by driving.** Server up (`nohup python3 -u -m agent.server > /tmp/agent-server.log 2>&1 &`), page open at http://localhost:9000/, then:
 
 ```bash
 curl -s -X POST http://localhost:9000/drive -H 'Content-Type: application/json' \
   -d '{"tab":"5","user":"台北今天天氣怎樣?"}' | python3 -c "import json,sys; d=json.load(sys.stdin); print(len(d['turns']), d['final'])"
 ```
 
-Expected on the page: the green final block now has TWO ▸ expanders under it; the sent one shows `messages` containing the SKILL.md body (role `tool` + the L2 injection). Hard-reload with devtools open (cache-bust lands in Task 6).
+Expected on the page: the green final block now has TWO ▸ expanders under it; the sent one shows `messages` containing the SKILL.md body (role `tool` + the L2 injection); the amber injection block carries the new hint line. Hard-reload with devtools open (cache-bust lands in Task 6).
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 6: Commit**
 
 ```bash
 git add frontend/app.js
@@ -458,7 +480,7 @@ After the `driveSkill` function definition add:
 
 (Fetch idiom verified: tab ④ calls plain relative `fetch("/preview", …)` — app.js:669-673 — same-origin single-port server; no helper needed.)
 
-- [ ] **Step 3: Verify.** With server + page up: type in the Tab ⑤ textarea → after ~300 ms the box fills with the template-expanded prompt containing `## Skill index (L1)` and the `<tools>` block (colored). Tick「無 skill 對照」→ the index section and tools disappear from the preview. Stop llama-server (`pkill llama-server`) and toggle → box shows `[preview error] …` (no crash).
+- [ ] **Step 3: Verify.** With server + page up, HARD-reload first (cache-bust only lands in Task 6 — a stale cached app.js silently skips this feature): type in the Tab ⑤ textarea → after ~300 ms the box fills with the template-expanded prompt containing `## Skill index (L1)` and the `<tools>` block (colored). Tick「無 skill 對照」→ the index section and tools disappear from the preview. Stop llama-server (`pkill llama-server`) and toggle → box shows `[preview error] …` (no crash).
 
 - [ ] **Step 4: Commit**
 
@@ -508,6 +530,10 @@ zh-TW heading:「Skill 解剖 — 一個資料夾、三層」. Bump BOTH files' 
     'en':    'L3 · script — executed only, code never enters context',
     'zh-TW': 'L3 · 腳本 — 只執行,code 不進 context',
   },
+  anatomy_unavailable: {
+    'en':    '(anatomy unavailable)',
+    'zh-TW': '(解剖資料讀不到)',
+  },
 ```
 
 (`{n}` = `Math.round(content.length / 4)` of the frontmatter entry only — per spec §2 the badge quotes THIS skill's L1 cost, not the whole system prompt.)
@@ -539,13 +565,13 @@ zh-TW heading:「Skill 解剖 — 一個資料夾、三層」. Bump BOTH files' 
         row.append(label, d);
         anatomyEl.appendChild(row);
       }
-    }).catch(() => { anatomyEl.textContent = "(anatomy unavailable)"; });
+    }).catch(() => { anatomyEl.textContent = t('anatomy_unavailable'); });
   }
 ```
 
 (Same caveat as Task 5 on the fetch idiom; `BUBBLE.details(summaryText, node)` and `BUBBLE.pre(text)` are the existing helpers used throughout `setupSkillTab`. The `{n}` token estimate is only meaningful for L1 — for L2/L3 the captions carry no `{n}` placeholder, so the extra var is ignored by `t()`.)
 
-- [ ] **Step 4: Verify.** Hard-reload http://localhost:9000/ (check the network tab loads `app.js?v=82`). Tab ⑤ left column shows the card with 3 rows: `skills/check_weather/SKILL.md#frontmatter [L1]`, `…#body [L2]`, `…scripts/weather.py [L3]`; each expands to the real file content; L1 caption shows a small token figure (~15–25). Repeat on http://localhost:9000/index.html (EN copy check).
+- [ ] **Step 4: Verify.** Hard-reload http://localhost:9000/ (check the network tab loads `app.js?v=82`). Tab ⑤ left column shows the card with 3 rows: `skills/check_weather/SKILL.md#frontmatter [L1]`, `…#body [L2]`, `…scripts/weather.py [L3]`; each expands to the real file content; L1 caption shows a small token figure (~25–30). Repeat on http://localhost:9000/index.html (EN copy check).
 
 - [ ] **Step 5: Full suite + commit**
 
