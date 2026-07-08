@@ -45,10 +45,20 @@ which one, is still the model's decision.
   sources give different answers. **Where the tool comes from is where the answer comes
   from** — and that's exactly why plugging in third-party tools means knowing who's
   behind them
-- Tying the three lessons together: Tab ④ tools live in the client (hard-coded) → Tab ⑤
-  skill (local capability package: manual + script loaded on demand) → Tab ⑥ MCP
-  (external process, discovered via protocol). It's all the same move: getting context
-  and tools in front of the model; what differs is the source and the trust boundary
+- Tying the three lessons together — three ways of **registering tools** (use this table
+  when explaining to clients):
+
+  | | Tab ④ hard-coded | Tab ⑤ Skill | Tab ⑥ MCP |
+  |---|---|---|---|
+  | Where the ability list lives | in the client code | folders on disk (code ships only 2 generic tools) | external process, asked via handshake |
+  | Adding an ability | code change + redeploy | drop in a folder | the other side updates their server |
+  | Who maintains it | you | you (docs + scripts) | someone else |
+
+  Analogy: ④ a menu printed inside the restaurant (adding a dish = reprint), ⑤ the
+  kitchen consulting its own recipe shelf (add a recipe book and it just works), ⑥
+  ordering delivery (the menu is another restaurant's; they update, you get it for
+  free). It's all the same move: getting context and tools in front of the model;
+  what differs is the source and the trust boundary
 - Want to go deeper: expand the "full article" at the bottom of the page
 
 ## Common Participant Questions

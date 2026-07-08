@@ -57,6 +57,14 @@ line — **the difference is whether there's a skill**.
   context into the prompt to change probabilities; the difference is that a skill is a
   **controlled** injection: who wrote it, whether it loads, which package loads —
   all visible
+- Close the loop with the three interlocking proofs that "context changes probabilities":
+  1. **Tab ① three-shot** (quantitative): the probability bars flip before your eyes —
+     "2" at 86% → "3" at 87.5%
+  2. **No-skill contrast** (behavioral): same model, same line; index present/absent →
+     "28°C, sunny" becomes "I can't provide real-time information"
+  3. **The sent expander** (physical evidence): open turn 2's actual prompt — SKILL.md
+     is sitting right inside `messages`, the injection caught red-handed
+  Proof 1 shows the mechanism exists, Tab ⑤ shows it engineered, 2 & 3 are the autopsy
 - The token-cost chip at the top left: read the two numbers as-is — progressive
   loading costs ~M tokens now vs ~N if everything were stuffed into the system
   prompt. (With a single small skill the gap is modest — the POINT is the
@@ -76,9 +84,13 @@ line — **the difference is whether there's a skill**.
   → Lesson 6
 
 ## Common Participant Questions
-- "How is a skill different from Tab ④'s tools?" — Tab ④'s tools are hard-coded in the
-  client; a skill adds the "manual" layer: inject the how-to first, then follow it — and
-  capability packages can keep being added
+- "How is a skill different from Tab ④'s tools?" — The difference is **how the ability
+  list gets registered**. Tab ④ is a menu printed inside the restaurant: tool schemas are
+  hard-coded in the client, so adding an ability = code change + redeploy. A skill is the
+  kitchen consulting its own recipe shelf: the code ships only two generic tools (read a
+  file, run a script) forever; adding an ability = dropping a folder into skills/, zero
+  code changes. Check the preview's `<tools>` block: **abilities grow, the tool list
+  doesn't** — that's exactly why skills keep context cheap
 - "How is L2 injection different from me pasting an SOP into the chat box myself?" —
   Essentially the same thing! A skill turns "you paste it by hand every time" into "the
   model fetches it on demand by itself", and it ships an executable script too
