@@ -24,7 +24,7 @@
 - **AI 秀 prompt**(頁面沒有 preview 框 — 由 AI 演):`POST /preview
   {"tab":"6","user":"現在幾點?台北天氣如何?"}` — server 會真的起一個 mini MCP
   server、握手拿工具清單、再展開 prompt。對照前兩課:`<tools>` 裡的 get_time +
-  get_weather 是**問來的** — 不是寫死(④)、也不是磁碟上的檔案(⑤)
+  get_weather 是**問來的** — 不是寫死(④)、也不是磁碟上的檔案(⑤)。(上色:終端用 ```diff 染色 — `+` 綠=我們寫的、`-` 紅=訓練約定改不掉、無前綴灰=template 標記;用 Claude app 上課時改出 HTML 卡片全彩更清楚)
 
 ### 段落 2 — 泡泡 + 協定卡交錯讀
 - 讀回應:藍色泡泡(model 吐 tool_call)→ 協定卡(tools/call 請求/回應,
