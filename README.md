@@ -6,6 +6,8 @@
 
 跑在你 Mac 上,完全 local — `llama.cpp` + Qwen3 GGUF 模型。
 
+https://github.com/user-attachments/assets/52ec3bd4-1706-4a9d-82fc-8d1fb66c1ab2
+
 ---
 
 ## Quick start(Mac)

@@ -6,6 +6,8 @@ A 6-tab visualization tool that makes LLM internals visible: tokens, probabiliti
 
 Runs entirely local on your Mac — `llama.cpp` + Qwen3 GGUF models.
 
+https://github.com/user-attachments/assets/52ec3bd4-1706-4a9d-82fc-8d1fb66c1ab2
+
 ---
 
 ## Quick start (Mac)
