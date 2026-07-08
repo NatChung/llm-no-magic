@@ -46,7 +46,7 @@ manageable capability package.
   inside `messages`, which is exactly what the amber bubble's hint line points at.
   The "prompt actually sent to the model" has no box on the page — **the AI performs
   it**: call `POST /preview {"tab":"5","user":...,"mode":"proper"}`, paste it into the
-  chat and annotate it (which parts are protocol, which parts we wrote). (Coloring: in a terminal use a ```diff block — `+` green = ours/editable, `-` red = training-time convention/immutable, unprefixed gray = template markers; when teaching in the Claude app, render an HTML card with real colors instead)
+  chat and annotate it (which parts are protocol, which parts we wrote). (Coloring: use a ```diff code block — `+` green = ours/editable, `-` red = training-time convention/immutable, unprefixed gray = template markers. Always inline in the chat — never a separate HTML/artifact)
 
 ## Hands-On — no-skill contrast
 Check "no-skill contrast" and send the same line again: the index is empty, so the model

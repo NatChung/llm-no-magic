@@ -29,7 +29,7 @@ MCP solves.
   `POST /preview {"tab":"6","user":"現在幾點?台北天氣如何?"}` — the server really
   spawns a mini MCP server, handshakes for the tool list, then expands the prompt.
   Contrast with the last two lessons: the get_time + get_weather inside `<tools>`
-  were **asked for** — not hard-coded (④), not files on disk (⑤). (Coloring: in a terminal use a ```diff block — `+` green = ours/editable, `-` red = training-time convention/immutable, unprefixed gray = template markers; when teaching in the Claude app, render an HTML card with real colors instead)
+  were **asked for** — not hard-coded (④), not files on disk (⑤). (Coloring: use a ```diff code block — `+` green = ours/editable, `-` red = training-time convention/immutable, unprefixed gray = template markers. Always inline in the chat — never a separate HTML/artifact)
 
 ### Segment 2 — reading bubbles and protocol cards interleaved
 - Read: blue bubble (model emits a tool_call) → protocol card (tools/call

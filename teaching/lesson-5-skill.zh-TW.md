@@ -39,7 +39,7 @@
   L3 腳本);跑完之後展開第 2 turn 的「此 turn 實際送出的 prompt」— 剛注入的 L2
   說明書就躺在 messages 裡,琥珀泡泡上那行提示指的就是它。「實際送進 model 的
   prompt」頁面上沒有框 — **由 AI 演**:`POST /preview {"tab":"5","user":...,
-  "mode":"proper"}` 取回、貼進對話上色講解(哪段是協定、哪段是我們寫的)。(上色:終端用 ```diff 染色 — `+` 綠=我們寫的、`-` 紅=訓練約定改不掉、無前綴灰=template 標記;用 Claude app 上課時改出 HTML 卡片全彩更清楚)
+  "mode":"proper"}` 取回、貼進對話上色講解(哪段是協定、哪段是我們寫的)。(上色:用 ```diff code block — `+` 綠=我們寫的、`-` 紅=訓練約定改不掉、無前綴灰=template 標記。一律直接貼在對話裡,不要另出 HTML/artifact)
 
 ## 學員動手 — 無 skill 對照
 勾選「無 skill 對照」,同一句再送一次:索引是空的,model 只能靠自己編
