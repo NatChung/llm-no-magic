@@ -48,3 +48,27 @@ def test_load_skill_error_yields_tool_result(monkeypatch):
     tr = next(e for e in events if e["type"] == "tool_result")
     assert tr["error"] is True
     assert "not found" in tr["result"]
+
+
+def test_repo_index_is_single_skill():
+    """Repo policy (spec 2026-07-08): exactly one skill ships — check_weather."""
+    import agent.skill_agent as sa
+    index = sa.load_index()
+    assert list(index.keys()) == ["check_weather"]
+    assert index["check_weather"]["scripts"] == ["weather.py"]
+
+
+def test_load_index_multi_skill_fixture(tmp_path, monkeypatch):
+    """load_index() stays generic: N skill dirs → N entries (fixture, not repo)."""
+    import agent.skill_agent as sa
+    for name in ("alpha", "beta"):
+        d = tmp_path / name
+        (d / "scripts").mkdir(parents=True)
+        (d / "SKILL.md").write_text(
+            f"---\nname: {name}\ndescription: {name} desc\n---\nBody of {name}.\n")
+        (d / "scripts" / "run.py").write_text("print('hi')\n")
+    monkeypatch.setattr(sa, "SKILLS_DIR", tmp_path)
+    index = sa.load_index()
+    assert set(index.keys()) == {"alpha", "beta"}
+    assert index["alpha"]["description"] == "alpha desc"
+    assert index["beta"]["scripts"] == ["run.py"]

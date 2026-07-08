@@ -89,7 +89,7 @@ RUN_SKILL_SCRIPT_TOOL = {
             "type": "object",
             "properties": {
                 "skill": {"type": "string"},
-                "script": {"type": "string", "description": "Filename inside the skill's scripts/ dir (e.g. organize.py)"},
+                "script": {"type": "string", "description": "Filename inside the skill's scripts/ dir (e.g. weather.py)"},
                 "args": {"type": "string", "description": "Single-string argument(s) passed to the script after the filename"},
             },
             "required": ["skill", "script"],
