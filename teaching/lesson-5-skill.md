@@ -37,6 +37,12 @@ manageable capability package.
   format is what SKILL.md dictated
 - For details: expand the amber block to see the full injected manual; expand "script
   source" under the purple bubble — you can see it, but the model never did
+- Three new instruments: before sending, watch the left-column "Prompt actually sent
+  to the model" box — tick/untick "no-skill contrast" and the whole L1 index section
+  disappears/reappears; the "Skill anatomy" card expands the three on-disk layers
+  (L1 frontmatter / L2 body / L3 script); after a run, expand turn 2's "actual prompt
+  sent this turn" — the freshly injected L2 manual is sitting right inside `messages`,
+  which is exactly what the amber block's hint line points at
 
 ## Hands-On — no-skill contrast
 Check "no-skill contrast" and send the same line again: the index is empty, so the model
