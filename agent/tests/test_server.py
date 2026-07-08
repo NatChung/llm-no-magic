@@ -178,6 +178,41 @@ def test_preview_uses_tab4_slim_config(monkeypatch):
     assert sent["messages"][0]["content"] == "/no_think"
 
 
+def test_preview_tab5_proper_vs_no_skills(monkeypatch):
+    """POST /preview tab=5:proper 帶 skill index system + 3 tools;no_skills 無 tools。"""
+    import agent.server as server
+
+    captured = {}
+    def fake_post(url, **kw):
+        captured["json"] = kw.get("json")
+        return _mock_template_resp(prompt="TPL5")
+    monkeypatch.setattr(server.requests, "post", fake_post)
+
+    srv, port = _start_server_in_thread()
+    try:
+        def post_preview(body):
+            req = urllib.request.Request(
+                f"http://127.0.0.1:{port}/preview",
+                data=json.dumps(body).encode("utf-8"),
+                headers={"Content-Type": "application/json"}, method="POST")
+            return json.loads(urllib.request.urlopen(req, timeout=5).read())
+
+        out = post_preview({"tab": "5", "user": "台北天氣?", "mode": "proper"})
+        assert out["prompt"] == "TPL5"
+        sent = captured["json"]
+        assert "## Skill index (L1)" in sent["messages"][0]["content"]
+        assert sent["messages"][1] == {"role": "user", "content": "台北天氣?"}
+        assert [t["function"]["name"] for t in sent["tools"]] == [
+            "load_skill", "read_skill_file", "run_skill_script"]
+
+        post_preview({"tab": "5", "user": "台北天氣?", "mode": "no_skills"})
+        sent = captured["json"]
+        assert "Skill index" not in sent["messages"][0]["content"]
+        assert "tools" not in sent
+    finally:
+        srv.shutdown()
+
+
 def test_do_post_agent_streams_events_via_sse(monkeypatch):
     """End-to-end: POST /agent → SSE body 含 turn_complete + final 兩 frame。"""
     import agent.server as server

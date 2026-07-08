@@ -34,7 +34,9 @@ from agent.agent import (
     MODEL_NAME,
     LLAMA_URL,
 )
-from agent.skill_agent import skill_agent_loop
+from agent.skill_agent import (skill_agent_loop, load_index, proper_system_prompt,
+                               no_skills_system_prompt, LOAD_SKILL_TOOL,
+                               READ_SKILL_FILE_TOOL, RUN_SKILL_SCRIPT_TOOL)
 from agent.mcp_agent import mcp_agent_loop
 
 
@@ -672,16 +674,32 @@ class AgentHandler(SimpleHTTPRequestHandler):
         if body is None:
             return
 
-        messages = [
-            {"role": "system", "content": tab4_system(body.get("system", ""))},
-            {"role": "user",   "content": body.get("user", "")},
-        ]
+        if body.get("tab") == "5":
+            # Tab ⑤ pre-send preview (spec 2026-07-08 §3a): the exact turn-1
+            # messages+tools skill_agent_loop would send, template-expanded.
+            mode = body.get("mode") or "proper"
+            if mode == "no_skills":
+                system = no_skills_system_prompt()
+                tools = []
+            else:
+                system = proper_system_prompt(load_index())
+                tools = [LOAD_SKILL_TOOL, READ_SKILL_FILE_TOOL, RUN_SKILL_SCRIPT_TOOL]
+            messages = [
+                {"role": "system", "content": system},
+                {"role": "user",   "content": body.get("user", "")},
+            ]
+            payload = {"messages": messages, "add_generation_prompt": True}
+            if tools:
+                payload["tools"] = tools
+        else:
+            messages = [
+                {"role": "system", "content": tab4_system(body.get("system", ""))},
+                {"role": "user",   "content": body.get("user", "")},
+            ]
+            payload = {"messages": messages, "tools": TAB4_TOOL_SCHEMAS,
+                       "add_generation_prompt": True}
         try:
-            resp = requests.post(LLAMA_TEMPLATE_URL, json={
-                "messages": messages,
-                "tools":    TAB4_TOOL_SCHEMAS,
-                "add_generation_prompt": True,
-            }, timeout=5)
+            resp = requests.post(LLAMA_TEMPLATE_URL, json=payload, timeout=5)
             resp.raise_for_status()
             prompt_text = resp.json().get("prompt", "")
         except Exception as exc:
