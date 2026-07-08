@@ -5,7 +5,7 @@
 這個 repo 是 **「LLM, no magic」** — 一個動手實作、完全本地端的 LLM 教學工具:一個網頁 UI
 (分頁 ①–⑥),由執行在 :9000 的純標準庫 Python 伺服器提供服務,驅動執行在 :8080 的
 llama.cpp + Qwen3 GGUF 模型。分頁 ①–④ 是互動式的(tokens/機率、聊天模板、思考模式、函式呼叫代理);
-⑤ 是互動式的 Skill 預覽;⑥ 是文章。
+⑤ 是互動式 Skill demo(三層漸進式揭露);⑥ 是互動式 MCP demo(真 stdio JSON-RPC 迷你 server),文章收在展開段。
 
 **這個 repo 支援 AI 帶領教學。** 你(AI agent)可以主導整個課程。
 
@@ -23,7 +23,7 @@ llama.cpp + Qwen3 GGUF 模型。分頁 ①–④ 是互動式的(tokens/機率�
 
 - 架構:
   `agent/server.py`(單埠標準庫伺服器 :9000 — 靜態前端
-  + `/agent` `/skill-agent` `/preview` `/drive` `/inspect` `/stop` API,自動啟動 llama-server :8080)、
+  + `/agent` `/preview` `/drive` `/inspect` `/stop` API(drive 涵蓋分頁 1-6),自動啟動 llama-server :8080)、
   `frontend/app.js`(零建置 Tailwind Play CDN UI)、`agent/agent.py`(CLI agent 迴圈
   + 4 個工具)、`teaching/`(AI 帶領教學素材)、`init.py`(環境檢查工具)。
 - 測試:`pytest agent/tests -q`(純 pytest 函式 + mocks;維持這個風格)。

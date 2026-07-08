@@ -5,7 +5,9 @@
 This repo is **"LLM, no magic"** — a hands-on, fully-local LLM teaching tool: a web UI
 (tabs ①–⑥) served by a stdlib Python server on :9000, driving llama.cpp + Qwen3 GGUF
 models on :8080. Tabs ①–④ are interactive (tokens/probabilities, chat template,
-thinking mode, function-calling agent); ⑤ is an interactive Skill preview; ⑥ is an article.
+thinking mode, function-calling agent); ⑤ is an interactive Skill demo (3-layer
+progressive disclosure); ⑥ is an interactive MCP demo (real stdio JSON-RPC
+mini-server) with the article tucked in an expander.
 
 **This repo supports AI-led teaching.** You (the AI agent) can run the course.
 
@@ -22,7 +24,7 @@ use the `.zh-TW` files and reply in 繁體中文).
 ## Creator → development mode
 
 - Architecture: `agent/server.py` (single-port stdlib server :9000 — static frontend
-  + `/agent` `/skill-agent` `/preview` `/drive` `/inspect` `/stop` APIs, auto-launches llama-server :8080),
+  + `/agent` `/preview` `/drive` `/inspect` `/stop` APIs (drive covers tabs 1-6), auto-launches llama-server :8080),
   `frontend/app.js` (zero-build Tailwind Play CDN UI), `agent/agent.py` (CLI agent loop
   + 4 tools), `teaching/` (AI-led course material), `init.py` (env checker).
 - Tests: `pytest agent/tests -q` (plain pytest functions + mocks; keep that style).

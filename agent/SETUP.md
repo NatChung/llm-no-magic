@@ -12,7 +12,7 @@ Verified 2026-05-29. **Two-port setup** — one Python server on `:9000` serves 
 - **Launch server**: `cd ~/projects/llm-no-magic && nohup python3 -u -m agent.server > /tmp/agent-server.log 2>&1 &`
 - **No need to launch llama manually.** On startup, `_detect_model()` probes `:8080`; if nothing is there, the first `/drive` triggers a swap that launches it (tab-switching in the page is UI-only in v3), with `--host $LISTEN_HOST` propagated.
 - **Model source** (if the GGUF is missing): `hf download Qwen/Qwen3-4B-GGUF Qwen3-4B-Q4_K_M.gguf --local-dir ~/models` (same syntax for the 0.6B, just swap the name).
-- **Endpoints**: `/`, `/index.zh-TW.html`, `/app.js`, `/styles.css` (static) + `/agent`, `/skill-agent`, `/preview`, `/drive`, `/inspect`, `/stop` (API) + `/events`, `/health` — all on `:9000`. Legacy `/frontend/*` URLs 301-redirect to `/*`. The direct llama endpoint is `http://localhost:8080/v1/chat/completions` (only the CLI `agent.py` talks to it directly).
+- **Endpoints**: `/`, `/index.zh-TW.html`, `/app.js`, `/styles.css` (static) + `/agent`, `/preview`, `/drive`, `/inspect`, `/stop` (API) + `/events`, `/health` — all on `:9000`. Legacy `/frontend/*` URLs 301-redirect to `/*`. The direct llama endpoint is `http://localhost:8080/v1/chat/completions` (only the CLI `agent.py` talks to it directly).
 - **Function calling**: relies on the 4B (the 0.6B is unstable). Driving Tab ④ (or ⑤) triggers a swap to 4B inside `/drive`.
 - **GPU footprint**: ~3GB max — only one model is on the GPU at a time. During a swap, the old process is killed and the new one launches in ~5s.
 
