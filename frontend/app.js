@@ -90,6 +90,14 @@ const I18N = {
     'en':    'Sent again: the prompt sent to the model after accumulating {turn} turn(s)',
     'zh-TW': '再送出,累積 {turn} turn 後送進下次 model 的 prompt',
   },
+  sent_prompt_summary: {
+    'en':    'Actual prompt sent this turn (turn {turn})',
+    'zh-TW': '此 turn 實際送出的 prompt(turn {turn})',
+  },
+  l2_see_sent_hint: {
+    'en':    '→ expand the next turn\'s sent prompt to see it sitting inside messages',
+    'zh-TW': '→ 展開下一個 turn 的 sent,看它躺在 messages 裡',
+  },
   l2_injected_label: {
     'en':    'SKILL.md body injected into context',
     'zh-TW': 'SKILL.md body 注入 context',
@@ -915,7 +923,7 @@ function setupSkillTab(panel) {
   function onTurn(f) {
     const hasCalls = (f.tool_calls || []).length > 0;
     turns.push({ hadTool: hasCalls });
-    if (!hasCalls) { pendingSent = null; pendingReceived = null; return; }  // content-only turn renders at `final`
+    if (!hasCalls) return;  // content-only turn renders at `final` — keep pendingSent/Received for it
     const lines = f.tool_calls.map((tc) => {
       const a = (tc.args || "").trim();
       return `⟨tool_call⟩ ${tc.name}(${a === "{}" ? "" : a})`;
@@ -929,7 +937,7 @@ function setupSkillTab(panel) {
     row.dataset.turn = String(f.turn);
     // attach the buffered wire views for THIS turn (sent/received preceded us)
     if (pendingSent) {
-      row.appendChild(BUBBLE.details(t('next_prompt_summary', { turn: f.turn }),
+      row.appendChild(BUBBLE.details(t('sent_prompt_summary', { turn: f.turn }),
         BUBBLE.pre(JSON.stringify(pendingSent.messages, null, 2))));
       pendingSent = null;
     }
@@ -950,7 +958,10 @@ function setupSkillTab(panel) {
     const sub = document.createElement("div");
     sub.className = "text-xs text-muted mt-0.5";
     sub.textContent = t('l2_injected_sub');
-    block.append(head, sub);
+    const hint = document.createElement("div");
+    hint.className = "text-xs text-inject mt-0.5";
+    hint.textContent = t('l2_see_sent_hint');
+    block.append(head, sub, hint);
     block.appendChild(BUBBLE.details(t('l2_body_summary'), BUBBLE.pre(f.body)));
     turnsEl.appendChild(block);
   }
@@ -983,7 +994,21 @@ function setupSkillTab(panel) {
     // f.content 空字串 = cancel/stop 的 terminal-final(§3.6)— 只解鎖按鈕,
     // 不畫空的綠泡泡(同 tab4 renderFinal 的 guard)
     if (!finalDone && f.content) {
-      turnsEl.appendChild(BUBBLE.finalBlock({ caption: t('to_user_caption'), content: f.content }));
+      const fb = BUBBLE.finalBlock({ caption: t('to_user_caption'), content: f.content });
+      turnsEl.appendChild(fb);
+      // final turn is content-only, so onTurn skipped its wire views — the
+      // final turn's `sent` holds the FULLEST accumulated messages (incl. the
+      // injected L2 body): attach here so EVERY turn has its expander.
+      if (pendingSent) {
+        fb.appendChild(BUBBLE.details(t('sent_prompt_summary', { turn: pendingSent.turn }),
+          BUBBLE.pre(JSON.stringify(pendingSent.messages, null, 2))));
+        pendingSent = null;
+      }
+      if (pendingReceived) {
+        fb.appendChild(BUBBLE.details(t('received_summary'),
+          BUBBLE.pre(JSON.stringify(pendingReceived.response, null, 2))));
+        pendingReceived = null;
+      }
       const rounds = turns.length;
       const trips = turns.filter((x) => x.hadTool).length;
       if (rounds) turnsEl.prepend(BUBBLE.banner(
