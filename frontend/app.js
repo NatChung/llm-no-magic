@@ -309,14 +309,21 @@ const BUBBLE = {
     bannerIcon: "w-7 h-7 rounded-full bg-final-tint text-final flex items-center justify-center flex-shrink-0",
     npDetails:  "mt-1.5 w-full text-left",
     npSummary:  "cursor-pointer text-xs text-muted hover:text-ink-soft py-1 list-none [&::-webkit-details-marker]:hidden before:content-['▸_'] [&[open]]:before:content-['▾_']",
+    // 右側泡泡(user / 工具 / 注入)的展開器:npDetails 的 w-full 會撐滿整列,
+    // text-left 就把 summary 推到列的最左緣、離泡泡 300px 遠。summary 靠右對齊,
+    // 讓它的右緣貼齊泡泡右緣;<pre> 仍靠左(展開後才好讀)。
+    npSummaryRight: "text-right",
     npPre:      "mt-1.5 rounded-md bg-surface border border-edge-soft p-3 text-xs font-mono whitespace-pre-wrap break-all max-h-64 overflow-auto text-ink-soft",
     errorBox:   "mt-3 rounded-md bg-surface-2 border border-edge p-3 text-sm font-mono text-ink-soft",
   },
-  details(summaryText, contentEl) {
+  // align: "right" 給右側泡泡用 —— summary 跟著泡泡靠右,不要孤零零留在列左緣
+  details(summaryText, contentEl, { align = "left" } = {}) {
     const details = document.createElement("details");
     details.className = BUBBLE.tw.npDetails;
     const summary = document.createElement("summary");
-    summary.className = BUBBLE.tw.npSummary;
+    summary.className = align === "right"
+      ? `${BUBBLE.tw.npSummary} ${BUBBLE.tw.npSummaryRight}`
+      : BUBBLE.tw.npSummary;
     summary.textContent = summaryText;
     details.append(summary, contentEl);
     return details;
@@ -729,7 +736,8 @@ function setupAgent(panel) {
     // turn 1, else the previous turn's last purple tool bubble).
     if (sent_prompt && lastRightBubble) {
       lastRightBubble.appendChild(BUBBLE.details(t('sent_prompt_summary', { turn }),
-                                                  BUBBLE.pre(sent_prompt)));
+                                                  BUBBLE.pre(sent_prompt),
+                                                  { align: "right" }));
       lastRightBubble = null;
     }
 
@@ -916,7 +924,7 @@ function setupSkillTab(panel) {
     // that's about to render for turn N.
     if (lastRightBubble) {
       lastRightBubble.appendChild(BUBBLE.details(t('sent_prompt_summary', { turn: f.turn }),
-        BUBBLE.pre(JSON.stringify(f.messages, null, 2))));
+        BUBBLE.pre(JSON.stringify(f.messages, null, 2)), { align: "right" }));
       lastRightBubble = null;
     }
     // else: no home for this prompt — drop silently. Two ways to get here:
@@ -978,7 +986,8 @@ function setupSkillTab(panel) {
     if (isScript) {
       const key = `${f.skill}/${f.filename.replace(/^scripts\//, "")}`;
       if (scriptSources[key]) {
-        row.appendChild(BUBBLE.details(t('script_source_summary'), BUBBLE.pre(scriptSources[key])));
+        row.appendChild(BUBBLE.details(t('script_source_summary'),
+                                       BUBBLE.pre(scriptSources[key]), { align: "right" }));
       }
       // 唯一例外:腳本原始碼永遠不進 prompt — 不接下一發 sent
       lastRightBubble = null;
@@ -1150,7 +1159,8 @@ function setupMcpTab(panel) {
     // turn 1, else the previous turn's last purple tool bubble).
     if (f.sent_prompt && lastRightBubble) {
       lastRightBubble.appendChild(BUBBLE.details(t('sent_prompt_summary', { turn: f.turn }),
-                                                  BUBBLE.pre(f.sent_prompt)));
+                                                  BUBBLE.pre(f.sent_prompt),
+                                                  { align: "right" }));
       lastRightBubble = null;
     }
 
