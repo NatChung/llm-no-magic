@@ -1276,10 +1276,12 @@ def test_agent_loop_every_turn_carries_sent_prompt_and_received_chunk(monkeypatc
     assert len(turns) == 2
     assert turns[0]["sent_prompt"] == "TPL-turn1"
     assert turns[1]["sent_prompt"] == "TPL-turn2"
+    # received_chunk 必須是「這一 turn」模型吐的字,不是別 turn 的 —— 兩個 turn
+    # 的 mock token 刻意不同,所以掛錯 turn 會紅。
+    assert turns[0]["received_chunk"] == "<|im_start|>assistant\n<tool_call>"
+    assert turns[1]["received_chunk"] == "<|im_start|>assistant\n現在是 09:00。"
     for tn in turns:
         assert "next_prompt" not in tn
-        assert tn["received_chunk"]
-        assert tn["received_chunk"].startswith("<|im_start|>assistant")
 
 
 def test_agent_loop_sent_prompt_templates_pre_call_messages(monkeypatch):

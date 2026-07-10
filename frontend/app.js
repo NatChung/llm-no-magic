@@ -919,7 +919,12 @@ function setupSkillTab(panel) {
         BUBBLE.pre(JSON.stringify(f.messages, null, 2))));
       lastRightBubble = null;
     }
-    // else: no home for this prompt (follows an exempt script-output bubble) — drop silently
+    // else: no home for this prompt — drop silently. Two ways to get here:
+    //   1. it follows the exempt script-output bubble (by design; that bubble
+    //      keeps its script source, which no prompt can replace)
+    //   2. skill_agent retried an empty content-only turn, which rendered no
+    //      right-side bubble — the retry's prompt then has nowhere to hang, so
+    //      that answer's expander is missing. Degraded, not broken; rare.
   }
 
   function onReceived(f) { pendingReceived = f.response; }
