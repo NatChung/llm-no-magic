@@ -92,7 +92,7 @@ def _mock_template_resp(prompt=""):
 def _route_iter(responses):
     """Build a mock requests.post that returns next iter response for chat
     completions, but returns a stub template response for /apply-template
-    (so iter isn't consumed by the per-turn template call added in next_prompt)."""
+    (so iter isn't consumed by the per-turn template call added in sent_prompt)."""
     def route(url, **kw):
         if "apply-template" in str(url):
             return _mock_template_resp(prompt="(stub template)")
@@ -989,8 +989,7 @@ def test_drive_tab4_cancel_emits_final(monkeypatch):
         # agent_loop ever yielding its own final.
         server.CANCEL.set()
         yield {"type": "turn_complete", "turn": 1, "message_tokens": [],
-               "tool_calls": [], "tool_results": [], "received_chunk": "",
-               "next_prompt": ""}
+               "tool_calls": [], "tool_results": [], "sent_prompt": ""}
 
     monkeypatch.setattr(server, "agent_loop", fake_loop)
     q = server.subscribe()
@@ -1169,7 +1168,7 @@ def test_drive_tab6_aggregates_protocol_and_turns(monkeypatch):
         {"type": "protocol", "phase": "handshake", "method": "initialize",
          "request": {}, "response": {}},
         {"type": "turn_complete", "turn": 1, "content": "ans", "tool_calls": [],
-         "tool_results": [], "received_chunk": "", "next_prompt": "",
+         "tool_results": [], "sent_prompt": "",
          "usage": {"prompt_tokens": 9, "completion_tokens": 2}},
         {"type": "final", "content": "ans"},
     ]
@@ -1244,3 +1243,91 @@ def test_inspect_tab5_returns_files_and_does_not_publish(monkeypatch):
         assert published == [{"type": "inspect", "tokenIndex": 3}]
     finally:
         srv.shutdown()
+
+
+def test_agent_loop_every_turn_carries_sent_prompt(monkeypatch):
+    """每個 turn_complete(含 final content-only turn)都帶 sent_prompt;
+    不再有 received_chunk / next_prompt。"""
+    import agent.server as server
+
+    tool_call = [{"id": "c1", "type": "function",
+                  "function": {"name": "get_time", "arguments": "{}"}}]
+    responses = iter([
+        _mock_llama_resp(content=None, tool_calls=tool_call),
+        _mock_llama_resp(content="現在是 09:00。"),
+    ])
+    prompts = iter(["TPL-turn1", "TPL-turn2"])
+
+    def route(url, **kw):
+        if "apply-template" in str(url):
+            return _mock_template_resp(prompt=next(prompts))
+        return next(responses)
+
+    monkeypatch.setattr(server.requests, "post", route)
+    monkeypatch.setattr(server, "dispatch_tool_call", lambda *a, **kw: "09:00")
+
+    events = list(server.agent_loop("sys", "現在幾點?"))
+    turns = [e for e in events if e["type"] == "turn_complete"]
+
+    assert len(turns) == 2
+    assert turns[0]["sent_prompt"] == "TPL-turn1"
+    assert turns[1]["sent_prompt"] == "TPL-turn2"
+    for tn in turns:
+        assert "received_chunk" not in tn
+        assert "next_prompt" not in tn
+
+
+def test_agent_loop_sent_prompt_templates_pre_call_messages(monkeypatch):
+    """turn 1 的 sent_prompt 是「還沒 append assistant/tool」的 messages 算出來的。"""
+    import agent.server as server
+
+    captured = []
+    tool_call = [{"id": "c1", "type": "function",
+                  "function": {"name": "get_time", "arguments": "{}"}}]
+    responses = iter([
+        _mock_llama_resp(content=None, tool_calls=tool_call),
+        _mock_llama_resp(content="done"),
+    ])
+
+    def route(url, **kw):
+        if "apply-template" in str(url):
+            # snapshot: kw["json"]["messages"] is agent_loop's live list —
+            # agent_loop keeps appending to that same object on later turns,
+            # so without copying here every captured entry would end up
+            # showing the final, fully-accumulated state instead of each
+            # turn's own pre-call snapshot.
+            captured.append({**kw["json"], "messages": list(kw["json"]["messages"])})
+            return _mock_template_resp(prompt="TPL")
+        return next(responses)
+
+    monkeypatch.setattr(server.requests, "post", route)
+    monkeypatch.setattr(server, "dispatch_tool_call", lambda *a, **kw: "09:00")
+
+    list(server.agent_loop("sys", "現在幾點?"))
+
+    # turn 1:只有 system + user
+    assert [m["role"] for m in captured[0]["messages"]] == ["system", "user"]
+    # turn 2:accumulated — assistant(tool_call) + tool result 都進來了
+    assert [m["role"] for m in captured[1]["messages"]] == [
+        "system", "user", "assistant", "tool"]
+    # add_generation_prompt 必須帶,否則算出來的不是「要送出的」prompt
+    assert captured[0]["add_generation_prompt"] is True
+    assert [t["function"]["name"] for t in captured[0]["tools"]] == ["get_time"]
+
+
+def test_agent_loop_sent_prompt_degrades_on_template_error(monkeypatch):
+    """/apply-template 掛掉時 sent_prompt 降級為 [template error] …,不中斷 loop。"""
+    import agent.server as server
+
+    def route(url, **kw):
+        if "apply-template" in str(url):
+            raise RuntimeError("boom")
+        return _mock_llama_resp(content="hi")
+
+    monkeypatch.setattr(server.requests, "post", route)
+
+    events = list(server.agent_loop("sys", "hi"))
+    turns = [e for e in events if e["type"] == "turn_complete"]
+    assert len(turns) == 1
+    assert turns[0]["sent_prompt"].startswith("[template error] RuntimeError")
+    assert events[-1] == {"type": "final", "content": "hi"}

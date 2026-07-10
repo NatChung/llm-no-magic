@@ -249,6 +249,21 @@ def agent_loop(system: str, user: str) -> Iterable[dict]:
         {"role": "user",   "content": user},
     ]
     for turn in range(1, MAX_TURNS + 1):
+        # "sent" — the exact prompt going into THIS turn's model call (chat
+        # template applied). Computed BEFORE the call so every turn — including
+        # the final, content-only one — carries its own. (turn N's sent_prompt
+        # is what the old next_prompt of turn N-1 used to show.)
+        try:
+            tpl_resp = requests.post(LLAMA_TEMPLATE_URL, json={
+                "messages": messages,
+                "tools":    TAB4_TOOL_SCHEMAS,
+                "add_generation_prompt": True,
+            }, timeout=5)
+            tpl_resp.raise_for_status()
+            sent_prompt = tpl_resp.json().get("prompt", "")
+        except Exception as exc:
+            sent_prompt = f"[template error] {type(exc).__name__}: {exc}"
+
         resp = requests.post(LLAMA_URL, json={
             "model":       MODEL_NAME,
             "messages":    messages,
@@ -284,35 +299,13 @@ def agent_loop(system: str, user: str) -> Iterable[dict]:
                 "content":       result,
             })
 
-        # "received" — the raw text the model emitted this turn (concat from logprobs tokens),
-        # wrapped with the chat-template assistant prefix to match the "sent next" perspective.
-        received_text = "".join(t.get("token", "") for t in lp) if lp else ""
-        received_chunk = f"<|im_start|>assistant\n{received_text}" if received_text else ""
-
-        # "sent next" — the prompt sent into the next model call, after accumulation (chat template applied).
-        # Only computed when there's a next turn (model still in tool_call): no tool_calls = final turn,
-        # nothing will be sent to the model again, so showing "sent next" would mislead.
-        next_prompt = ""
-        if tool_calls:
-            try:
-                tpl_resp = requests.post(LLAMA_TEMPLATE_URL, json={
-                    "messages": messages,
-                    "tools":    TAB4_TOOL_SCHEMAS,
-                    "add_generation_prompt": True,
-                }, timeout=5)
-                tpl_resp.raise_for_status()
-                next_prompt = tpl_resp.json().get("prompt", "")
-            except Exception as exc:
-                next_prompt = f"[template error] {type(exc).__name__}: {exc}"
-
         yield {
             "type":           "turn_complete",
             "turn":           turn,
             "message_tokens": lp,
             "tool_calls":     tool_calls_pub,
             "tool_results":   tool_results_pub,
-            "received_chunk": received_chunk,
-            "next_prompt":    next_prompt,
+            "sent_prompt":    sent_prompt,
         }
 
         if not tool_calls:
