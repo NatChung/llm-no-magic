@@ -135,7 +135,9 @@ const WIRE = (function () {
     return el("span", "text-ink-soft", String(value));
   }
 
-  function jsonNode(value) {
+  // isRoot:根節點恆展開(spec §5 ——「一打開展開器就看到骨架」),子節點仍照
+  // shouldCollapse 規則收合。只有頂層呼叫(render())傳 true;遞迴一律 false。
+  function jsonNode(value, isRoot) {
     const isArr = Array.isArray(value);
     const isObj = value !== null && typeof value === "object";
     if (!isObj) return primitive(value);
@@ -163,10 +165,10 @@ const WIRE = (function () {
         row.appendChild(el("span", "text-syn-key", JSON.stringify(k)));
         row.appendChild(el("span", "text-syn-punct", ": "));
       }
-      row.appendChild(jsonNode(v));
+      row.appendChild(jsonNode(v, false));
       body.appendChild(row);
     }
-    return fold(summary, body, !shouldCollapse(value));
+    return fold(summary, body, !!isRoot || !shouldCollapse(value));
   }
 
   // ── chat template ──────────────────────────────────────────────
@@ -196,12 +198,12 @@ const WIRE = (function () {
 
   function messageBlock(msg) {
     const marker = () => el("span", "text-syn-marker", "<|im_start|>");
-    const role = () => el("span", "text-syn-tag", msg.role);
+    const role = () => el("span", "text-syn-tag ml-1", msg.role);
 
     // 陷阱 1:結尾的 assistant body 是空的 —— 只印一行 marker,不給 toggle。
     if (msg.body.trim() === "") {
       const line = el("div");
-      line.append(marker(), el("span", "text-syn-tag ml-1", msg.role));
+      line.append(marker(), role());
       return line;
     }
 
@@ -216,7 +218,7 @@ const WIRE = (function () {
 
     const summary = [
       marker(),
-      el("span", "text-syn-tag ml-1", msg.role),
+      role(),
       el("span", "text-muted ml-2", label("wire_chars_summary", { chars: msg.body.length })),
     ];
     return fold(summary, body, true);
@@ -235,7 +237,7 @@ const WIRE = (function () {
     if (detect(src) === "json") {
       const parsed = tryParse(src);
       // parse 失敗就整塊退回純文字 —— 絕不出現空白框。
-      return parsed.ok ? jsonNode(parsed.value) : textLine(src);
+      return parsed.ok ? jsonNode(parsed.value, true) : textLine(src);
     }
     return renderChat(src);
   }
