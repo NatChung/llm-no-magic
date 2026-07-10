@@ -50,8 +50,9 @@ round trips**.
   a single word of weather knowledge — just a catalog and two generic tools". (Coloring:
   `+` green = ours/editable, `-` red = training-time convention/immutable, unprefixed
   gray = template markers. Always inline in the chat — never a separate HTML/artifact)
-- **4. Walk the round trips** (ping-pong reading: left = the model thinking, right =
-  something coming in): blue `read_file("skills/check_weather/SKILL.md")` → right amber
+- **4. Walk the round trips** (ping-pong reading: **the grey bubble at the top right is the
+  student's own question** — everything on the right is "things coming in", the left is the
+  model thinking): blue `read_file("skills/check_weather/SKILL.md")` → right amber
   "SKILL.md injected into context ← stuffed back into the prompt" (the context counter
   jumps a notch) → blue `run_script` → right purple returns
   `{"city":"台北","temp_c":28,...}` (the code never enters the context — only its

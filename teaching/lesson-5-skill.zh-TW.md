@@ -42,7 +42,8 @@
   「綠色部分沒有半個字的天氣知識,只有目錄跟兩支通用工具」。(上色:`+` 綠=我們寫的、
   `-` 紅=訓練約定改不掉、無前綴灰=template 標記。一律直接貼在對話裡,不要另出
   HTML/artifact)
-- **4. 講來回軌跡**(乒乓讀法:左=model 在想、右=東西進來):
+- **4. 講來回軌跡**(乒乓讀法:**最上面靠右的灰泡是學生自己送出的問題** —— 右邊
+  都是「東西進來」,左邊是 model 在想):
   藍 `read_file("skills/check_weather/SKILL.md")` → 右琥珀「SKILL.md 注入 context
   ← 塞回 prompt」(context 計數跳一截)→ 藍 `run_script` → 右紫回
   `{"city":"台北","temp_c":28,...}`(code 沒進 context,只有輸出)→

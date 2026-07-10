@@ -28,7 +28,12 @@ has been building toward.
   can change. (Coloring: use a ```diff code block — `+` green = ours/editable, `-` red = training-time convention/immutable, unprefixed gray = template markers. Always inline in the chat — never a separate HTML/artifact)
 - Drive: `POST /drive {"tab":"4","user":"現在幾點?"}` → the page auto-switches to Tab ④ and renders; **the first drive triggers a 0.6B→4B swap — the loading banner runs 3-5 s** (the swap happens inside `/drive`; the page shows the banner on `swap_start`)
 - Read: the bubble trace — round 1's blue model bubble `⟨tool_call⟩ get_time()` → the purple tool bubble on the right `returns "HH:MM:SS"` (↩ result fed back to the model) → the full-width green bubble "no tool_call → goes to you" (the current time); the summary on top reads "Model ⇄ tools: 1 round-trip, 2 rounds in total — only then your turn" → Debrief: round 1 — model outputs `<tool_call>{"name":"get_time"…}` → client actually runs Python to get the time → feeds result back into the conversation → round 2 can now answer. **The XML tag is just a convention; the client is what executes.** Contrast with last lesson: the same line, `現在幾點?` — thinking could only make one up, here it really got it — the difference is simply having a tool.
-- For details: each bubble has small ▸ expanders underneath (raw token stream / raw received text / the accumulated prompt sent again) — walk the learner through expanding "Sent again" to see how the conversation accumulates into the next input.
+- The stream starts with your own question — a grey bubble on the right. Right side = things
+  coming in; left side = the model thinking.
+- For details: each blue and green bubble has one small ▸ expander underneath ("the prompt
+  actually sent this turn") — walk the learner through expanding it to see how the conversation
+  accumulates into the next input. The purple tool bubbles have none: their body already prints
+  the raw return value.
 
 ## Hands-On
 Have participants type **a question that needs no tool** (e.g. `1+1 等於幾?`) into the input box themselves and submit it.

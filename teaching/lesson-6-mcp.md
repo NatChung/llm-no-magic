@@ -32,6 +32,9 @@ MCP solves.
   were **asked for** — not hard-coded (④), not files on disk (⑤). (Coloring: use a ```diff code block — `+` green = ours/editable, `-` red = training-time convention/immutable, unprefixed gray = template markers. Always inline in the chat — never a separate HTML/artifact)
 
 ### Segment 2 — reading bubbles and protocol cards interleaved
+- The stream starts with your question (grey bubble, right). Expand the blue bubble's "prompt
+  actually sent this turn" and you'll find get_time + get_weather sitting inside the `<tools>`
+  block — asked for over the handshake, not hardcoded.
 - Read: blue bubble (model emits a tool_call) → protocol card (tools/call
   request/response — the line that crosses processes) → purple bubble (result fed back to
   the model) → repeat → green final fuses both results
