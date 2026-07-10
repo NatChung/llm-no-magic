@@ -996,10 +996,11 @@ function setupSkillTab(panel) {
     if (!finalDone && f.content) {
       const fb = BUBBLE.finalBlock({ caption: t('to_user_caption'), content: f.content });
       // final turn is content-only, so onTurn skipped its wire view — the
-      // final turn's `received` is the model's own raw response, same shape
-      // as the blue bubbles' — attach it here (same label, model_raw_summary).
+      // final turn's `received` is the model's own raw response. Label it
+      // to_user_raw_summary like tabs ④⑥'s green block: same position, same
+      // data, so the student must not meet two different names for it.
       if (pendingReceived) {
-        fb.appendChild(BUBBLE.details(t('model_raw_summary'),
+        fb.appendChild(BUBBLE.details(t('to_user_raw_summary'),
           BUBBLE.pre(JSON.stringify(pendingReceived, null, 2))));
         pendingReceived = null;
       }

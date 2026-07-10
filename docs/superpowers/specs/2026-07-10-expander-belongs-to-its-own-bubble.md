@@ -54,7 +54,11 @@ Status: approved, supersedes §3 of `2026-07-10-chat-bubble-user-right-single-ex
 | 模型 藍(turn N) | 左 | 模型吐的原始訊息 | `received(N).response` |
 | 琥珀 L2 注入(turn N 之後) | 右 | 送給 AI 的 prompt(turn N+1) | `sent(N+1).messages` |
 | 紫 腳本回傳 | 右 | **腳本原始碼**(唯一例外) | `scriptSources[...]` |
-| 綠(final turn F) | 全寬 | 模型吐的原始訊息 | `received(F).response` |
+| 綠(final turn F) | 全寬 | 送給使用者的原始訊息 | `received(F).response` |
+
+> 綠泡的標籤三個 tab 一律用「送給使用者的原始訊息」。同一個位置、同一種資料,
+> 不能讓學生遇到兩個名字。(⑤ 的資料來源是 `received` frame、④⑥ 是
+> `received_chunk`,但對學生而言是同一件事。)
 
 **⑤ 紫泡是規則的唯一例外,而且是刻意的:** 腳本原始碼**永遠不會**出現在任何一份
 prompt 裡 —— 那正是 lesson-5 的教學點(「你看得到,model 從頭到尾沒看過」)。
