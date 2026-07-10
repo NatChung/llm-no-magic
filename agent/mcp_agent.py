@@ -17,6 +17,7 @@ from pathlib import Path
 import requests
 
 LLAMA_URL = "http://localhost:8080/v1/chat/completions"
+LLAMA_TEMPLATE_URL = LLAMA_URL.replace("/v1/chat/completions", "/apply-template")
 MAX_TURNS = 8          # > tab4's 6 on purpose: discovery chains run longer
 RPC_TIMEOUT = 10       # seconds per JSON-RPC round-trip
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -127,6 +128,18 @@ def mcp_agent_loop(user_query: str):
                     {"role": "user", "content": user_query}]
 
         for turn in range(1, MAX_TURNS + 1):
+            # "sent" — this turn's actual prompt, chat template applied.
+            # tools 是握手問來的 openai_tools:展開藍泡就看得到 <tools> 區塊,
+            # 那正是 lesson-6「工具清單是問來的」的物證。
+            try:
+                sent_prompt = requests.post(LLAMA_TEMPLATE_URL, json={
+                    "messages": messages,
+                    "tools":    openai_tools,
+                    "add_generation_prompt": True,
+                }, timeout=5).json().get("prompt", "")
+            except Exception as exc:
+                sent_prompt = f"[template error] {type(exc).__name__}: {exc}"
+
             body = {"model": "any", "messages": messages, "temperature": 0.3,
                     "tools": openai_tools, "tool_choice": "auto"}
             try:
@@ -168,9 +181,7 @@ def mcp_agent_loop(user_query: str):
             yield {
                 "type": "turn_complete", "turn": turn, "content": content,
                 "tool_calls": tcs, "tool_results": tool_results,
-                "received_chunk": json.dumps(msg, ensure_ascii=False, indent=2),
-                "next_prompt": (json.dumps(messages, ensure_ascii=False, indent=2)
-                                if tool_calls else ""),
+                "sent_prompt": sent_prompt,
                 "usage": {"prompt_tokens": usage.get("prompt_tokens"),
                           "completion_tokens": usage.get("completion_tokens")},
             }
