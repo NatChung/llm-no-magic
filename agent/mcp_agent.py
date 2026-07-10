@@ -182,6 +182,7 @@ def mcp_agent_loop(user_query: str):
                 "type": "turn_complete", "turn": turn, "content": content,
                 "tool_calls": tcs, "tool_results": tool_results,
                 "sent_prompt": sent_prompt,
+                "received_chunk": json.dumps(msg, ensure_ascii=False, indent=2),
                 "usage": {"prompt_tokens": usage.get("prompt_tokens"),
                           "completion_tokens": usage.get("completion_tokens")},
             }

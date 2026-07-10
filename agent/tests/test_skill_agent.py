@@ -21,14 +21,21 @@ def test_turn_carries_usage(monkeypatch):
     assert turn["usage"] == {"prompt_tokens": 500, "completion_tokens": 7}
 
 
-def test_no_received_frame_is_emitted(monkeypatch):
-    """received frame 已移除 —— 前端不再顯示「收到的 response」展開器。
-    sent frame 仍在:lesson-5 的「注入現場」證物靠它。"""
+def test_received_frame_is_emitted_per_turn(monkeypatch):
+    """received frame 恢復 —— 藍泡/綠泡要掛「模型自己那則原始訊息」,
+    只有 response = {message, usage} 兩個 key(全量 llama json 太肥,expander
+    不需要)。sent frame 仍在:lesson-5 的「注入現場」證物靠它。"""
     import agent.skill_agent as sa
     monkeypatch.setattr(sa.requests, "post", lambda *a, **kw: _resp(content="hi"))
     events = list(sa.skill_agent_loop("hello", "proper"))
 
-    assert not [e for e in events if e["type"] == "received"]
+    received = [e for e in events if e["type"] == "received"]
+    assert len(received) == 1
+    assert received[0]["turn"] == 1
+    assert set(received[0]["response"].keys()) == {"message", "usage"}
+    assert received[0]["response"]["message"]["role"] == "assistant"
+    assert received[0]["response"]["message"]["content"] == "hi"
+
     sent = next(e for e in events if e["type"] == "sent")
     assert sent["turn"] == 1
     assert isinstance(sent["messages"], list)

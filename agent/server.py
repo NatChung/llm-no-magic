@@ -299,6 +299,11 @@ def agent_loop(system: str, user: str) -> Iterable[dict]:
                 "content":       result,
             })
 
+        # "received" — the raw text the model emitted this turn (concat from logprobs tokens),
+        # wrapped with the chat-template assistant prefix to match the chat-template shape.
+        received_text = "".join(t.get("token", "") for t in lp) if lp else ""
+        received_chunk = f"<|im_start|>assistant\n{received_text}" if received_text else ""
+
         yield {
             "type":           "turn_complete",
             "turn":           turn,
@@ -306,6 +311,7 @@ def agent_loop(system: str, user: str) -> Iterable[dict]:
             "tool_calls":     tool_calls_pub,
             "tool_results":   tool_results_pub,
             "sent_prompt":    sent_prompt,
+            "received_chunk": received_chunk,
         }
 
         if not tool_calls:

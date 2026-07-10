@@ -378,6 +378,15 @@ def skill_agent_loop(user_query, mode):
         usage = {"prompt_tokens": usage_raw.get("prompt_tokens"),
                  "completion_tokens": usage_raw.get("completion_tokens")}
 
+        # surface the model response — trimmed to the assistant message +
+        # usage (the full llama json bloats every relay frame; the UI's
+        # ▸ expander only needs these two)
+        yield {
+            "type": "received",
+            "turn": turn,
+            "response": {"message": msg, "usage": usage},
+        }
+
         content = msg.get("content") or ""
         tool_calls = msg.get("tool_calls", []) or []
 

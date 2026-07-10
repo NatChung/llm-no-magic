@@ -1245,16 +1245,20 @@ def test_inspect_tab5_returns_files_and_does_not_publish(monkeypatch):
         srv.shutdown()
 
 
-def test_agent_loop_every_turn_carries_sent_prompt(monkeypatch):
-    """每個 turn_complete(含 final content-only turn)都帶 sent_prompt;
-    不再有 received_chunk / next_prompt。"""
+def test_agent_loop_every_turn_carries_sent_prompt_and_received_chunk(monkeypatch):
+    """每個 turn_complete(含 final content-only turn)都帶 sent_prompt 與
+    received_chunk(模型自己那則原始訊息);不再有 next_prompt。"""
     import agent.server as server
 
     tool_call = [{"id": "c1", "type": "function",
                   "function": {"name": "get_time", "arguments": "{}"}}]
     responses = iter([
-        _mock_llama_resp(content=None, tool_calls=tool_call),
-        _mock_llama_resp(content="現在是 09:00。"),
+        _mock_llama_resp(content=None, tool_calls=tool_call,
+                          logprobs_content=[{"token": "<tool_call>", "logprob": -0.1,
+                                              "top_logprobs": []}]),
+        _mock_llama_resp(content="現在是 09:00。",
+                          logprobs_content=[{"token": "現在是 09:00。", "logprob": -0.1,
+                                              "top_logprobs": []}]),
     ])
     prompts = iter(["TPL-turn1", "TPL-turn2"])
 
@@ -1273,8 +1277,9 @@ def test_agent_loop_every_turn_carries_sent_prompt(monkeypatch):
     assert turns[0]["sent_prompt"] == "TPL-turn1"
     assert turns[1]["sent_prompt"] == "TPL-turn2"
     for tn in turns:
-        assert "received_chunk" not in tn
         assert "next_prompt" not in tn
+        assert tn["received_chunk"]
+        assert tn["received_chunk"].startswith("<|im_start|>assistant")
 
 
 def test_agent_loop_sent_prompt_templates_pre_call_messages(monkeypatch):

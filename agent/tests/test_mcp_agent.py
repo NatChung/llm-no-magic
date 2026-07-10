@@ -107,7 +107,9 @@ def test_child_killed_on_generator_close(monkeypatch):
 
 
 def test_turn_complete_carries_templated_sent_prompt(monkeypatch):
-    """turn_complete 帶 templated sent_prompt;不再有 received_chunk / next_prompt。
+    """turn_complete 帶 templated sent_prompt 與 received_chunk(模型自己那則
+    原始訊息,JSON 化);不再有 next_prompt。/apply-template POST 不能吃掉
+    chat-completions 的 iterator entry(_route 依 url 分流已經處理)。
     template 呼叫要帶握手問來的 tools 與 add_generation_prompt。"""
     import agent.mcp_agent as m
 
@@ -123,8 +125,10 @@ def test_turn_complete_carries_templated_sent_prompt(monkeypatch):
     turns = [e for e in events if e["type"] == "turn_complete"]
 
     assert turns[0]["sent_prompt"] == "TPL-6"
-    assert "received_chunk" not in turns[0]
     assert "next_prompt" not in turns[0]
+    received = json.loads(turns[0]["received_chunk"])
+    assert received["role"] == "assistant"
+    assert received["content"] == "answer"
     assert captured["json"]["add_generation_prompt"] is True
     assert [t["function"]["name"] for t in captured["json"]["tools"]] == [
         "get_time", "get_weather"]
