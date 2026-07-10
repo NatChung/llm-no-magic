@@ -111,6 +111,11 @@ text-xs font-mono max-h-64 overflow-auto text-ink-soft
 `<|im_end|>` 與下一個 `<|im_start|>` 之間的空白,一律丟棄(實測 ④⑥ 的資料那裡
 只有一個 `\n`)。
 
+**但 `<|im_end|>` 本身要印出來。** 它是 template 標記,是這堂課的教材之一;
+原本的純 `<pre>` 看得到它,wire view 不能把它弄丟。每個「原文有配對 `<|im_end|>`」
+的訊息區塊,body 結尾補一行 `<|im_end|>`(`syn-marker` 灰)。
+結尾那個沒有 `<|im_end|>` 的 assistant 區塊自然就沒有。
+
 **`<tools>` 逐行 parse 時跳過空白行**(`line.trim() === ""` → 略過,不當成解析失敗)。
 
 ### 4. JSON renderer
@@ -150,7 +155,7 @@ text-xs font-mono max-h-64 overflow-auto text-ink-soft
 |---|---|---|
 | `wire_tools_summary` | `{n} tool(s), {chars} chars` | `{n} 個工具,{chars} 字元` |
 | `wire_toolcall_summary` | `tool call` | `工具呼叫` |
-| `wire_msg_summary` | `{role} message, {chars} chars` | `{role} 訊息,{chars} 字元` |
+| `wire_chars_summary` | `{chars} chars` | `{chars} 字元` |
 | `wire_obj_summary` | `{n} keys, {chars} chars` | `{n} 個欄位,{chars} 字元` |
 | `wire_arr_summary` | `{n} items, {chars} chars` | `{n} 個項目,{chars} 字元` |
 
