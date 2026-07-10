@@ -30,11 +30,22 @@ Spec: `docs/superpowers/specs/2026-07-10-wire-view-syntax-highlight-fold.md`
 | `frontend/app.js` | 加 `BUBBLE.wire()`;10 個 `BUBBLE.pre()` → `BUBBLE.wire()`;5 個新 i18n key。 |
 | `frontend/index.html`、`frontend/index.zh-TW.html` | 6 個 `syn-*` 顏色 token;`<script src="wire.js?v=1">`;`app.js?v=92`。 |
 
-## 三個真實資料陷阱(每個 task 都要記得)
+## 四個真實資料陷阱(每個 task 都要記得)
 
 1. prompt 結尾是 `…<|im_start|>assistant\n`,**沒有配對的 `<|im_end|>`**。
 2. `<tool_call>` 也出現在 **system** 訊息裡當格式範例,內容是 `{"name": <function-name>, "arguments": <args-json-object>}` —— **不是合法 JSON**,`JSON.parse` 會拋。
 3. `<tools>` 裡是**每行一個 JSON 物件**,不是一個 JSON 陣列。tab④ 只有 1 行(`get_time`),tab⑥ 有 2 行(`get_time`、`get_weather`)。
+4. **system 的散文裡有「空標籤對」,它們是句子的一部分,不是區塊。** 實測每一份 prompt 都有:
+
+   > You are provided with function signatures within `<tools></tools>` XML tags:
+   >
+   > For each function call, return a json object … within `<tool_call></tool_call>` XML tags:
+
+   天真的 `/<(tools|tool_call)>\n?([\s\S]*?)\n?<\/\1>/g` 會把它們當成**內容為空的區塊**,
+   於是 ④⑥ 的 system 會長出 2 個 `<tools>` 折疊(第一個空的)與 2 個 `<tool_call>` 折疊,
+   而且那兩句教材散文會被折疊小工具吃掉。
+   **正解:兩側都要求換行** —— `/<(tools|tool_call)>\n([\s\S]*?)\n<\/\1>/g`。
+   真實區塊一定長成 `<tools>\n…\n</tools>`,而空標籤對沒有換行,自然落回 text 段。
 
 ---
 
@@ -45,6 +56,7 @@ Spec: `docs/superpowers/specs/2026-07-10-wire-view-syntax-highlight-fold.md`
 **Files:**
 - Create: `frontend/wire.js`
 - Create: `frontend/wire.test.js`
+- Modify: `AGENTS.md` + `AGENTS.zh-TW.md`(新增第二個測試指令)
 
 **Interfaces:**
 - Produces:
@@ -115,6 +127,30 @@ test("_splitBlocks: 沒有區塊 → 單一 text 段", () => {
 
 test("_splitBlocks: 空 body → 空陣列", () => {
   assert.deepStrictEqual(WIRE._splitBlocks(""), []);
+});
+
+// 陷阱 4:真實 system 散文裡的「空標籤對」是句子的一部分,不是區塊。
+// 這段 fixture 逐字抄自 tab④ 的 /preview 輸出。
+test("_splitBlocks: 散文裡的空標籤對不得被當成區塊", () => {
+  const realSystemBody =
+    "You are provided with function signatures within <tools></tools> XML tags:\n" +
+    '<tools>\n{"type": "function", "function": {"name": "get_time"}}\n</tools>\n\n' +
+    "For each function call, return a json object within <tool_call></tool_call> XML tags:\n" +
+    '<tool_call>\n{"name": <function-name>, "arguments": <args-json-object>}\n</tool_call>';
+  const segs = WIRE._splitBlocks(realSystemBody);
+
+  // 只能有一個 tools 段、一個 tool_call 段,而且都不是空的
+  const tools = segs.filter((s) => s.type === "tools");
+  const calls = segs.filter((s) => s.type === "tool_call");
+  assert.strictEqual(tools.length, 1, "空的 <tools></tools> 被誤判成區塊了");
+  assert.strictEqual(calls.length, 1, "空的 <tool_call></tool_call> 被誤判成區塊了");
+  assert.ok(tools[0].text.includes("get_time"));
+  assert.ok(calls[0].text.includes("<function-name>"));
+
+  // 散文裡的空標籤對必須原樣留在 text 段裡(否則教材那兩句話會被吃掉)
+  const proseText = segs.filter((s) => s.type === "text").map((s) => s.text).join("");
+  assert.ok(proseText.includes("<tools></tools>"));
+  assert.ok(proseText.includes("<tool_call></tool_call>"));
 });
 
 // ── _parseToolsLines ────────────────────────────────────────────
@@ -196,7 +232,10 @@ const WIRE = (function () {
     return out;
   }
 
-  const BLOCK_RE = /<(tools|tool_call)>\n?([\s\S]*?)\n?<\/\1>/g;
+  // 陷阱 4:system 散文裡有「空標籤對」(`…within <tools></tools> XML tags:`),
+  // 那是句子,不是區塊。兩側都強制要求換行,空標籤對就匹配不到,自然落回 text 段。
+  // 真實區塊一定長成 <tools>\n…\n</tools>。
+  const BLOCK_RE = /<(tools|tool_call)>\n([\s\S]*?)\n<\/\1>/g;
 
   function splitBlocks(body) {
     const out = [];
@@ -266,17 +305,35 @@ if (typeof module !== "undefined" && module.exports) module.exports = WIRE;
 - [ ] **Step 4: 跑測試確認通過**
 
 Run: `node --test frontend/wire.test.js`
-Expected: PASS,`# pass 12`、`# fail 0`
+Expected: PASS,`# pass 13`、`# fail 0`
 
 - [ ] **Step 5: 語法檢查**
 
 Run: `node --check frontend/wire.js && node --check frontend/wire.test.js`
 Expected: 無輸出(通過)
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 6: `AGENTS.md` 記錄第二個測試指令(雙語)**
+
+`AGENTS.md` 目前只寫了 pytest。前端從此有自動化測試,要讓後面的 agent 知道。
+
+`AGENTS.md:28` 那一行下面加:
+
+```markdown
+- Frontend tests: `node --test frontend/wire.test.js` (node built-in runner, zero deps;
+  only the pure parsing layer of `wire.js` — DOM is verified in the browser).
+```
+
+`AGENTS.zh-TW.md:26` 那一行下面加:
+
+```markdown
+- 前端測試:`node --test frontend/wire.test.js`(node 內建 runner,零依賴;
+  只測 `wire.js` 的純解析層 —— DOM 由瀏覽器驗證)。
+```
+
+- [ ] **Step 7: Commit**
 
 ```bash
-git add frontend/wire.js frontend/wire.test.js
+git add frontend/wire.js frontend/wire.test.js AGENTS.md AGENTS.zh-TW.md
 git commit -m "feat(wire): 純解析核心 + node 單元測試
 
 新增 frontend/wire.js 的解析層(切訊息、切區塊、逐行 parse tools、
@@ -286,8 +343,11 @@ tryParse、collapse 判定),render 先留 stub。
 <|im_end|>;system 裡的 <tool_call> 範例是佔位符不是合法 JSON;<tools>
 內是逐行 JSON 物件而非陣列。
 
-前端首次引進自動化測試,用 node 內建 test runner,零依賴:
-node --test frontend/wire.test.js"
+陷阱 4 的測試用真實 system 散文當 fixture(裡面有 <tools></tools> 這種
+空標籤對),確保它們留在 text 段裡、不會被誤判成區塊。
+
+前端首次引進自動化測試,用 node 內建 test runner,零依賴。AGENTS.md 雙語
+同步記錄這個新指令。"
 ```
 
 ---
@@ -326,13 +386,17 @@ node --test frontend/wire.test.js"
 > **不需要 safelist**。現況已有先例:`text-tool` / `text-inject` 也只出現在
 > `app.js` 的字串裡,頁面上照樣有顏色。未來維護者請勿為此加設定。
 
-- [ ] **Step 2: 確認兩個 HTML 的 head 仍然逐字相同**
+- [ ] **Step 2: 確認兩個 HTML 的顏色區塊逐字相同**
 
-Run:
+`<html lang>` 與 `<title>` 兩檔本來就不同(那是雙語版本的重點),所以**不能**比整段 head。
+只比 `colors: {` 到它的收尾 `},`:
+
 ```bash
-diff <(sed -n '1,46p' frontend/index.html) <(sed -n '1,46p' frontend/index.zh-TW.html) && echo "IDENTICAL"
+extract() { sed -n '/^          colors: {/,/^          },/p' "$1"; }
+diff <(extract frontend/index.html) <(extract frontend/index.zh-TW.html) \
+  && echo "COLOURS IDENTICAL" || echo "❌ 兩檔顏色區塊不一致"
 ```
-Expected: `IDENTICAL`(head 區塊在兩檔本來就一致,加色後仍須一致)
+Expected: `COLOURS IDENTICAL`
 
 - [ ] **Step 3: `app.js` 加 5 個 i18n key**
 
@@ -584,7 +648,7 @@ Play CDN 的 runtime MutationObserver 會處理動態 class,不需 safelist
 - [ ] **Step 2: 確認純解析測試仍然全綠(DOM 層不得污染它們)**
 
 Run: `node --test frontend/wire.test.js`
-Expected: PASS,`# pass 12`、`# fail 0`
+Expected: PASS,`# pass 13`、`# fail 0`
 
 > 這一步是真的在測東西:`render` 現在會呼叫 `document`,但只在**被呼叫時**。
 > 若有人把 `document.createElement` 提到 IIFE 的頂層,`require("./wire.js")`
@@ -661,11 +725,16 @@ document 只在 render 被呼叫時碰,所以 node 測試仍能 require 這支�
 | `BUBBLE.pre(scriptSources[key])` | ⑤ 腳本原始碼(Python) |
 | `BUBBLE.pre(f.content)` | ⑤ 解剖卡(YAML / Markdown / Python) |
 
-驗證:
+驗證(**定義**是 method shorthand `pre(text) {` / `wire(text) {`,`grep "BUBBLE.pre("`
+**不會**數到它 —— 這兩個數字只算呼叫點):
+
 ```bash
-grep -c "BUBBLE.wire(" frontend/app.js   # 應為 11(1 個定義 + 10 個呼叫)
-grep -c "BUBBLE.pre(" frontend/app.js    # 應為 3(1 個定義 + 2 個呼叫)
+echo "wire 呼叫點 = $(grep -c 'BUBBLE.wire(' frontend/app.js)   # 應為 10"
+echo "pre  呼叫點 = $(grep -c 'BUBBLE.pre('  frontend/app.js)   # 應為 2"
+echo "兩個定義都還在:"; grep -nE "^  (pre|wire)\(text\) \{" frontend/app.js
 ```
+Expected:`wire 呼叫點 = 10`、`pre 呼叫點 = 2`,且 `pre(text) {` 與 `wire(text) {` 各一行。
+(改動前 `grep -c 'BUBBLE.pre('` 是 12。)
 
 - [ ] **Step 3: 兩個 HTML 載入 `wire.js` 並 bump 版號**
 
@@ -742,11 +811,21 @@ curl -s -X POST localhost:9000/drive -H 'Content-Type: application/json' -d '{"t
   out.tab4_msg_blocks = msgFolds.length;                              // 期望 3
   out.tab4_foldable = msgFolds.filter((n) => n.tagName === 'DETAILS').length;  // 期望 2
   out.tab4_last_is_plain_marker = msgFolds[2].tagName === 'DIV';      // 期望 true
-  const toolsFold = wire.querySelector('details details');            // system 裡的 <tools>
+  // system 裡的 <tools> 折疊。用 summary 內容認,不要靠 'details details' 的位置 ——
+  // 那樣會抓到第一個巢狀 details,一旦有其他區塊排在前面就抓錯。
+  const toolsFold = [...wire.querySelectorAll('details')]
+    .find((d) => d.querySelector(':scope > summary')?.textContent.includes('<tools>'));
+  out.tab4_tools_fold_count = [...wire.querySelectorAll('details')]
+    .filter((d) => d.querySelector(':scope > summary')?.textContent.includes('<tools>')).length;  // 期望 1
   out.tab4_tools_collapsed_by_default = toolsFold && !toolsFold.open; // 期望 true
   out.tab4_tools_summary = toolsFold.querySelector('summary').textContent;
   toolsFold.open = true;
-  out.tab4_tools_tool_count = toolsFold.querySelectorAll(':scope > div > *').length;  // 期望 1(只有 get_time)
+  // fold() 的結構是 details > div.pl-4(縮排層)> div(body)> [每個工具]。
+  // ':scope > div > *' 只會數到那個 body div → 永遠是 1。要多下鑽一層。
+  out.tab4_tools_tool_count = toolsFold.querySelectorAll(':scope > div > div > *').length;  // 期望 1(只有 get_time)
+  // 散文裡的空標籤對必須還是純文字,沒有被折疊小工具吃掉(陷阱 4)
+  out.tab4_prose_kept = wire.textContent.includes('<tools></tools>')
+                     && wire.textContent.includes('<tool_call></tool_call>');  // 期望 true
   out.tab4_has_key_colour = !!wire.querySelector('.text-syn-key');
   out.tab4_has_str_colour = !!wire.querySelector('.text-syn-str');
   out.tab4_im_end_rendered = [...wire.querySelectorAll('.text-syn-marker')]
@@ -763,8 +842,15 @@ curl -s -X POST localhost:9000/drive -H 'Content-Type: application/json' -d '{"t
     .find((r) => r.textContent.includes('SKILL.md'));
   amber.querySelector(':scope > details').open = true;
   const amberWire = amber.querySelector(':scope > details > div.max-h-64');
-  const nested = [...amberWire.querySelectorAll('details')];
-  out.tab5_has_collapsed_node = nested.some((d) => !d.open);          // 期望 true
+  // 不能寫 nested.some(d => !d.open) —— 頂層 messages[] 陣列自己就 >200 字元、
+  // 必定預設收起,那條斷言永遠 true,根本沒驗到目標。要打中 role:"tool" 那一顆。
+  const toolMsgFold = [...amberWire.querySelectorAll('details')].find((d) => {
+    const row = d.closest('div');
+    return row && row.textContent.includes('"tool"') && d !== amberWire.firstElementChild;
+  });
+  out.tab5_tool_msg_collapsed = !!toolMsgFold && !toolMsgFold.open;   // 期望 true
+  if (toolMsgFold) { toolMsgFold.open = true; }
+  out.tab5_skillmd_visible = amberWire.textContent.includes('回覆格式');  // 期望 true
 
   // ── ⑤ 腳本泡 / 解剖卡仍是純 <pre> ──
   const script = [...document.querySelectorAll('.tab-panel[data-panel="skill"] .turns .ml-auto')]
@@ -792,14 +878,16 @@ Expected(逐項對照 spec 驗收 3–8):
 tab4_msg_blocks: 3
 tab4_foldable: 2
 tab4_last_is_plain_marker: true
+tab4_tools_fold_count: 1          ← 陷阱 4:只能有一個,不能長出空的那個
 tab4_tools_collapsed_by_default: true
 tab4_tools_tool_count: 1
+tab4_prose_kept: true             ← 陷阱 4:散文的空標籤對還在
 tab4_has_key_colour: true
 tab4_has_str_colour: true
 tab4_im_end_rendered: true
 literal_tools_text: true
 no_real_tools_element: true
-tab5_has_collapsed_node: true
+tab5_tool_msg_collapsed: true
 tab5_script_still_pre: true
 max_details_per_bubble: 1
 ```
@@ -821,9 +909,10 @@ console:
   const userRow = document.querySelector('.tab-panel[data-panel="mcp"] .turns > div:nth-child(2)');
   userRow.querySelector(':scope > details').open = true;
   const wire = userRow.querySelector(':scope > details > div.max-h-64');
-  const tools = wire.querySelector('details details');
+  const tools = [...wire.querySelectorAll('details')]
+    .find((d) => d.querySelector(':scope > summary')?.textContent.includes('<tools>'));
   tools.open = true;
-  const toolCount = tools.querySelectorAll(':scope > div > *').length;
+  const toolCount = tools.querySelectorAll(':scope > div > div > *').length;   // 見 Step 6 的巢狀說明
 
   // protocol card:notifications/initialized 那張的 response 是 null。
   // 必須找到一個「文字剛好是 null」的 syn-num span —— 不能只檢查
