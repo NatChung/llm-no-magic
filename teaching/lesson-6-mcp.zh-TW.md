@@ -24,13 +24,16 @@
 - **AI 秀 prompt**(頁面沒有 preview 框 — 由 AI 演):`POST /preview
   {"tab":"6","user":"現在幾點?台北天氣如何?"}` — server 會真的起一個 mini MCP
   server、握手拿工具清單、再展開 prompt。對照前兩課:`<tools>` 裡的 get_time +
-  get_weather 是**問來的** — 不是寫死(④)、也不是磁碟上的檔案(⑤)。(上色:用 ```diff code block — `+` 綠=我們寫的、`-` 紅=訓練約定改不掉、無前綴灰=template 標記。一律直接貼在對話裡,不要另出 HTML/artifact)
+  get_weather 是**問來的** — 不是寫死(④)、也不是磁碟上的檔案(⑤);等一下展開泡泡時,
+  這個 `<tools>` 區塊會**預設折疊**(因為太長)— 點開它是劇情的一部分,不是卡住。
+  (上色:用 ```diff code block — `+` 綠=我們寫的、`-` 紅=訓練約定改不掉、無前綴灰=template 標記。一律直接貼在對話裡,不要另出 HTML/artifact)
 
 ### 段落 2 — 泡泡 + 協定卡交錯讀
 - 對話流從你的問題開頭(靠右灰泡)—— 而且藏著關鍵的是這顆泡泡,不是模型那顆:展開它的
-  「送給 AI 的 prompt(turn 1)」,`<tools>` 區塊裡的 get_time + get_weather 就躺在裡面
-  —— 那是剛剛跟 mini MCP server 握手問來的,不是寫死的。(藍泡自己的展開器秀的是另一件
-  事:模型吐的原始 `<tool_call>`。)
+  「送給 AI 的 prompt(turn 1)」,會看到一個折疊起來的 `▸ <tools> 2 個工具,423 字元` —
+  因為太長預設收合,點開它,get_time + get_weather 就躺在裡面 —— 那是剛剛跟 mini MCP
+  server 握手問來的,不是寫死的。(藍泡自己的展開器秀的是另一件事:模型吐的原始
+  `<tool_call>`。)
 - 讀回應:藍色泡泡(model 吐 tool_call)→ 協定卡(tools/call 請求/回應,
   跨 process 的那條線)→ 紫色泡泡(結果餵回模型,它自己的展開器帶著下一輪的 prompt)
   → 重複 → 綠色 final 融合兩個結果

@@ -29,12 +29,15 @@ MCP solves.
   `POST /preview {"tab":"6","user":"現在幾點?台北天氣如何?"}` — the server really
   spawns a mini MCP server, handshakes for the tool list, then expands the prompt.
   Contrast with the last two lessons: the get_time + get_weather inside `<tools>`
-  were **asked for** — not hard-coded (④), not files on disk (⑤). (Coloring: use a ```diff code block — `+` green = ours/editable, `-` red = training-time convention/immutable, unprefixed gray = template markers. Always inline in the chat — never a separate HTML/artifact)
+  were **asked for** — not hard-coded (④), not files on disk (⑤); when you open the bubble in a
+  moment, that `<tools>` block arrives folded shut because it's long — clicking it open is part
+  of the story, not a snag. (Coloring: use a ```diff code block — `+` green = ours/editable, `-` red = training-time convention/immutable, unprefixed gray = template markers. Always inline in the chat — never a separate HTML/artifact)
 
 ### Segment 2 — reading bubbles and protocol cards interleaved
 - The stream starts with your question (grey bubble, right) — and it's this bubble, not the
   model's, that holds the punchline: expand its "prompt sent to the AI (turn 1)" and you'll find
-  get_time + get_weather sitting inside the `<tools>` block — asked for over the handshake, not
+  a `▸ <tools> 2 個工具,423 字元` fold, collapsed by default because it's long — click it open
+  and get_time + get_weather are sitting right there, asked for over the handshake, not
   hardcoded. (The blue bubble's own expander shows something different: the raw `<tool_call>`
   the model emitted.)
 - Read: blue bubble (model emits a tool_call) → protocol card (tools/call

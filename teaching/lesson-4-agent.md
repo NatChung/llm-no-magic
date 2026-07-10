@@ -30,11 +30,15 @@ has been building toward.
 - Read: the bubble trace — round 1's blue model bubble `⟨tool_call⟩ get_time()` → the purple tool bubble on the right `returns "HH:MM:SS"` (↩ result fed back to the model) → the full-width green bubble "no tool_call → goes to you" (the current time); the summary on top reads "Model ⇄ tools: 1 round-trip, 2 rounds in total — only then your turn" → Debrief: round 1 — model outputs `<tool_call>{"name":"get_time"…}` → client actually runs Python to get the time → feeds result back into the conversation → round 2 can now answer. **The XML tag is just a convention; the client is what executes.** Contrast with last lesson: the same line, `現在幾點?` — thinking could only make one up, here it really got it — the difference is simply having a tool.
 - The stream starts with your own question — a grey bubble on the right. Right side = things
   coming in; left side = the model thinking.
-- For details: every bubble has exactly one ▸ expander, and it always shows *that bubble's own
-  message*: right-side bubbles show what got sent to the model because of them; the left-side
-  blue/green bubbles show what the model itself emitted. Walk the learner through all four: the
-  grey user bubble ▸ "the prompt sent to the AI (turn 1)" — the templated prompt with your
-  question and the `<tools>` block listing `get_time`, but **no tool result yet**; the blue
+- For details: first name what's inside the fold — each ▸ expander opens a coloured, foldable
+  "wire view" of the raw text; greys are the `<|im_start|>`/`<|im_end|>` template markers, and
+  the arrows are what fold and unfold each block. Every bubble has exactly one ▸ expander, and
+  it always shows *that bubble's own message*: right-side bubbles show what got sent to the
+  model because of them; the left-side blue/green bubbles show what the model itself emitted.
+  Walk the learner through all four: the grey user bubble ▸ "the prompt sent to the AI (turn 1)"
+  — the templated prompt with your question and, folded shut by default because it's long, a
+  `▸ <tools>` block; click the arrow and `get_time` is sitting right there — **no tool result
+  yet**; the blue
   bubble ▸ "the raw message the model emitted" — the `<tool_call>` tag itself; the purple tool
   bubble ▸ "the prompt sent to the AI (turn 2)" — the *same* prompt as the user bubble, now with
   the tool's result appended (noticeably longer); the green bubble ▸ "the raw message sent to
