@@ -1,4 +1,4 @@
-"""skill_agent_loop — mocked llama; usage propagation + trimmed received."""
+"""skill_agent_loop — mocked llama; usage propagation + sent frame."""
 
 
 def _resp(content=None, tool_calls=None, prompt_tokens=500):
@@ -13,15 +13,25 @@ def _resp(content=None, tool_calls=None, prompt_tokens=500):
     return R()
 
 
-def test_turn_carries_usage_and_received_is_trimmed(monkeypatch):
+def test_turn_carries_usage(monkeypatch):
     import agent.skill_agent as sa
     monkeypatch.setattr(sa.requests, "post", lambda *a, **kw: _resp(content="hi"))
     events = list(sa.skill_agent_loop("hello", "proper"))
     turn = next(e for e in events if e["type"] == "turn")
     assert turn["usage"] == {"prompt_tokens": 500, "completion_tokens": 7}
-    received = next(e for e in events if e["type"] == "received")
-    assert set(received["response"].keys()) == {"message", "usage"}
-    assert received["response"]["message"]["content"] == "hi"
+
+
+def test_no_received_frame_is_emitted(monkeypatch):
+    """received frame 已移除 —— 前端不再顯示「收到的 response」展開器。
+    sent frame 仍在:lesson-5 的「注入現場」證物靠它。"""
+    import agent.skill_agent as sa
+    monkeypatch.setattr(sa.requests, "post", lambda *a, **kw: _resp(content="hi"))
+    events = list(sa.skill_agent_loop("hello", "proper"))
+
+    assert not [e for e in events if e["type"] == "received"]
+    sent = next(e for e in events if e["type"] == "sent")
+    assert sent["turn"] == 1
+    assert isinstance(sent["messages"], list)
 
 
 def test_no_skills_mode_empty_index(monkeypatch):
