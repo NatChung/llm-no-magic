@@ -149,6 +149,26 @@ const I18N = {
   protocol_card_req: { 'en': '→ request',  'zh-TW': '→ 請求' },
   protocol_card_resp:{ 'en': '← response', 'zh-TW': '← 回應' },
   protocol_expand:   { 'en': 'Full JSON-RPC frames', 'zh-TW': '完整 JSON-RPC 內容' },
+  wire_tools_summary: {
+    'en':    '{n} tool(s), {chars} chars',
+    'zh-TW': '{n} 個工具,{chars} 字元',
+  },
+  wire_toolcall_summary: {
+    'en':    'tool call',
+    'zh-TW': '工具呼叫',
+  },
+  wire_chars_summary: {
+    'en':    '{chars} chars',
+    'zh-TW': '{chars} 字元',
+  },
+  wire_obj_summary: {
+    'en':    '{n} keys, {chars} chars',
+    'zh-TW': '{n} 個欄位,{chars} 字元',
+  },
+  wire_arr_summary: {
+    'en':    '{n} items, {chars} chars',
+    'zh-TW': '{n} 個項目,{chars} 字元',
+  },
   mcp_exec_badge: {
     'en':    '🔌 runs in the external process',
     'zh-TW': '🔌 在外部 process 執行',

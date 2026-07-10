@@ -28,6 +28,15 @@
             'final-tint': 'oklch(96% 0.045 255)',
             inject:        'oklch(60% 0.14 75)',   // amber — L2 注入時刻
             'inject-tint': 'oklch(96% 0.045 85)',
+            // syntax colours for the wire view(展開器內容)——
+            // 刻意與泡泡的教學語意色(tool/result/final/inject)分開命名,
+            // 學生才不會把「這裡是紫色」誤讀成「這裡是工具」。
+            'syn-key':    'oklch(45% 0.16 255)',   // 藍 — JSON key
+            'syn-str':    'oklch(48% 0.14 55)',    // 橘 — 字串值
+            'syn-num':    'oklch(48% 0.12 190)',   // 青綠 — 數字 / true / false / null
+            'syn-tag':    'oklch(48% 0.18 320)',   // 紫 — <tools> <tool_call> 標籤、im_start 的 role
+            'syn-marker': 'oklch(62% 0.020 280)',  // 灰 — <|im_start|> <|im_end|>
+            'syn-punct':  'oklch(68% 0.010 280)',  // 淺灰 — { } [ ] , :
           },
           fontFamily: {
             sans: ['ui-sans-serif', 'system-ui', '"PingFang TC"', '"Helvetica Neue"', 'sans-serif'],
