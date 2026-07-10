@@ -334,6 +334,7 @@ const BUBBLE = {
     // 讓它的右緣貼齊泡泡右緣;<pre> 仍靠左(展開後才好讀)。
     npSummaryRight: "text-right",
     npPre:      "mt-1.5 rounded-md bg-surface border border-edge-soft p-3 text-xs font-mono whitespace-pre-wrap break-all max-h-64 overflow-auto text-ink-soft",
+    npWire:     "mt-1.5 rounded-md bg-surface border border-edge-soft p-3 text-xs font-mono max-h-64 overflow-auto text-ink-soft",
     errorBox:   "mt-3 rounded-md bg-surface-2 border border-edge p-3 text-sm font-mono text-ink-soft",
   },
   // align: "right" 給右側泡泡用 —— summary 跟著泡泡靠右,不要孤零零留在列左緣
@@ -353,6 +354,15 @@ const BUBBLE = {
     pre.className = BUBBLE.tw.npPre;
     pre.textContent = text;
     return pre;
+  },
+  // wire 內容(prompt / JSON)→ 上色 + 可折。外層必須是 <div> 不是 <pre>:
+  // <details> 不能合法巢狀在 <pre> 裡,而且 npPre 的 break-all 會把上色後的
+  // token 從中間折斷。純碼(腳本原始碼、解剖卡)仍然走 BUBBLE.pre。
+  wire(text) {
+    const box = document.createElement("div");
+    box.className = BUBBLE.tw.npWire;
+    box.appendChild(WIRE.render(text));
+    return box;
   },
   user({ text }) {
     const row = document.createElement("div");
@@ -756,7 +766,7 @@ function setupAgent(panel) {
     // turn 1, else the previous turn's last purple tool bubble).
     if (sent_prompt && lastRightBubble) {
       lastRightBubble.appendChild(BUBBLE.details(t('sent_prompt_summary', { turn }),
-                                                  BUBBLE.pre(sent_prompt),
+                                                  BUBBLE.wire(sent_prompt),
                                                   { align: "right" }));
       lastRightBubble = null;
     }
@@ -772,7 +782,7 @@ function setupAgent(panel) {
         caption: t('calls_tool_caption'),
       });
       if (received_chunk) {
-        mRow.appendChild(BUBBLE.details(t('model_raw_summary'), BUBBLE.pre(received_chunk)));
+        mRow.appendChild(BUBBLE.details(t('model_raw_summary'), BUBBLE.wire(received_chunk)));
       }
       block.appendChild(mRow);
 
@@ -797,7 +807,7 @@ function setupAgent(panel) {
       const content = (message_tokens || []).map((s) => s.token).join("");
       const fb = BUBBLE.finalBlock({ caption: t('to_user_caption'), content });
       if (received_chunk) {
-        fb.appendChild(BUBBLE.details(t('to_user_raw_summary'), BUBBLE.pre(received_chunk)));
+        fb.appendChild(BUBBLE.details(t('to_user_raw_summary'), BUBBLE.wire(received_chunk)));
       }
       block.appendChild(fb);
     }
@@ -944,7 +954,7 @@ function setupSkillTab(panel) {
     // that's about to render for turn N.
     if (lastRightBubble) {
       lastRightBubble.appendChild(BUBBLE.details(t('sent_prompt_summary', { turn: f.turn }),
-        BUBBLE.pre(JSON.stringify(f.messages, null, 2)), { align: "right" }));
+        BUBBLE.wire(JSON.stringify(f.messages, null, 2)), { align: "right" }));
       lastRightBubble = null;
     }
     // else: no home for this prompt — drop silently. Two ways to get here:
@@ -975,7 +985,7 @@ function setupSkillTab(panel) {
     // attach the buffered wire view for THIS turn (received preceded us)
     if (pendingReceived) {
       row.appendChild(BUBBLE.details(t('model_raw_summary'),
-        BUBBLE.pre(JSON.stringify(pendingReceived, null, 2))));
+        BUBBLE.wire(JSON.stringify(pendingReceived, null, 2))));
       pendingReceived = null;
     }
     turnsEl.appendChild(row);
@@ -1035,7 +1045,7 @@ function setupSkillTab(panel) {
       // data, so the student must not meet two different names for it.
       if (pendingReceived) {
         fb.appendChild(BUBBLE.details(t('to_user_raw_summary'),
-          BUBBLE.pre(JSON.stringify(pendingReceived, null, 2))));
+          BUBBLE.wire(JSON.stringify(pendingReceived, null, 2))));
         pendingReceived = null;
       }
       turnsEl.appendChild(fb);
@@ -1154,7 +1164,7 @@ function setupMcpTab(panel) {
       card.appendChild(resp);
     }
     card.appendChild(BUBBLE.details(t('protocol_expand'),
-      BUBBLE.pre(JSON.stringify({ request: f.request, response: f.response }, null, 2))));
+      BUBBLE.wire(JSON.stringify({ request: f.request, response: f.response }, null, 2))));
     return card;
   }
 
@@ -1179,7 +1189,7 @@ function setupMcpTab(panel) {
     // turn 1, else the previous turn's last purple tool bubble).
     if (f.sent_prompt && lastRightBubble) {
       lastRightBubble.appendChild(BUBBLE.details(t('sent_prompt_summary', { turn: f.turn }),
-                                                  BUBBLE.pre(f.sent_prompt),
+                                                  BUBBLE.wire(f.sent_prompt),
                                                   { align: "right" }));
       lastRightBubble = null;
     }
@@ -1195,7 +1205,7 @@ function setupMcpTab(panel) {
         caption: t('calls_tool_caption'),
       });
       if (f.received_chunk) {
-        row.appendChild(BUBBLE.details(t('model_raw_summary'), BUBBLE.pre(f.received_chunk)));
+        row.appendChild(BUBBLE.details(t('model_raw_summary'), BUBBLE.wire(f.received_chunk)));
       }
       turnsEl.appendChild(row);
       // flush this turn's wire calls: blue bubble → protocol card(s) → purple results
@@ -1219,7 +1229,7 @@ function setupMcpTab(panel) {
       finalDone = true;
       const fb = BUBBLE.finalBlock({ caption: t('to_user_caption'), content: f.content });
       if (f.received_chunk) {
-        fb.appendChild(BUBBLE.details(t('to_user_raw_summary'), BUBBLE.pre(f.received_chunk)));
+        fb.appendChild(BUBBLE.details(t('to_user_raw_summary'), BUBBLE.wire(f.received_chunk)));
       }
       turnsEl.appendChild(fb);
     }
