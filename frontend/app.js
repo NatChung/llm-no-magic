@@ -50,6 +50,10 @@ const I18N = {
     'en':    'Tool · {name}',
     'zh-TW': '工具 · {name}',
   },
+  user_bubble_label: {
+    'en':    'You',
+    'zh-TW': '你',
+  },
   calls_tool_caption: {
     'en':    'calls the tool — your PC runs it →',
     'zh-TW': '呼叫工具,交給你的電腦跑 →',
@@ -304,6 +308,9 @@ const BUBBLE = {
     tBadge:     "ml-1.5 font-normal text-muted",
     tBubble:    "rounded-2xl rounded-tr-sm bg-tool-tint border border-tool/15 px-4 py-3 font-mono text-sm break-all leading-relaxed text-ink text-left",
     tCaption:   "text-xs text-tool mt-1 mr-1",
+    // user 泡:靠右(右側 = 東西進來),中性色 — 跟工具紫、注入琥珀區隔
+    uLabel:     "text-xs font-semibold text-ink-soft mb-1",
+    uBubble:    "rounded-2xl rounded-tr-sm bg-surface-2 border border-edge px-4 py-3 font-mono text-sm break-all leading-relaxed text-ink text-left",
     // 琥珀變體(tab⑤ L2 注入):同右側工具泡泡的節奏,顏色標「這一發是注入」
     iLabel:     "text-xs font-semibold text-inject mb-1",
     iBubble:    "rounded-2xl rounded-tr-sm bg-inject-tint border border-inject/25 px-4 py-3 text-sm break-all leading-relaxed text-ink text-left",
@@ -332,6 +339,18 @@ const BUBBLE = {
     pre.className = BUBBLE.tw.npPre;
     pre.textContent = text;
     return pre;
+  },
+  user({ text }) {
+    const row = document.createElement("div");
+    row.className = BUBBLE.tw.tRow;
+    const labelEl = document.createElement("div");
+    labelEl.className = BUBBLE.tw.uLabel;
+    labelEl.textContent = t('user_bubble_label');
+    const bubble = document.createElement("div");
+    bubble.className = BUBBLE.tw.uBubble;
+    bubble.textContent = text;
+    row.append(labelEl, bubble);
+    return { row, bubble };
   },
   model({ label, lines, caption, chip }) {
     const row = document.createElement("div");
@@ -810,7 +829,8 @@ function setupAgent(panel) {
     // §3.6 顯示輸入 — reflect the driven user into the panel's own
     // input fields so the student sees the question that was actually asked.
     if (frame && frame.user != null) { promptEl.value = frame.user; lastPrompt = frame.user; }
-    refreshPreview();
+    // user 泡領頭:右側 = 東西進來,你的問題是最先進來的那個
+    if (frame && frame.user) turnsEl.appendChild(BUBBLE.user({ text: frame.user }).row);
   }
   function endRun() { setRunning(false); }
   PANELS["4"] = {
@@ -1002,6 +1022,7 @@ function setupSkillTab(panel) {
     onDriveStart: (f) => {
       clearAll(); setRunning(true);
       if (f.user != null) promptEl.value = f.user;
+      if (f.user) turnsEl.appendChild(BUBBLE.user({ text: f.user }).row);
       noSkillsToggle.checked = f.mode === "no_skills";
     },
     onIndex, onSent, onReceived, onTurn, onSkillLoaded, onL3Loaded, onToolResult,
@@ -1170,6 +1191,7 @@ function setupMcpTab(panel) {
       handshakeEl.textContent = t('handshake_empty');
       setRunning(true);
       if (f.user != null) promptEl.value = f.user;
+      if (f.user) turnsEl.appendChild(BUBBLE.user({ text: f.user }).row);
     },
     onProtocol,
     onTurnComplete,
