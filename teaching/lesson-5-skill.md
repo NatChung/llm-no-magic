@@ -60,12 +60,17 @@ round trips**.
 - Key point to narrate: the model is using **generic tools** (read a file, run a script) —
   there is no skill-specific machinery at all. This is exactly Anthropic's official
   approach: a skill = file structure + convention, no magic
-- For details: expand the amber bubble to see the full injected manual; the blue bubbles
-  also each carry their own "▸ prompt actually sent this turn" expander — a `messages[]`
-  JSON array snapshot right before that turn's call; expand "script source" under the
-  purple bubble — you can see it, but the model never did; expand the green bubble's
-  "actual prompt sent this turn" — the freshly injected L2 manual is sitting right inside
-  `messages` (exactly what the amber bubble's hint line points at)
+- For details: five bubbles, five expanders — each shows that bubble's own message. The grey
+  user bubble ▸ "the prompt sent to the AI (turn 1)" — a `messages[]` array with exactly two
+  entries, system + user; nothing skill-related in it yet. Blue turn 1 ▸ "the raw message the
+  model emitted" — the model's `read_file` call. The amber bubble ▸ "the prompt sent to the AI
+  (turn 2)" — this **is** the injection scene: `messages[]` now holds a `role: "tool"` entry
+  whose content is the *full SKILL.md text*, sitting right there for the student to see. Blue
+  turn 2 ▸ the model's raw `run_script` call. The purple bubble is the one deliberate exception
+  to "expander = a prompt": it shows "script source" — the script's own code, which never once
+  appears in any prompt the model saw. Green ▸ "the raw message sent to you" — the model's final
+  reply. Tell the student to expand the amber bubble itself to see the injection caught in the
+  act — there's no separate hint to chase; the bubble's own expander *is* the sent prompt.
 
 ## Hands-On — no-skill contrast
 Check "no-skill contrast" and send the same line again: the index is empty (the chip
@@ -85,8 +90,8 @@ the model doesn't even know skills exist.
      "2" at 86% → "3" at 87.5%
   2. **No-skill contrast** (behavioral): same model, same line; index present/absent →
      "28°C, sunny" becomes "I can't provide real-time information"
-  3. **The sent expander** (physical evidence): open turn 2's actual prompt — SKILL.md
-     is sitting right inside `messages`, the injection caught red-handed
+  3. **The amber bubble's own expander** (physical evidence): its "prompt sent to the AI
+     (turn 2)" — SKILL.md is sitting right inside `messages`, the injection caught red-handed
   Proof 1 shows the mechanism exists, Tab ⑤ shows it engineered, 2 & 3 are the autopsy
 - The token-cost chip above the anatomy card: read the two numbers as-is — progressive
   loading costs ~M tokens now vs ~N if everything were stuffed into the system

@@ -32,12 +32,15 @@ MCP solves.
   were **asked for** — not hard-coded (④), not files on disk (⑤). (Coloring: use a ```diff code block — `+` green = ours/editable, `-` red = training-time convention/immutable, unprefixed gray = template markers. Always inline in the chat — never a separate HTML/artifact)
 
 ### Segment 2 — reading bubbles and protocol cards interleaved
-- The stream starts with your question (grey bubble, right). Expand the blue bubble's "prompt
-  actually sent this turn" and you'll find get_time + get_weather sitting inside the `<tools>`
-  block — asked for over the handshake, not hardcoded.
+- The stream starts with your question (grey bubble, right) — and it's this bubble, not the
+  model's, that holds the punchline: expand its "prompt sent to the AI (turn 1)" and you'll find
+  get_time + get_weather sitting inside the `<tools>` block — asked for over the handshake, not
+  hardcoded. (The blue bubble's own expander shows something different: the raw `<tool_call>`
+  the model emitted.)
 - Read: blue bubble (model emits a tool_call) → protocol card (tools/call
   request/response — the line that crosses processes) → purple bubble (result fed back to
-  the model) → repeat → green final fuses both results
+  the model, and its own expander carries the next turn's prompt) → repeat → green final
+  fuses both results
 - Contrast with Tab ④: the model side is **exactly the same** (it emits the tool_call
   convention tag); what changes is where the client goes to execute once it gets a
   tool_call — a built-in function vs asking an external process
