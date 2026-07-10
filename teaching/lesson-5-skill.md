@@ -60,13 +60,13 @@ round trips**.
 - Key point to narrate: the model is using **generic tools** (read a file, run a script) —
   there is no skill-specific machinery at all. This is exactly Anthropic's official
   approach: a skill = file structure + convention, no magic
-- For details: five bubbles, five expanders — each shows that bubble's own message. The grey
+- For details: six bubbles, six expanders — each shows that bubble's own message. The grey
   user bubble ▸ "the prompt sent to the AI (turn 1)" — a `messages[]` array with exactly two
   entries, system + user; nothing skill-related in it yet. Blue turn 1 ▸ "the raw message the
   model emitted" — the model's `read_file` call. The amber bubble ▸ "the prompt sent to the AI
   (turn 2)" — this **is** the injection scene: `messages[]` now holds a `role: "tool"` entry
   whose content is the *full SKILL.md text*. That entry is long, so the JSON tree folds it shut
-  by default, tagged with a summary like `▸ {…} 2 個欄位,428 字元` — click it and SKILL.md is
+  by default, tagged with a summary like `▸ {…} 3 個欄位,428 字元` — click it and SKILL.md is
   sitting right there for the student to see. Blue turn 2 ▸ the model's raw `run_script` call.
   The purple bubble is the one deliberate exception to "expander = a prompt": it shows "script
   source" — the script's own code, which never once appears in any prompt the model saw. Green
