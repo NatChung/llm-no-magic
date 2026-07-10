@@ -82,18 +82,6 @@ const I18N = {
     'en':    'No tool needed — the model answered you directly in 1 round',
     'zh-TW': '模型沒呼叫工具,1 個回合直接回答你',
   },
-  raw_tokens_summary: {
-    'en':    'The raw token stream the model emitted this round',
-    'zh-TW': '這回合 model 吐的原始 token 流',
-  },
-  received_summary: {
-    'en':    'Received: the raw string the model emitted on this turn',
-    'zh-TW': '收到,model 在這 turn 吐的字串(原樣)',
-  },
-  next_prompt_summary: {
-    'en':    'Sent again: the prompt sent to the model after accumulating {turn} turn(s)',
-    'zh-TW': '再送出,累積 {turn} turn 後送進下次 model 的 prompt',
-  },
   sent_prompt_summary: {
     'en':    'Actual prompt sent this turn (turn {turn})',
     'zh-TW': '此 turn 實際送出的 prompt(turn {turn})',
@@ -724,24 +712,7 @@ function setupAgent(panel) {
     turnsEl.innerHTML = "";
   }
 
-  function makeTokensBox(turn, message_tokens) {
-    const box = document.createElement("div");
-    box.className = BUBBLE.tw.tokensBox;
-    const turnIdx = turns.length;  // 0-based array index for turns[]
-    message_tokens.forEach((step, tokIdx) => {
-      // `.tok` + `.tok-static` 是 styles.css 邏輯依賴(必留)
-      const span = document.createElement("span");
-      span.className = "tok tok-static";
-      span.dataset.turn = String(turnIdx);
-      span.dataset.tokIdx = String(tokIdx);
-      span.textContent = step.token;
-      span.title = `Turn ${turn} / token ${tokIdx + 1}`;
-      box.appendChild(span);
-    });
-    return box;
-  }
-
-  function renderTurnBlock(turn, message_tokens, tool_calls, tool_results, received_chunk, next_prompt) {
+  function renderTurnBlock(turn, message_tokens, tool_calls, tool_results, sent_prompt) {
     const block = document.createElement("div");
     block.className = BUBBLE.tw.block;
     block.dataset.turn = String(turn);
@@ -757,15 +728,14 @@ function setupAgent(panel) {
         lines,
         caption: t('calls_tool_caption'),
       });
-      if (message_tokens && message_tokens.length) {
-        mRow.appendChild(BUBBLE.details(t('raw_tokens_summary'), makeTokensBox(turn, message_tokens)));
-      }
-      if (received_chunk) {
-        mRow.appendChild(BUBBLE.details(t('received_summary'), BUBBLE.pre(received_chunk)));
+      if (sent_prompt) {
+        mRow.appendChild(BUBBLE.details(t('sent_prompt_summary', { turn }),
+                                        BUBBLE.pre(sent_prompt)));
       }
       block.appendChild(mRow);
 
-      (tool_results || []).forEach((tr, i) => {
+      // 紫泡不給展開器:本體印的就是原始回傳值
+      (tool_results || []).forEach((tr) => {
         const raw = (tr.result_text || "").trim();
         const looksJson = raw.startsWith("{") || raw.startsWith("[");
         const { row: tRow } = BUBBLE.tool({
@@ -774,9 +744,6 @@ function setupAgent(panel) {
           body: `${t('tool_returns')} ${looksJson ? raw : JSON.stringify(raw)}`,
           caption: t('feeds_back_caption'),
         });
-        if (next_prompt && i === tool_results.length - 1) {
-          tRow.appendChild(BUBBLE.details(t('next_prompt_summary', { turn }), BUBBLE.pre(next_prompt)));
-        }
         block.appendChild(tRow);
       });
     } else {
@@ -784,8 +751,9 @@ function setupAgent(panel) {
       finalRendered = true;
       const content = (message_tokens || []).map((s) => s.token).join("");
       block.appendChild(BUBBLE.finalBlock({ caption: t('to_user_caption'), content }));
-      if (message_tokens && message_tokens.length) {
-        block.appendChild(BUBBLE.details(t('raw_tokens_summary'), makeTokensBox(turn, message_tokens)));
+      if (sent_prompt) {
+        block.appendChild(BUBBLE.details(t('sent_prompt_summary', { turn }),
+                                         BUBBLE.pre(sent_prompt)));
       }
     }
 
@@ -836,7 +804,7 @@ function setupAgent(panel) {
   PANELS["4"] = {
     onDriveStart: beginRun,
     onTurnComplete: (f) =>
-      renderTurnBlock(f.turn, f.message_tokens, f.tool_calls, f.tool_results, f.received_chunk, f.next_prompt),
+      renderTurnBlock(f.turn, f.message_tokens, f.tool_calls, f.tool_results, f.sent_prompt),
     onFinal: (f) => { renderFinal(f.content); renderTraceSummary(); endRun(); },
     onError: (f) => { renderError(f.message); endRun(); },
   };
@@ -886,11 +854,10 @@ function setupSkillTab(panel) {
   // `sent`/`received` arrive BEFORE their `turn` frame (loop yield order) —
   // buffer them here and attach the ▸ expanders when onTurn builds the row.
   let pendingSent = null;
-  let pendingReceived = null;
 
   function clearAll() {
     turns = []; lastPromptTokens = null; finalDone = false;
-    pendingSent = null; pendingReceived = null;
+    pendingSent = null;
     turnsEl.innerHTML = "";
   }
 
@@ -915,7 +882,6 @@ function setupSkillTab(panel) {
   }
 
   function onSent(f) { pendingSent = f; }
-  function onReceived(f) { pendingReceived = f; }
 
   function onTurn(f) {
     const hasCalls = (f.tool_calls || []).length > 0;
@@ -932,16 +898,11 @@ function setupSkillTab(panel) {
       chip: contextChip(f.usage),
     });
     row.dataset.turn = String(f.turn);
-    // attach the buffered wire views for THIS turn (sent/received preceded us)
+    // attach the buffered wire view for THIS turn (sent preceded us)
     if (pendingSent) {
       row.appendChild(BUBBLE.details(t('sent_prompt_summary', { turn: f.turn }),
         BUBBLE.pre(JSON.stringify(pendingSent.messages, null, 2))));
       pendingSent = null;
-    }
-    if (pendingReceived) {
-      row.appendChild(BUBBLE.details(t('received_summary'),
-        BUBBLE.pre(JSON.stringify(pendingReceived.response, null, 2))));
-      pendingReceived = null;
     }
     turnsEl.appendChild(row);
   }
@@ -1001,11 +962,6 @@ function setupSkillTab(panel) {
           BUBBLE.pre(JSON.stringify(pendingSent.messages, null, 2))));
         pendingSent = null;
       }
-      if (pendingReceived) {
-        fb.appendChild(BUBBLE.details(t('received_summary'),
-          BUBBLE.pre(JSON.stringify(pendingReceived.response, null, 2))));
-        pendingReceived = null;
-      }
       const rounds = turns.length;
       const trips = turns.filter((x) => x.hadTool).length;
       if (rounds) turnsEl.prepend(BUBBLE.banner(
@@ -1025,7 +981,7 @@ function setupSkillTab(panel) {
       if (f.user) turnsEl.appendChild(BUBBLE.user({ text: f.user }).row);
       noSkillsToggle.checked = f.mode === "no_skills";
     },
-    onIndex, onSent, onReceived, onTurn, onSkillLoaded, onL3Loaded, onToolResult,
+    onIndex, onSent, onTurn, onSkillLoaded, onL3Loaded, onToolResult,
     onFinal,
     onError: (f) => {
       const errBox = document.createElement("div");
@@ -1140,14 +1096,15 @@ function setupMcpTab(panel) {
         lines,
         caption: t('calls_tool_caption'),
       });
-      if (f.received_chunk) {
-        row.appendChild(BUBBLE.details(t('received_summary'), BUBBLE.pre(f.received_chunk)));
+      if (f.sent_prompt) {
+        row.appendChild(BUBBLE.details(t('sent_prompt_summary', { turn: f.turn }),
+                                       BUBBLE.pre(f.sent_prompt)));
       }
       turnsEl.appendChild(row);
       // flush this turn's wire calls: blue bubble → protocol card(s) → purple results
       for (const card of pendingCallCards) turnsEl.appendChild(card);
       pendingCallCards = [];
-      (f.tool_results || []).forEach((tr, i) => {
+      (f.tool_results || []).forEach((tr) => {
         const raw = (tr.result_text || "").trim();
         const looksJson = raw.startsWith("{") || raw.startsWith("[");
         const { row: tRow } = BUBBLE.tool({
@@ -1156,14 +1113,16 @@ function setupMcpTab(panel) {
           body: `${t('tool_returns')} ${looksJson ? raw : JSON.stringify(raw)}`,
           caption: t('feeds_back_caption'),
         });
-        if (f.next_prompt && i === f.tool_results.length - 1) {
-          tRow.appendChild(BUBBLE.details(t('next_prompt_summary', { turn: f.turn }), BUBBLE.pre(f.next_prompt)));
-        }
         turnsEl.appendChild(tRow);
       });
     } else {
       finalDone = true;
-      turnsEl.appendChild(BUBBLE.finalBlock({ caption: t('to_user_caption'), content: f.content }));
+      const fb = BUBBLE.finalBlock({ caption: t('to_user_caption'), content: f.content });
+      if (f.sent_prompt) {
+        fb.appendChild(BUBBLE.details(t('sent_prompt_summary', { turn: f.turn }),
+                                      BUBBLE.pre(f.sent_prompt)));
+      }
+      turnsEl.appendChild(fb);
     }
   }
 
