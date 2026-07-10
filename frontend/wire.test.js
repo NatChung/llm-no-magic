@@ -24,6 +24,31 @@ test("_splitMessages: 三則訊息,最後一則無 im_end 且 body 為空", () =
   assert.deepStrictEqual(msgs[2], { role: "assistant", body: "", hadEnd: false });
 });
 
+// 使用者可以直接打出「<|im_start|>」這串字。它必須原樣留在 user 的 body 裡,
+// 不能被截斷 —— 這是 MSG_RE 不把 <|im_start|> 加進 lookahead 的理由。
+test("_splitMessages: user 打出 <|im_start|> 字面值,body 不得被截斷", () => {
+  const text =
+    "<|im_start|>user\nhello <|im_start|>injected<|im_end|>\n" +
+    "<|im_start|>assistant\n";
+  const msgs = WIRE._splitMessages(text);
+  assert.strictEqual(msgs.length, 2);
+  assert.strictEqual(msgs[0].role, "user");
+  assert.strictEqual(msgs[0].body, "hello <|im_start|>injected");
+  assert.strictEqual(msgs[0].hadEnd, true);
+});
+
+// 已知限制(目前無 producer 會產生):中間某則訊息若缺 <|im_end|>,
+// 它的 body 會吞掉後面的訊息。這個測試鎖住現行行為,免得有人在不知道
+// 上面那個取捨的情況下「修好」它。
+test("_splitMessages: 已知限制 —— 中間缺 im_end 會吞掉下一則", () => {
+  const text =
+    "<|im_start|>system\nfoo\n" +
+    "<|im_start|>user\nbar<|im_end|>";
+  const msgs = WIRE._splitMessages(text);
+  assert.strictEqual(msgs.length, 1);
+  assert.ok(msgs[0].body.includes("<|im_start|>user"));
+});
+
 test("_splitMessages: 沒有任何 marker → 空陣列", () => {
   assert.deepStrictEqual(WIRE._splitMessages("just some text"), []);
 });

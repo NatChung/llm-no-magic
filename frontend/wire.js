@@ -16,6 +16,13 @@ const WIRE = (function () {
 
   // 陷阱 1:結尾的 <|im_start|>assistant 沒有配對的 <|im_end|>。
   // 用 lookahead,讓 body 停在 <|im_end|> 或字串結尾,兩者都不消耗。
+  //
+  // 為什麼不順便停在下一個 <|im_start|>?因為使用者可以在輸入框裡直接打出
+  // 「<|im_start|>」這串字,它會原封不動進到 templated prompt 的 user 訊息裡。
+  // 多加那個 alternative 會把 user 的內容從那裡截斷、還把 hadEnd 誤設成 false ——
+  // 那是今天就會發生的事。反之,「中間某則訊息缺 <|im_end|>」目前無任何 producer
+  // 會產生(server.py / skill_agent.py / mcp_agent.py 都無條件補上 <|im_end|>)。
+  // 兩害相權:留現行版本。下面兩個測試把這個取捨釘死。
   const MSG_RE = /<\|im_start\|>(\w+)\n([\s\S]*?)(?=<\|im_end\|>|$)/g;
 
   function splitMessages(text) {
