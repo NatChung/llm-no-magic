@@ -307,7 +307,6 @@ const BUBBLE = {
     fBubble:    "rounded-xl bg-result-tint border border-result/15 px-4 py-3.5 text-center text-base md:text-lg leading-relaxed text-ink",
     banner:     "rounded-lg bg-surface-2 border border-edge-soft px-4 py-3 flex items-center gap-3 text-sm text-ink-soft",
     bannerIcon: "w-7 h-7 rounded-full bg-final-tint text-final flex items-center justify-center flex-shrink-0",
-    tokensBox:  "mt-1.5 rounded-md bg-surface border border-edge-soft p-3 font-mono text-xs break-all leading-relaxed max-h-48 overflow-auto",
     npDetails:  "mt-1.5 w-full text-left",
     npSummary:  "cursor-pointer text-xs text-muted hover:text-ink-soft py-1 list-none [&::-webkit-details-marker]:hidden before:content-['▸_'] [&[open]]:before:content-['▾_']",
     npPre:      "mt-1.5 rounded-md bg-surface border border-edge-soft p-3 text-xs font-mono whitespace-pre-wrap break-all max-h-64 overflow-auto text-ink-soft",
@@ -471,7 +470,6 @@ function connectEvents() {
       case "index":          active && active.onIndex && active.onIndex(f); break;
       case "tools_exposed":  active && active.onToolsExposed && active.onToolsExposed(f); break;
       case "sent":           active && active.onSent && active.onSent(f); break;
-      case "received":       active && active.onReceived && active.onReceived(f); break;
       case "turn":           active && active.onTurn && active.onTurn(f); break;
       case "skill_loaded":   active && active.onSkillLoaded && active.onSkillLoaded(f); break;
       case "l3_loaded":      active && active.onL3Loaded && active.onL3Loaded(f); break;
@@ -570,7 +568,7 @@ function setupPanel(panel) {
         highlightStep(stepIdx);
       });
     } else {
-      span.className = "tok tok-static";   // reasoning: no probs panel to pop
+      span.className = "tok tok-static";   // reasoning: no probs panel to pop; styles.css 的 .tok.tok-static 規則依賴這個字面值(必留)
     }
     (target || textEl).appendChild(span);
   }

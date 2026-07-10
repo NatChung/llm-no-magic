@@ -378,7 +378,6 @@ def skill_agent_loop(user_query, mode):
         usage = {"prompt_tokens": usage_raw.get("prompt_tokens"),
                  "completion_tokens": usage_raw.get("completion_tokens")}
 
-
         content = msg.get("content") or ""
         tool_calls = msg.get("tool_calls", []) or []
 

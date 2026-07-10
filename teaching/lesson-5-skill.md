@@ -60,10 +60,12 @@ round trips**.
 - Key point to narrate: the model is using **generic tools** (read a file, run a script) —
   there is no skill-specific machinery at all. This is exactly Anthropic's official
   approach: a skill = file structure + convention, no magic
-- For details: expand the amber bubble to see the full injected manual; expand "script
-  source" under the purple bubble — you can see it, but the model never did; expand the
-  green bubble's "actual prompt sent this turn" — the freshly injected L2 manual is
-  sitting right inside `messages` (exactly what the amber bubble's hint line points at)
+- For details: expand the amber bubble to see the full injected manual; the blue bubbles
+  also each carry their own "▸ prompt actually sent this turn" expander — a `messages[]`
+  JSON array snapshot right before that turn's call; expand "script source" under the
+  purple bubble — you can see it, but the model never did; expand the green bubble's
+  "actual prompt sent this turn" — the freshly injected L2 manual is sitting right inside
+  `messages` (exactly what the amber bubble's hint line points at)
 
 ## Hands-On — no-skill contrast
 Check "no-skill contrast" and send the same line again: the index is empty (the chip
