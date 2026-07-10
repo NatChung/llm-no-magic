@@ -144,3 +144,43 @@ def test_mcp_sent_prompt_degrades_on_template_error(monkeypatch):
     turns = [e for e in events if e["type"] == "turn_complete"]
     assert turns[0]["sent_prompt"].startswith("[template error] RuntimeError")
     assert events[-1] == {"type": "final", "content": "answer"}
+
+
+def test_mcp_agent_loop_sent_prompt_templates_pre_call_messages(monkeypatch):
+    """turn 1 的 template 只帶 system+user;turn 2 的 template 帶 accumulated
+    assistant(tool_call)+tool 結果 —— 證明 /apply-template 是 pre-call 呼叫,
+    不是 append 之後才算。mirror agent/tests/test_server.py 同名測試。"""
+    import agent.mcp_agent as m
+
+    captured = []
+    calls = iter([
+        _llama_resp(tool_calls=[{"id": "c1", "type": "function",
+                                 "function": {"name": "get_weather",
+                                              "arguments": '{"city": "台北"}'}}]),
+        _llama_resp(content="台北 16°C 有雨"),
+    ])
+
+    def route(url, **kw):
+        if "apply-template" in str(url):
+            # snapshot: mcp_agent_loop keeps appending to the same messages
+            # list across turns, so without copying here every captured
+            # entry would alias the final accumulated state.
+            captured.append({**kw["json"], "messages": list(kw["json"]["messages"])})
+            return _template_resp("TPL")
+        return next(calls)
+
+    monkeypatch.setattr(m.requests, "post", route)
+    events = list(m.mcp_agent_loop("台北天氣?"))
+
+    # turn 1:只有 system + user
+    assert [msg["role"] for msg in captured[0]["messages"]] == ["system", "user"]
+    # turn 2:accumulated — assistant(tool_call) + tool result 都進來了
+    assert [msg["role"] for msg in captured[1]["messages"]] == [
+        "system", "user", "assistant", "tool"]
+    # add_generation_prompt 必須帶,否則算出來的不是「要送出的」prompt
+    assert captured[0]["add_generation_prompt"] is True
+    assert captured[1]["add_generation_prompt"] is True
+    assert [t["function"]["name"] for t in captured[0]["tools"]] == [
+        "get_time", "get_weather"]
+
+    assert events[-1]["type"] == "final"
