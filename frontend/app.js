@@ -83,12 +83,16 @@ const I18N = {
     'zh-TW': '模型沒呼叫工具,1 個回合直接回答你',
   },
   sent_prompt_summary: {
-    'en':    'Actual prompt sent this turn (turn {turn})',
-    'zh-TW': '此 turn 實際送出的 prompt(turn {turn})',
+    'en':    'The prompt actually sent to the AI (turn {turn})',
+    'zh-TW': '送給 AI 的 prompt(turn {turn})',
   },
-  l2_see_sent_hint: {
-    'en':    '→ expand the next turn\'s sent prompt to see it sitting inside messages',
-    'zh-TW': '→ 展開下一個 turn 的 sent,看它躺在 messages 裡',
+  model_raw_summary: {
+    'en':    'The raw message the model emitted',
+    'zh-TW': '模型吐的原始訊息',
+  },
+  to_user_raw_summary: {
+    'en':    'The raw message sent to you',
+    'zh-TW': '送給使用者的原始訊息',
   },
   l2_injected_label: {
     'en':    'SKILL.md injected into context',
@@ -101,10 +105,6 @@ const I18N = {
   inject_back_caption: {
     'en':    '← stuffed back into the prompt',
     'zh-TW': '← 塞回 prompt',
-  },
-  l2_body_summary: {
-    'en':    'The injected SKILL.md content (verbatim file read)',
-    'zh-TW': '注入的 SKILL.md 內容(原樣讀出的檔案)',
   },
   context_chip: {
     'en':    'context: {n} tokens ({delta})',
@@ -470,6 +470,7 @@ function connectEvents() {
       case "index":          active && active.onIndex && active.onIndex(f); break;
       case "tools_exposed":  active && active.onToolsExposed && active.onToolsExposed(f); break;
       case "sent":           active && active.onSent && active.onSent(f); break;
+      case "received":       active && active.onReceived && active.onReceived(f); break;
       case "turn":           active && active.onTurn && active.onTurn(f); break;
       case "skill_loaded":   active && active.onSkillLoaded && active.onSkillLoaded(f); break;
       case "l3_loaded":      active && active.onL3Loaded && active.onL3Loaded(f); break;
@@ -703,18 +704,34 @@ function setupAgent(panel) {
   // turns[i] = { tokenSteps: [{token, top_logprobs}, ...], el: HTMLElement, hadTool: bool }
   let turns = [];
   let finalRendered = false;   // final turn 的綠色泡泡是否已渲染
+  // lastRightBubble: the most recently rendered right-side bubble (user row,
+  // or a turn's last purple tool row) that hasn't yet received its "prompt
+  // actually sent because of it" expander. turn_complete(N).sent_prompt is
+  // that prompt — it attaches HERE, not to the model bubble that triggered it
+  // (spec 2026-07-10-expander-belongs-to-its-own-bubble.md).
+  let lastRightBubble = null;
 
   function clearAll() {
     turns = [];
     finalRendered = false;
+    lastRightBubble = null;
     turnsEl.innerHTML = "";
   }
 
-  function renderTurnBlock(turn, message_tokens, tool_calls, tool_results, sent_prompt) {
+  function renderTurnBlock(turn, message_tokens, tool_calls, tool_results, sent_prompt, received_chunk) {
     const block = document.createElement("div");
     block.className = BUBBLE.tw.block;
     block.dataset.turn = String(turn);
     const hasToolCalls = (tool_calls || []).length > 0;
+
+    // sent_prompt for THIS turn is what produced this turn's own response —
+    // it belongs to whichever right-side bubble caused it (user bubble for
+    // turn 1, else the previous turn's last purple tool bubble).
+    if (sent_prompt && lastRightBubble) {
+      lastRightBubble.appendChild(BUBBLE.details(t('sent_prompt_summary', { turn }),
+                                                  BUBBLE.pre(sent_prompt)));
+      lastRightBubble = null;
+    }
 
     if (hasToolCalls) {
       const lines = tool_calls.map((tc) => {
@@ -726,13 +743,13 @@ function setupAgent(panel) {
         lines,
         caption: t('calls_tool_caption'),
       });
-      if (sent_prompt) {
-        mRow.appendChild(BUBBLE.details(t('sent_prompt_summary', { turn }),
-                                        BUBBLE.pre(sent_prompt)));
+      if (received_chunk) {
+        mRow.appendChild(BUBBLE.details(t('model_raw_summary'), BUBBLE.pre(received_chunk)));
       }
       block.appendChild(mRow);
 
-      // 紫泡不給展開器:本體印的就是原始回傳值
+      // 紫泡:掛下一 turn 的 sent_prompt(見上方);多顆時只有最後一顆掛
+      let lastToolRow = null;
       (tool_results || []).forEach((tr) => {
         const raw = (tr.result_text || "").trim();
         const looksJson = raw.startsWith("{") || raw.startsWith("[");
@@ -743,16 +760,18 @@ function setupAgent(panel) {
           caption: t('feeds_back_caption'),
         });
         block.appendChild(tRow);
+        lastToolRow = tRow;
       });
+      lastRightBubble = lastToolRow;
     } else {
       // ── final 回合:沒有 tool_call → 綠色全寬「給使用者」 ──
       finalRendered = true;
       const content = (message_tokens || []).map((s) => s.token).join("");
-      block.appendChild(BUBBLE.finalBlock({ caption: t('to_user_caption'), content }));
-      if (sent_prompt) {
-        block.appendChild(BUBBLE.details(t('sent_prompt_summary', { turn }),
-                                         BUBBLE.pre(sent_prompt)));
+      const fb = BUBBLE.finalBlock({ caption: t('to_user_caption'), content });
+      if (received_chunk) {
+        fb.appendChild(BUBBLE.details(t('to_user_raw_summary'), BUBBLE.pre(received_chunk)));
       }
+      block.appendChild(fb);
     }
 
     turnsEl.appendChild(block);
@@ -796,13 +815,17 @@ function setupAgent(panel) {
     // input fields so the student sees the question that was actually asked.
     if (frame && frame.user != null) { promptEl.value = frame.user; lastPrompt = frame.user; }
     // user 泡領頭:右側 = 東西進來,你的問題是最先進來的那個
-    if (frame && frame.user) turnsEl.appendChild(BUBBLE.user({ text: frame.user }).row);
+    if (frame && frame.user) {
+      const { row } = BUBBLE.user({ text: frame.user });
+      turnsEl.appendChild(row);
+      lastRightBubble = row;   // turn 1's sent_prompt attaches here
+    }
   }
   function endRun() { setRunning(false); }
   PANELS["4"] = {
     onDriveStart: beginRun,
     onTurnComplete: (f) =>
-      renderTurnBlock(f.turn, f.message_tokens, f.tool_calls, f.tool_results, f.sent_prompt),
+      renderTurnBlock(f.turn, f.message_tokens, f.tool_calls, f.tool_results, f.sent_prompt, f.received_chunk),
     onFinal: (f) => { renderFinal(f.content); renderTraceSummary(); endRun(); },
     onError: (f) => { renderError(f.message); endRun(); },
   };
@@ -849,13 +872,21 @@ function setupSkillTab(panel) {
   let lastPromptTokens = null;  // context-chip delta
   let scriptSources = {};
   let finalDone = false;
-  // `sent`/`received` arrive BEFORE their `turn` frame (loop yield order) —
-  // buffer them here and attach the ▸ expanders when onTurn builds the row.
-  let pendingSent = null;
+  // lastRightBubble: the most recently rendered right-side bubble (user row,
+  // amber L2-injection row, or a non-script purple row) that hasn't yet
+  // received its "prompt actually sent because of it" expander. A `sent(N)`
+  // frame attaches there and clears it. A script-output purple row is the one
+  // deliberate exception: it sets lastRightBubble = null (script source never
+  // appears in any prompt), so the NEXT `sent` has nowhere to attach and is
+  // dropped silently (spec 2026-07-10-expander-belongs-to-its-own-bubble.md).
+  let lastRightBubble = null;
+  // `received` arrives BEFORE its `turn` frame (loop yield order) — buffer it
+  // here and attach to the model/final bubble once it's built.
+  let pendingReceived = null;
 
   function clearAll() {
     turns = []; lastPromptTokens = null; finalDone = false;
-    pendingSent = null;
+    lastRightBubble = null; pendingReceived = null;
     turnsEl.innerHTML = "";
   }
 
@@ -879,12 +910,24 @@ function setupSkillTab(panel) {
       { proper: f.proper_tokens_est, naive: f.naive_tokens_est });
   }
 
-  function onSent(f) { pendingSent = f; }
+  function onSent(f) {
+    // sent(N).messages is the prompt that produced THIS turn's response — it
+    // belongs to whichever right-side bubble caused it, not the model bubble
+    // that's about to render for turn N.
+    if (lastRightBubble) {
+      lastRightBubble.appendChild(BUBBLE.details(t('sent_prompt_summary', { turn: f.turn }),
+        BUBBLE.pre(JSON.stringify(f.messages, null, 2))));
+      lastRightBubble = null;
+    }
+    // else: no home for this prompt (follows an exempt script-output bubble) — drop silently
+  }
+
+  function onReceived(f) { pendingReceived = f.response; }
 
   function onTurn(f) {
     const hasCalls = (f.tool_calls || []).length > 0;
     turns.push({ hadTool: hasCalls });
-    if (!hasCalls) return;  // content-only turn renders at `final` — keep pendingSent/Received for it
+    if (!hasCalls) return;  // content-only turn renders at `final` — keep pendingReceived for it
     const lines = f.tool_calls.map((tc) => {
       const a = (tc.args || "").trim();
       return `⟨tool_call⟩ ${tc.name}(${a === "{}" ? "" : a})`;
@@ -896,30 +939,27 @@ function setupSkillTab(panel) {
       chip: contextChip(f.usage),
     });
     row.dataset.turn = String(f.turn);
-    // attach the buffered wire view for THIS turn (sent preceded us)
-    if (pendingSent) {
-      row.appendChild(BUBBLE.details(t('sent_prompt_summary', { turn: f.turn }),
-        BUBBLE.pre(JSON.stringify(pendingSent.messages, null, 2))));
-      pendingSent = null;
+    // attach the buffered wire view for THIS turn (received preceded us)
+    if (pendingReceived) {
+      row.appendChild(BUBBLE.details(t('model_raw_summary'),
+        BUBBLE.pre(JSON.stringify(pendingReceived, null, 2))));
+      pendingReceived = null;
     }
     turnsEl.appendChild(row);
   }
 
   function onSkillLoaded(f) {
     // 右側琥珀泡泡 — 注入就是 read_file 的「回傳」,跟 tab④ 的紫泡泡同節奏,
-    // 琥珀色標出「這一發塞的是說明書」。
+    // 琥珀色標出「這一發塞的是說明書」。它自己的按鈕是下一發 sent(N+1),
+    // 注入內容就躺在那份 messages 裡(比單看 SKILL.md 全文更接近「注入的現場」)。
     const { row } = BUBBLE.tool({
       label: `📥 ${t('l2_injected_label')} — ${f.name}`,
       body: t('l2_injected_sub'),
       caption: t('inject_back_caption'),
       tone: "inject",
     });
-    row.appendChild(BUBBLE.details(t('l2_body_summary'), BUBBLE.pre(f.body)));
-    const hint = document.createElement("div");
-    hint.className = "text-xs text-inject mt-0.5";
-    hint.textContent = t('l2_see_sent_hint');
-    row.appendChild(hint);
     turnsEl.appendChild(row);
+    lastRightBubble = row;   // next sent(N+1) attaches here
   }
 
   function onL3Loaded(f) {
@@ -935,6 +975,10 @@ function setupSkillTab(panel) {
       if (scriptSources[key]) {
         row.appendChild(BUBBLE.details(t('script_source_summary'), BUBBLE.pre(scriptSources[key])));
       }
+      // 唯一例外:腳本原始碼永遠不進 prompt — 不接下一發 sent
+      lastRightBubble = null;
+    } else {
+      lastRightBubble = row;   // non-script read_file: next sent(N+1) attaches here
     }
     turnsEl.appendChild(row);
   }
@@ -951,15 +995,15 @@ function setupSkillTab(panel) {
     // 不畫空的綠泡泡(同 tab4 renderFinal 的 guard)
     if (!finalDone && f.content) {
       const fb = BUBBLE.finalBlock({ caption: t('to_user_caption'), content: f.content });
-      turnsEl.appendChild(fb);
-      // final turn is content-only, so onTurn skipped its wire views — the
-      // final turn's `sent` holds the FULLEST accumulated messages (incl. the
-      // injected L2 body): attach here so EVERY turn has its expander.
-      if (pendingSent) {
-        fb.appendChild(BUBBLE.details(t('sent_prompt_summary', { turn: pendingSent.turn }),
-          BUBBLE.pre(JSON.stringify(pendingSent.messages, null, 2))));
-        pendingSent = null;
+      // final turn is content-only, so onTurn skipped its wire view — the
+      // final turn's `received` is the model's own raw response, same shape
+      // as the blue bubbles' — attach it here (same label, model_raw_summary).
+      if (pendingReceived) {
+        fb.appendChild(BUBBLE.details(t('model_raw_summary'),
+          BUBBLE.pre(JSON.stringify(pendingReceived, null, 2))));
+        pendingReceived = null;
       }
+      turnsEl.appendChild(fb);
       const rounds = turns.length;
       const trips = turns.filter((x) => x.hadTool).length;
       if (rounds) turnsEl.prepend(BUBBLE.banner(
@@ -976,10 +1020,14 @@ function setupSkillTab(panel) {
     onDriveStart: (f) => {
       clearAll(); setRunning(true);
       if (f.user != null) promptEl.value = f.user;
-      if (f.user) turnsEl.appendChild(BUBBLE.user({ text: f.user }).row);
+      if (f.user) {
+        const { row } = BUBBLE.user({ text: f.user });
+        turnsEl.appendChild(row);
+        lastRightBubble = row;   // sent(1) attaches here
+      }
       noSkillsToggle.checked = f.mode === "no_skills";
     },
-    onIndex, onSent, onTurn, onSkillLoaded, onL3Loaded, onToolResult,
+    onIndex, onSent, onReceived, onTurn, onSkillLoaded, onL3Loaded, onToolResult,
     onFinal,
     onError: (f) => {
       const errBox = document.createElement("div");
@@ -1047,6 +1095,12 @@ function setupMcpTab(panel) {
   // so reading order matches the causality (model decides → wire call →
   // result).
   let pendingCallCards = [];
+  // lastRightBubble: the most recently rendered right-side bubble (user row,
+  // or a turn's last purple tool row) that hasn't yet received its "prompt
+  // actually sent because of it" expander. turn_complete(N).sent_prompt is
+  // that prompt — it attaches HERE, not to the model bubble that triggered it
+  // (spec 2026-07-10-expander-belongs-to-its-own-bubble.md).
+  let lastRightBubble = null;
 
   function protocolCard(f) {
     const card = document.createElement("div");
@@ -1084,6 +1138,16 @@ function setupMcpTab(panel) {
   function onTurnComplete(f) {
     const hasCalls = (f.tool_calls || []).length > 0;
     turns.push({ hadTool: hasCalls });
+
+    // sent_prompt for THIS turn is what produced this turn's own response —
+    // it belongs to whichever right-side bubble caused it (user bubble for
+    // turn 1, else the previous turn's last purple tool bubble).
+    if (f.sent_prompt && lastRightBubble) {
+      lastRightBubble.appendChild(BUBBLE.details(t('sent_prompt_summary', { turn: f.turn }),
+                                                  BUBBLE.pre(f.sent_prompt)));
+      lastRightBubble = null;
+    }
+
     if (hasCalls) {
       const lines = f.tool_calls.map((tc) => {
         const a = (tc.args || "").trim();
@@ -1094,14 +1158,14 @@ function setupMcpTab(panel) {
         lines,
         caption: t('calls_tool_caption'),
       });
-      if (f.sent_prompt) {
-        row.appendChild(BUBBLE.details(t('sent_prompt_summary', { turn: f.turn }),
-                                       BUBBLE.pre(f.sent_prompt)));
+      if (f.received_chunk) {
+        row.appendChild(BUBBLE.details(t('model_raw_summary'), BUBBLE.pre(f.received_chunk)));
       }
       turnsEl.appendChild(row);
       // flush this turn's wire calls: blue bubble → protocol card(s) → purple results
       for (const card of pendingCallCards) turnsEl.appendChild(card);
       pendingCallCards = [];
+      let lastToolRow = null;
       (f.tool_results || []).forEach((tr) => {
         const raw = (tr.result_text || "").trim();
         const looksJson = raw.startsWith("{") || raw.startsWith("[");
@@ -1112,13 +1176,14 @@ function setupMcpTab(panel) {
           caption: t('feeds_back_caption'),
         });
         turnsEl.appendChild(tRow);
+        lastToolRow = tRow;
       });
+      lastRightBubble = lastToolRow;
     } else {
       finalDone = true;
       const fb = BUBBLE.finalBlock({ caption: t('to_user_caption'), content: f.content });
-      if (f.sent_prompt) {
-        fb.appendChild(BUBBLE.details(t('sent_prompt_summary', { turn: f.turn }),
-                                      BUBBLE.pre(f.sent_prompt)));
+      if (f.received_chunk) {
+        fb.appendChild(BUBBLE.details(t('to_user_raw_summary'), BUBBLE.pre(f.received_chunk)));
       }
       turnsEl.appendChild(fb);
     }
@@ -1141,14 +1206,18 @@ function setupMcpTab(panel) {
 
   PANELS["6"] = {
     onDriveStart: (f) => {
-      turns = []; finalDone = false; pendingCallCards = [];
+      turns = []; finalDone = false; pendingCallCards = []; lastRightBubble = null;
       turnsEl.innerHTML = "";
       handshakeEl.innerHTML = "";
       handshakeEl.dataset.filled = "0";
       handshakeEl.textContent = t('handshake_empty');
       setRunning(true);
       if (f.user != null) promptEl.value = f.user;
-      if (f.user) turnsEl.appendChild(BUBBLE.user({ text: f.user }).row);
+      if (f.user) {
+        const { row } = BUBBLE.user({ text: f.user });
+        turnsEl.appendChild(row);
+        lastRightBubble = row;   // turn 1's sent_prompt attaches here
+      }
     },
     onProtocol,
     onTurnComplete,
