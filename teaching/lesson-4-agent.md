@@ -19,9 +19,32 @@ has been building toward.
 ### Segment 1 — What time is it? (get_time)
 - **Picks up from last lesson (the payoff of the whole chain)**: the input box already holds `現在幾點?` — the exact line Lesson 3 closed on, auto-carried when you switched tabs. Last lesson even thinking could only invent a time out of thin air; this lesson, the same line and the same model **actually calls `get_time` and returns the real time** — this is the line the whole ①→②→③→④ chain has been building toward
 - Preview: "The model has no clock. Guess how it knows the current time? Watch the 'Agent trace': blue bubbles on the left are the model, purple bubbles on the right are the tools — it reads like a chat log."
+- **AI shows the prompt** (there is no preview box on the page — this beat is performed
+  by the AI): before driving, call `POST /preview {"user":"現在幾點?"}`, paste the
+  returned prompt into the chat and explain its three layers: `<|im_start|>` role
+  markers = the chat-template convention (Lesson 2), the English `# Tools` scaffold =
+  a convention baked in at training time (cannot be changed), and the Chinese tool
+  descriptions inside the `<tools>` JSON = the part we (the product layer) wrote and
+  can change. (Coloring: use a ```diff code block — `+` green = ours/editable, `-` red = training-time convention/immutable, unprefixed gray = template markers. Always inline in the chat — never a separate HTML/artifact)
 - Drive: `POST /drive {"tab":"4","user":"現在幾點?"}` → the page auto-switches to Tab ④ and renders; **the first drive triggers a 0.6B→4B swap — the loading banner runs 3-5 s** (the swap happens inside `/drive`; the page shows the banner on `swap_start`)
 - Read: the bubble trace — round 1's blue model bubble `⟨tool_call⟩ get_time()` → the purple tool bubble on the right `returns "HH:MM:SS"` (↩ result fed back to the model) → the full-width green bubble "no tool_call → goes to you" (the current time); the summary on top reads "Model ⇄ tools: 1 round-trip, 2 rounds in total — only then your turn" → Debrief: round 1 — model outputs `<tool_call>{"name":"get_time"…}` → client actually runs Python to get the time → feeds result back into the conversation → round 2 can now answer. **The XML tag is just a convention; the client is what executes.** Contrast with last lesson: the same line, `現在幾點?` — thinking could only make one up, here it really got it — the difference is simply having a tool.
-- For details: each bubble has small ▸ expanders underneath (raw token stream / raw received text / the accumulated prompt sent again) — walk the learner through expanding "Sent again" to see how the conversation accumulates into the next input.
+- The stream starts with your own question — a grey bubble on the right. Right side = things
+  coming in; left side = the model thinking.
+- For details: first name what's inside the fold — each ▸ expander opens a coloured, foldable
+  "wire view" of the raw text; greys are the `<|im_start|>`/`<|im_end|>` template markers, and
+  the arrows are what fold and unfold each block. Every bubble has exactly one ▸ expander, and
+  it always shows *that bubble's own message*: right-side bubbles show what got sent to the
+  model because of them; the left-side blue/green bubbles show what the model itself emitted.
+  Walk the learner through all four: the grey user bubble ▸ "the prompt sent to the AI (turn 1)"
+  — the templated prompt with your question and, folded shut by default because it's long, a
+  `▸ <tools>` block; click the arrow and `get_time` is sitting right there — **no tool result
+  yet**; the blue
+  bubble ▸ "the raw message the model emitted" — the `<tool_call>` tag itself; the purple tool
+  bubble ▸ "the prompt sent to the AI (turn 2)" — the *same* prompt as the user bubble, now with
+  the tool's result appended (noticeably longer); the green bubble ▸ "the raw message sent to
+  you" — the model's final `<|im_start|>assistant` reply. Put the user bubble's prompt and the
+  purple bubble's prompt side by side: same conversation, one tool result longer — that growth
+  *is* the accumulation lesson.
 
 ## Hands-On
 Have participants type **a question that needs no tool** (e.g. `1+1 等於幾?`) into the input box themselves and submit it.

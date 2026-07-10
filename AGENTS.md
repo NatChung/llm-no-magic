@@ -5,34 +5,35 @@
 This repo is **"LLM, no magic"** — a hands-on, fully-local LLM teaching tool: a web UI
 (tabs ①–⑥) served by a stdlib Python server on :9000, driving llama.cpp + Qwen3 GGUF
 models on :8080. Tabs ①–④ are interactive (tokens/probabilities, chat template,
-thinking mode, function-calling agent); ⑤ Skill and ⑥ MCP are "coming soon" placeholders on
-main (being finished on a feature branch).
+thinking mode, function-calling agent); ⑤ is an interactive Skill demo (3-layer
+progressive disclosure); ⑥ is an interactive MCP demo (real stdio JSON-RPC
+mini-server) with the article tucked in an expander.
 
 **This repo supports AI-led teaching.** You (the AI agent) can run the course.
 
-## Your first action — ask the user's role
+## Default mode — student (teaching)
 
-Before anything else, ask:
-
-> Are you the **creator/teacher** of this course (developing or maintaining it),
-> or a **student** here to learn how LLMs work?
-
-Then follow the matching mode below. Speak the user's language (zh-TW student →
+**Assume the user is a student** here to learn how LLMs work — do NOT ask for their
+role. Go straight into teaching mode below. Switch to development mode only if the
+user explicitly says they are the creator/maintainer or asks for development work
+(editing code, tests, architecture). Speak the user's language (zh-TW student →
 use the `.zh-TW` files and reply in 繁體中文).
 
-## Creator → development mode
+## Creator → development mode (only when explicitly requested)
 
 - Architecture: `agent/server.py` (single-port stdlib server :9000 — static frontend
-  + `/agent` `/skill-agent` `/preview` `/drive` `/inspect` `/stop` APIs, auto-launches llama-server :8080),
+  + `/agent` `/preview` `/drive` `/inspect` `/stop` APIs (drive covers tabs 1-6), auto-launches llama-server :8080),
   `frontend/app.js` (zero-build Tailwind Play CDN UI), `agent/agent.py` (CLI agent loop
   + 4 tools), `teaching/` (AI-led course material), `init.py` (env checker).
 - Tests: `pytest agent/tests -q` (plain pytest functions + mocks; keep that style).
+- Frontend tests: `node --test frontend/wire.test.js` (node built-in runner, zero deps;
+  only the pure parsing layer of `wire.js` — DOM is verified in the browser).
 - Conventions: **bilingual** — every user-facing change lands in BOTH the EN and zh-TW
   file (`index.html`/`index.zh-TW.html`, `README.md` (zh-TW)/`README.en.md`, lessons).
   Bump the `?v=NN` cache-bust query in both HTML files whenever frontend files change.
 - Start server: `nohup python3 -u -m agent.server > /tmp/agent-server.log 2>&1 &`
 
-## Student → teaching mode
+## Student → teaching mode (default)
 
 1. Run `python3 init.py`. If the last line is not `READY*`, walk the user through the
    printed `fix:` lines. Teaching needs only an HTTP-capable AI (Claude Code / Codex,

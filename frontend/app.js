@@ -50,6 +50,10 @@ const I18N = {
     'en':    'Tool · {name}',
     'zh-TW': '工具 · {name}',
   },
+  user_bubble_label: {
+    'en':    'You',
+    'zh-TW': '你',
+  },
   calls_tool_caption: {
     'en':    'calls the tool — your PC runs it →',
     'zh-TW': '呼叫工具,交給你的電腦跑 →',
@@ -78,17 +82,100 @@ const I18N = {
     'en':    'No tool needed — the model answered you directly in 1 round',
     'zh-TW': '模型沒呼叫工具,1 個回合直接回答你',
   },
-  raw_tokens_summary: {
-    'en':    'The raw token stream the model emitted this round',
-    'zh-TW': '這回合 model 吐的原始 token 流',
+  sent_prompt_summary: {
+    'en':    'The prompt actually sent to the AI (turn {turn})',
+    'zh-TW': '送給 AI 的 prompt(turn {turn})',
   },
-  received_summary: {
-    'en':    'Received: the raw string the model emitted on this turn',
-    'zh-TW': '收到,model 在這 turn 吐的字串(原樣)',
+  model_raw_summary: {
+    'en':    'The raw message the model emitted',
+    'zh-TW': '模型吐的原始訊息',
   },
-  next_prompt_summary: {
-    'en':    'Sent again: the prompt sent to the model after accumulating {turn} turn(s)',
-    'zh-TW': '再送出,累積 {turn} turn 後送進下次 model 的 prompt',
+  to_user_raw_summary: {
+    'en':    'The raw message sent to you',
+    'zh-TW': '送給使用者的原始訊息',
+  },
+  l2_injected_label: {
+    'en':    'SKILL.md injected into context',
+    'zh-TW': 'SKILL.md 注入 context',
+  },
+  l2_injected_sub: {
+    'en':    'the L2 manual now reweights everything that follows',
+    'zh-TW': 'L2 說明書進來了,接下來每一步都被它改寫機率',
+  },
+  inject_back_caption: {
+    'en':    '← stuffed back into the prompt',
+    'zh-TW': '← 塞回 prompt',
+  },
+  context_chip: {
+    'en':    'context: {n} tokens ({delta})',
+    'zh-TW': 'context: {n} tokens({delta})',
+  },
+  token_cost_chip: {
+    'en':    'Progressive loading: ~{proper} tokens now vs ~{naive} if everything were stuffed into the system prompt',
+    'zh-TW': '漸進式載入 ~{proper} tokens;全塞進 system prompt 要 ~{naive} tokens',
+  },
+  script_source_summary: {
+    'en':    'The script source (you can read it — the model never does)',
+    'zh-TW': '腳本原始碼(你看得到,model 從頭到尾沒看過)',
+  },
+  skill_read_file_label: {
+    'en':    'Tool · read_file',
+    'zh-TW': '工具 · read_file',
+  },
+  no_l3_badge: {
+    'en':    '💻 runs on your PC · code never enters context',
+    'zh-TW': '💻 在你電腦執行 · code 不進 context',
+  },
+  no_skills_run_note: {
+    'en':    'no-skill run: the index is empty, the model is on its own',
+    'zh-TW': '無 skill 對照:索引是空的,model 只能靠自己',
+  },
+  anatomy_l1_caption: {
+    'en':    'L1 · frontmatter (yaml) — always in context (~{n} tokens)',
+    'zh-TW': 'L1 · frontmatter(yaml)— 永遠在 context(~{n} tokens)',
+  },
+  anatomy_l2_caption: {
+    'en':    'L2 · SKILL.md body — enters context when read via read_file',
+    'zh-TW': 'L2 · SKILL.md body — read_file 讀到時進 context',
+  },
+  anatomy_l3_caption: {
+    'en':    'L3 · script — executed only, code never enters context',
+    'zh-TW': 'L3 · 腳本 — 只執行,code 不進 context',
+  },
+  anatomy_unavailable: {
+    'en':    '(anatomy unavailable)',
+    'zh-TW': '(解剖資料讀不到)',
+  },
+  protocol_card_req: { 'en': '→ request',  'zh-TW': '→ 請求' },
+  protocol_card_resp:{ 'en': '← response', 'zh-TW': '← 回應' },
+  protocol_expand:   { 'en': 'Full JSON-RPC frames', 'zh-TW': '完整 JSON-RPC 內容' },
+  wire_tools_summary: {
+    'en':    '{n} tool(s), {chars} chars',
+    'zh-TW': '{n} 個工具,{chars} 字元',
+  },
+  wire_toolcall_summary: {
+    'en':    'tool call',
+    'zh-TW': '工具呼叫',
+  },
+  wire_chars_summary: {
+    'en':    '{chars} chars',
+    'zh-TW': '{chars} 字元',
+  },
+  wire_obj_summary: {
+    'en':    '{n} keys, {chars} chars',
+    'zh-TW': '{n} 個欄位,{chars} 字元',
+  },
+  wire_arr_summary: {
+    'en':    '{n} items, {chars} chars',
+    'zh-TW': '{n} 個項目,{chars} 字元',
+  },
+  mcp_exec_badge: {
+    'en':    '🔌 runs in the external process',
+    'zh-TW': '🔌 在外部 process 執行',
+  },
+  handshake_empty: {
+    'en':    '(not run yet)',
+    'zh-TW': '(還沒跑)',
   },
 };
 function t(key, vars = {}) {
@@ -141,8 +228,8 @@ function renderProbs(probsEl, topLogprobs) {
 // ── Relay: page is a pure instrument driven by POST /drive, reflecting via
 //    GET /events. Backend GEN_LOCK serializes generation, so exactly one
 //    panel is "active" at a time — a single pointer set on drive_start. ──
-const PANEL_TO_TAB = { basic: "1", advanced: "2", reasoning: "3", agent: "4" };
-const TAB_TO_PANEL = { "1": "basic", "2": "advanced", "3": "reasoning", "4": "agent" };
+const PANEL_TO_TAB = { basic: "1", advanced: "2", reasoning: "3", agent: "4", skill: "5", mcp: "6" };
+const TAB_TO_PANEL = { "1": "basic", "2": "advanced", "3": "reasoning", "4": "agent", "5": "skill", "6": "mcp" };
 const PANELS = {};   // tab id "1".."4" → render callbacks (registered in setup*)
 
 // Switch the visible panel by panel-name (HTML data-panel value), and keep
@@ -164,7 +251,9 @@ let lastPrompt = "";
 document.querySelectorAll('[data-panel] .prompt').forEach((el) =>
   el.addEventListener("input", () => { lastPrompt = el.value; }));
 
+const NO_CARRY_PANELS = new Set(["skill", "mcp"]);   // 接龍串只到 ④;⑤⑥ 各有自己的題型
 function carryPromptInto(panelName) {
+  if (NO_CARRY_PANELS.has(panelName)) return;
   if (!PANEL_TO_TAB[panelName] || !lastPrompt) return;   // interactive tabs only
   const el = document.querySelector(`.tab-panel[data-panel="${panelName}"] .prompt`);
   if (!el) return;
@@ -210,6 +299,161 @@ function renderPromptPreview(previewEl, text) {
   html = html.replace(/@@TOOLS_BLOCK_(\d+)@@/g, (_, i) => placeholders[Number(i)]);
   previewEl.innerHTML = html;
 }
+
+
+// ── Shared chat-bubble builders (tabs ④⑤⑥) ──────────────────────────
+// 視覺語彙:模型=藍(左)、工具=紫(右)、給使用者=綠(全寬)。
+const BUBBLE = {
+  tw: {
+    block:      "turn-block space-y-1",
+    mRow:       "max-w-[88%] md:max-w-[75%]",
+    mLabel:     "text-xs font-semibold text-final mb-1",
+    mChip:      "ml-1.5 font-normal text-muted",
+    mBubble:    "w-fit rounded-2xl rounded-tl-sm bg-final-tint border border-final/15 px-4 py-3 font-mono text-sm break-all leading-relaxed text-ink",
+    mCaption:   "text-xs text-muted mt-1 ml-1",
+    tRow:       "ml-auto max-w-[88%] md:max-w-[75%] flex flex-col items-end",
+    tLabel:     "text-xs font-semibold text-tool mb-1",
+    tBadge:     "ml-1.5 font-normal text-muted",
+    tBubble:    "rounded-2xl rounded-tr-sm bg-tool-tint border border-tool/15 px-4 py-3 font-mono text-sm break-all leading-relaxed text-ink text-left",
+    tCaption:   "text-xs text-tool mt-1 mr-1",
+    // user 泡:靠右(右側 = 東西進來),中性色 — 跟工具紫、注入琥珀區隔
+    uLabel:     "text-xs font-semibold text-ink-soft mb-1",
+    uBubble:    "rounded-2xl rounded-tr-sm bg-surface-2 border border-edge px-4 py-3 font-mono text-sm break-all leading-relaxed text-ink text-left",
+    // 琥珀變體(tab⑤ L2 注入):同右側工具泡泡的節奏,顏色標「這一發是注入」
+    iLabel:     "text-xs font-semibold text-inject mb-1",
+    iBubble:    "rounded-2xl rounded-tr-sm bg-inject-tint border border-inject/25 px-4 py-3 text-sm break-all leading-relaxed text-ink text-left",
+    iCaption:   "text-xs text-inject mt-1 mr-1",
+    fCaption:   "text-center text-xs font-semibold text-result pt-2 mb-2",
+    fBubble:    "rounded-xl bg-result-tint border border-result/15 px-4 py-3.5 text-center text-base md:text-lg leading-relaxed text-ink",
+    banner:     "rounded-lg bg-surface-2 border border-edge-soft px-4 py-3 flex items-center gap-3 text-sm text-ink-soft",
+    bannerIcon: "w-7 h-7 rounded-full bg-final-tint text-final flex items-center justify-center flex-shrink-0",
+    npDetails:  "mt-1.5 w-full text-left",
+    npSummary:  "cursor-pointer text-xs text-muted hover:text-ink-soft py-1 list-none [&::-webkit-details-marker]:hidden before:content-['▸_'] [&[open]]:before:content-['▾_']",
+    // 右側泡泡(user / 工具 / 注入)的展開器:npDetails 的 w-full 會撐滿整列,
+    // text-left 就把 summary 推到列的最左緣、離泡泡 300px 遠。summary 靠右對齊,
+    // 讓它的右緣貼齊泡泡右緣;<pre> 仍靠左(展開後才好讀)。
+    npSummaryRight: "text-right",
+    npPre:      "mt-1.5 rounded-md bg-surface border border-edge-soft p-3 text-xs font-mono whitespace-pre-wrap break-all max-h-64 overflow-auto text-ink-soft",
+    npWire:     "mt-1.5 rounded-md bg-surface border border-edge-soft p-3 text-xs font-mono max-h-64 overflow-auto text-ink-soft",
+    errorBox:   "mt-3 rounded-md bg-surface-2 border border-edge p-3 text-sm font-mono text-ink-soft",
+  },
+  // align: "right" 給右側泡泡用 —— summary 跟著泡泡靠右,不要孤零零留在列左緣
+  details(summaryText, contentEl, { align = "left" } = {}) {
+    const details = document.createElement("details");
+    details.className = BUBBLE.tw.npDetails;
+    const summary = document.createElement("summary");
+    summary.className = align === "right"
+      ? `${BUBBLE.tw.npSummary} ${BUBBLE.tw.npSummaryRight}`
+      : BUBBLE.tw.npSummary;
+    summary.textContent = summaryText;
+    details.append(summary, contentEl);
+    return details;
+  },
+  pre(text) {
+    const pre = document.createElement("pre");
+    pre.className = BUBBLE.tw.npPre;
+    pre.textContent = text;
+    return pre;
+  },
+  // wire 內容(prompt / JSON)→ 上色 + 可折。外層必須是 <div> 不是 <pre>:
+  // <details> 不能合法巢狀在 <pre> 裡,而且 npPre 的 break-all 會把上色後的
+  // token 從中間折斷。純碼(腳本原始碼、解剖卡)仍然走 BUBBLE.pre。
+  wire(text) {
+    const box = document.createElement("div");
+    box.className = BUBBLE.tw.npWire;
+    box.appendChild(WIRE.render(text));
+    return box;
+  },
+  user({ text }) {
+    const row = document.createElement("div");
+    row.className = BUBBLE.tw.tRow;
+    const labelEl = document.createElement("div");
+    labelEl.className = BUBBLE.tw.uLabel;
+    labelEl.textContent = t('user_bubble_label');
+    const bubble = document.createElement("div");
+    bubble.className = BUBBLE.tw.uBubble;
+    bubble.textContent = text;
+    row.append(labelEl, bubble);
+    return { row, bubble };
+  },
+  model({ label, lines, caption, chip }) {
+    const row = document.createElement("div");
+    row.className = BUBBLE.tw.mRow;
+    const labelEl = document.createElement("div");
+    labelEl.className = BUBBLE.tw.mLabel;
+    labelEl.textContent = label;
+    if (chip) {
+      const chipEl = document.createElement("span");
+      chipEl.className = BUBBLE.tw.mChip;
+      chipEl.textContent = chip;
+      labelEl.appendChild(chipEl);
+    }
+    const bubble = document.createElement("div");
+    bubble.className = BUBBLE.tw.mBubble;
+    for (const line of lines) {
+      const div = document.createElement("div");
+      div.textContent = line;
+      bubble.appendChild(div);
+    }
+    row.append(labelEl, bubble);
+    if (caption) {
+      const cap = document.createElement("div");
+      cap.className = BUBBLE.tw.mCaption;
+      cap.textContent = caption;
+      row.appendChild(cap);
+    }
+    return { row, bubble };
+  },
+  tool({ label, badge, body, caption, tone }) {
+    const inject = tone === "inject";
+    const row = document.createElement("div");
+    row.className = BUBBLE.tw.tRow;
+    const labelEl = document.createElement("div");
+    labelEl.className = inject ? BUBBLE.tw.iLabel : BUBBLE.tw.tLabel;
+    labelEl.textContent = label;
+    if (badge) {
+      const badgeEl = document.createElement("span");
+      badgeEl.className = BUBBLE.tw.tBadge;
+      badgeEl.textContent = badge;
+      labelEl.appendChild(badgeEl);
+    }
+    const bubble = document.createElement("div");
+    bubble.className = inject ? BUBBLE.tw.iBubble : BUBBLE.tw.tBubble;
+    bubble.textContent = body;
+    row.append(labelEl, bubble);
+    if (caption) {
+      const cap = document.createElement("div");
+      cap.className = inject ? BUBBLE.tw.iCaption : BUBBLE.tw.tCaption;
+      cap.textContent = caption;
+      row.appendChild(cap);
+    }
+    return { row, bubble };
+  },
+  finalBlock({ caption, content }) {
+    const block = document.createElement("div");
+    block.className = BUBBLE.tw.block;
+    const capEl = document.createElement("div");
+    capEl.className = BUBBLE.tw.fCaption;
+    capEl.textContent = caption;
+    const bubble = document.createElement("div");
+    bubble.className = BUBBLE.tw.fBubble;
+    bubble.textContent = content || "(no final content)";
+    block.append(capEl, bubble);
+    return block;
+  },
+  banner(text) {
+    const el = document.createElement("div");
+    el.className = BUBBLE.tw.banner;
+    const icon = document.createElement("span");
+    icon.className = BUBBLE.tw.bannerIcon;
+    icon.setAttribute("aria-hidden", "true");
+    icon.textContent = "⟳";
+    const span = document.createElement("span");
+    span.textContent = text;
+    el.append(icon, span);
+    return el;
+  },
+};
 
 // Returns the fetch Response (or null on network error) so callers can detect
 // a rejected/failed drive (409 busy, or a 5xx e.g. swap failure) and re-enable
@@ -260,6 +504,15 @@ function connectEvents() {
         break;
       case "token":          active && active.onToken && active.onToken(f); break;
       case "turn_complete":  active && active.onTurnComplete && active.onTurnComplete(f); break;
+      case "index":          active && active.onIndex && active.onIndex(f); break;
+      case "tools_exposed":  active && active.onToolsExposed && active.onToolsExposed(f); break;
+      case "sent":           active && active.onSent && active.onSent(f); break;
+      case "received":       active && active.onReceived && active.onReceived(f); break;
+      case "turn":           active && active.onTurn && active.onTurn(f); break;
+      case "skill_loaded":   active && active.onSkillLoaded && active.onSkillLoaded(f); break;
+      case "l3_loaded":      active && active.onL3Loaded && active.onL3Loaded(f); break;
+      case "tool_result":    active && active.onToolResult && active.onToolResult(f); break;
+      case "protocol":       active && active.onProtocol && active.onProtocol(f); break;
       case "final":
         hideSwapBanner();
         active && active.onFinal && active.onFinal(f);
@@ -353,7 +606,7 @@ function setupPanel(panel) {
         highlightStep(stepIdx);
       });
     } else {
-      span.className = "tok tok-static";   // reasoning: no probs panel to pop
+      span.className = "tok tok-static";   // reasoning: no probs panel to pop; styles.css 的 .tok.tok-static 規則依賴這個字面值(必留)
     }
     (target || textEl).appendChild(span);
   }
@@ -476,185 +729,87 @@ function setupPanel(panel) {
 // ── Tab ④ Agent — 真執行 tool,SSE per-turn render ─────────────────────
 function setupAgent(panel) {
   const promptEl   = panel.querySelector(".prompt");
-  const previewEl  = panel.querySelector(".final-prompt-preview");
   const runBtn     = panel.querySelector(".run");
   const turnsEl    = panel.querySelector(".turns");
   // Note: Tab ④ 拿掉 probs-area,token 不再 clickable(教學焦點移到 turn-level
   // 累積 prompt,不在 per-token 機率)— renderProbs 仍在 Tab 1-3 用
   // final answer 不再有獨立 section:綠色「給使用者」泡泡直接渲染在 turns 流裡
-
-  // 即時 preview「實際送到 model 的 prompt」— 跟 Tab 2/3 一致(chat template
-  // 包好的 text);呼叫 backend /preview,由 llama.cpp /apply-template 算出。
-  const AGENT_PREVIEW_URL = "/preview";
-  async function refreshPreview() {
-    if (!previewEl) return;
-    try {
-      const res = await fetch(AGENT_PREVIEW_URL, {
-        method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body:   JSON.stringify({ user: promptEl.value }),
-      });
-      if (!res.ok) { previewEl.textContent = `[preview HTTP ${res.status}]`; return; }
-      const d = await res.json();
-      renderPromptPreview(previewEl, d.prompt || "(no prompt)");
-    } catch (err) {
-      previewEl.textContent = `[preview error] ${err.message}`;
-    }
-  }
-  // Debounce input events 300ms 避免每按一鍵都打 backend
-  let previewTimer = null;
-  function debouncedRefreshPreview() {
-    clearTimeout(previewTimer);
-    previewTimer = setTimeout(refreshPreview, 300);
-  }
-  refreshPreview();
-  promptEl.addEventListener("input", debouncedRefreshPreview);
+  // 「實際送進 model 的 prompt」不再放頁面 — AI 老師用 POST /preview 取回,
+  // 在對話裡上色講解(頁面愈來愈滿,這塊由 AI 演比較清楚)。
 
   // Per-turn token storage(避免不同 turn 的 token index 衝突)
   // turns[i] = { tokenSteps: [{token, top_logprobs}, ...], el: HTMLElement, hadTool: bool }
   let turns = [];
   let finalRendered = false;   // final turn 的綠色泡泡是否已渲染
+  // lastRightBubble: the most recently rendered right-side bubble (user row,
+  // or a turn's last purple tool row) that hasn't yet received its "prompt
+  // actually sent because of it" expander. turn_complete(N).sent_prompt is
+  // that prompt — it attaches HERE, not to the model bubble that triggered it
+  // (spec 2026-07-10-expander-belongs-to-its-own-bubble.md).
+  let lastRightBubble = null;
 
   function clearAll() {
     turns = [];
     finalRendered = false;
+    lastRightBubble = null;
     turnsEl.innerHTML = "";
   }
 
-  // ── Tailwind utility class strings,集中管理(chat-bubble layout:
-  //     模型=藍(左)、工具=紫(右)、給使用者=綠(全寬);.turn-block / .tok
-  //     等必留 class 給 CSS,其餘全 utility) ──
-  const TW = {
-    block:        "turn-block space-y-1",
-    // 模型泡泡(藍,靠左)
-    mRow:         "max-w-[88%] md:max-w-[75%]",
-    mLabel:       "text-xs font-semibold text-final mb-1",
-    mBubble:      "w-fit rounded-2xl rounded-tl-sm bg-final-tint border border-final/15 px-4 py-3 font-mono text-sm break-all leading-relaxed text-ink",
-    mCaption:     "text-xs text-muted mt-1 ml-1",
-    // 工具泡泡(紫,靠右)
-    tRow:         "ml-auto max-w-[88%] md:max-w-[75%] flex flex-col items-end",
-    tLabel:       "text-xs font-semibold text-tool mb-1",
-    tBubble:      "rounded-2xl rounded-tr-sm bg-tool-tint border border-tool/15 px-4 py-3 font-mono text-sm break-all leading-relaxed text-ink text-left",
-    tCaption:     "text-xs text-tool mt-1 mr-1",
-    // 給使用者(綠,全寬置中)
-    fCaption:     "text-center text-xs font-semibold text-result pt-2 mb-2",
-    fBubble:      "rounded-xl bg-result-tint border border-result/15 px-4 py-3.5 text-center text-base md:text-lg leading-relaxed text-ink",
-    // 頂端摘要 banner(final 後 prepend)
-    banner:       "rounded-lg bg-surface-2 border border-edge-soft px-4 py-3 flex items-center gap-3 text-sm text-ink-soft",
-    bannerIcon:   "w-7 h-7 rounded-full bg-final-tint text-final flex items-center justify-center flex-shrink-0",
-    // 泡泡下的小展開(token 流 / 收到 / 再送出)
-    tokensBox:    "mt-1.5 rounded-md bg-surface border border-edge-soft p-3 font-mono text-xs break-all leading-relaxed max-h-48 overflow-auto",
-    npDetails:    "mt-1.5 w-full text-left",
-    npSummary:    "cursor-pointer text-xs text-muted hover:text-ink-soft py-1 list-none [&::-webkit-details-marker]:hidden before:content-['▸_'] [&[open]]:before:content-['▾_']",
-    npPre:        "mt-1.5 rounded-md bg-surface border border-edge-soft p-3 text-xs font-mono whitespace-pre-wrap break-all max-h-64 overflow-auto text-ink-soft",
-    errorBox:     "mt-3 rounded-md bg-surface-2 border border-edge p-3 text-sm font-mono text-ink-soft",
-  };
-
-  function makeDetails(summaryText, contentEl) {
-    const details = document.createElement("details");
-    details.className = TW.npDetails;
-    const summary = document.createElement("summary");
-    summary.className = TW.npSummary;
-    summary.textContent = summaryText;
-    details.append(summary, contentEl);
-    return details;
-  }
-
-  function makeTokensBox(turn, message_tokens) {
-    const box = document.createElement("div");
-    box.className = TW.tokensBox;
-    const turnIdx = turns.length;  // 0-based array index for turns[]
-    message_tokens.forEach((step, tokIdx) => {
-      // `.tok` + `.tok-static` 是 styles.css 邏輯依賴(必留)
-      const span = document.createElement("span");
-      span.className = "tok tok-static";
-      span.dataset.turn = String(turnIdx);
-      span.dataset.tokIdx = String(tokIdx);
-      span.textContent = step.token;
-      span.title = `Turn ${turn} / token ${tokIdx + 1}`;
-      box.appendChild(span);
-    });
-    return box;
-  }
-
-  function renderTurnBlock(turn, message_tokens, tool_calls, tool_results, received_chunk, next_prompt) {
+  function renderTurnBlock(turn, message_tokens, tool_calls, tool_results, sent_prompt, received_chunk) {
     const block = document.createElement("div");
-    block.className = TW.block;
+    block.className = BUBBLE.tw.block;
     block.dataset.turn = String(turn);
     const hasToolCalls = (tool_calls || []).length > 0;
 
+    // sent_prompt for THIS turn is what produced this turn's own response —
+    // it belongs to whichever right-side bubble caused it (user bubble for
+    // turn 1, else the previous turn's last purple tool bubble).
+    if (sent_prompt && lastRightBubble) {
+      lastRightBubble.appendChild(BUBBLE.details(t('sent_prompt_summary', { turn }),
+                                                  BUBBLE.wire(sent_prompt),
+                                                  { align: "right" }));
+      lastRightBubble = null;
+    }
+
     if (hasToolCalls) {
-      // ── 模型泡泡(藍,左):⟨tool_call⟩ name(args) ──
-      const mRow = document.createElement("div");
-      mRow.className = TW.mRow;
-      const mLabel = document.createElement("div");
-      mLabel.className = TW.mLabel;
-      mLabel.textContent = t('model_round_label', { n: turn });
-      const mBubble = document.createElement("div");
-      mBubble.className = TW.mBubble;
-      for (const tc of tool_calls) {
-        const line = document.createElement("div");
+      const lines = tool_calls.map((tc) => {
         const argsStr = (tc.args || "").trim();
-        line.textContent = `⟨tool_call⟩ ${tc.name}(${argsStr === "{}" ? "" : argsStr})`;
-        mBubble.appendChild(line);
-      }
-      const mCaption = document.createElement("div");
-      mCaption.className = TW.mCaption;
-      mCaption.textContent = t('calls_tool_caption');
-      mRow.append(mLabel, mBubble, mCaption);
-      if (message_tokens && message_tokens.length) {
-        mRow.appendChild(makeDetails(t('raw_tokens_summary'), makeTokensBox(turn, message_tokens)));
-      }
+        return `⟨tool_call⟩ ${tc.name}(${argsStr === "{}" ? "" : argsStr})`;
+      });
+      const { row: mRow } = BUBBLE.model({
+        label: t('model_round_label', { n: turn }),
+        lines,
+        caption: t('calls_tool_caption'),
+      });
       if (received_chunk) {
-        const rcPre = document.createElement("pre");
-        rcPre.className = TW.npPre;
-        rcPre.textContent = received_chunk;
-        mRow.appendChild(makeDetails(t('received_summary'), rcPre));
+        mRow.appendChild(BUBBLE.details(t('model_raw_summary'), BUBBLE.wire(received_chunk)));
       }
       block.appendChild(mRow);
 
-      // ── 工具泡泡(紫,右):回傳 + 結果餵回模型 ──
-      (tool_results || []).forEach((tr, i) => {
-        const tRow = document.createElement("div");
-        tRow.className = TW.tRow;
-        const tLabel = document.createElement("div");
-        tLabel.className = TW.tLabel;
-        tLabel.textContent = t('tool_bubble_label', { name: tr.name });
-        const tBadge = document.createElement("span");
-        tBadge.className = "ml-1.5 font-normal text-muted";
-        tBadge.textContent = t('local_exec_badge');
-        tLabel.appendChild(tBadge);
-        const tBubble = document.createElement("div");
-        tBubble.className = TW.tBubble;
+      // 紫泡:掛下一 turn 的 sent_prompt(見上方);多顆時只有最後一顆掛
+      let lastToolRow = null;
+      (tool_results || []).forEach((tr) => {
         const raw = (tr.result_text || "").trim();
         const looksJson = raw.startsWith("{") || raw.startsWith("[");
-        tBubble.textContent = `${t('tool_returns')} ${looksJson ? raw : JSON.stringify(raw)}`;
-        const tCaption = document.createElement("div");
-        tCaption.className = TW.tCaption;
-        tCaption.textContent = t('feeds_back_caption');
-        tRow.append(tLabel, tBubble, tCaption);
-        // 再送出的累積 prompt 掛在「結果餵回模型」下面(最後一個 tool 泡泡)
-        if (next_prompt && i === tool_results.length - 1) {
-          const npPre = document.createElement("pre");
-          npPre.className = TW.npPre;
-          npPre.textContent = next_prompt;
-          tRow.appendChild(makeDetails(t('next_prompt_summary', { turn }), npPre));
-        }
+        const { row: tRow } = BUBBLE.tool({
+          label: t('tool_bubble_label', { name: tr.name }),
+          badge: t('local_exec_badge'),
+          body: `${t('tool_returns')} ${looksJson ? raw : JSON.stringify(raw)}`,
+          caption: t('feeds_back_caption'),
+        });
         block.appendChild(tRow);
+        lastToolRow = tRow;
       });
+      lastRightBubble = lastToolRow;
     } else {
       // ── final 回合:沒有 tool_call → 綠色全寬「給使用者」 ──
       finalRendered = true;
-      const fCaption = document.createElement("div");
-      fCaption.className = TW.fCaption;
-      fCaption.textContent = t('to_user_caption');
-      const fBubble = document.createElement("div");
-      fBubble.className = TW.fBubble;
-      fBubble.textContent = (message_tokens || []).map((s) => s.token).join("") || "(no final content)";
-      block.append(fCaption, fBubble);
-      if (message_tokens && message_tokens.length) {
-        block.appendChild(makeDetails(t('raw_tokens_summary'), makeTokensBox(turn, message_tokens)));
+      const content = (message_tokens || []).map((s) => s.token).join("");
+      const fb = BUBBLE.finalBlock({ caption: t('to_user_caption'), content });
+      if (received_chunk) {
+        fb.appendChild(BUBBLE.details(t('to_user_raw_summary'), BUBBLE.wire(received_chunk)));
       }
+      block.appendChild(fb);
     }
 
     turnsEl.appendChild(block);
@@ -670,39 +825,20 @@ function setupAgent(panel) {
     const rounds = turns.length;
     if (!rounds) return;
     const trips = turns.filter((tn) => tn.hadTool).length;
-    const banner = document.createElement("div");
-    banner.className = TW.banner;
-    const icon = document.createElement("span");
-    icon.className = TW.bannerIcon;
-    icon.setAttribute("aria-hidden", "true");
-    icon.textContent = "⟳";
-    const text = document.createElement("span");
-    text.textContent = trips === 0
-      ? t('trace_summary_notool')
-      : t('trace_summary', { trips, rounds });
-    banner.append(icon, text);
-    turnsEl.prepend(banner);
+    turnsEl.prepend(BUBBLE.banner(
+      trips === 0 ? t('trace_summary_notool') : t('trace_summary', { trips, rounds })));
   }
 
   function renderFinal(content) {
     // 正常流程綠色泡泡已在 final turn 的 turn_complete 渲染;這裡只補
     // 「最後一 turn 仍在 tool_call 就被截停」的 fallback(如 max-turns cap)
     if (finalRendered || !content) return;
-    const fCaption = document.createElement("div");
-    fCaption.className = TW.fCaption;
-    fCaption.textContent = t('to_user_caption');
-    const fBubble = document.createElement("div");
-    fBubble.className = TW.fBubble;
-    fBubble.textContent = content;
-    const block = document.createElement("div");
-    block.className = TW.block;
-    block.append(fCaption, fBubble);
-    turnsEl.appendChild(block);
+    turnsEl.appendChild(BUBBLE.finalBlock({ caption: t('to_user_caption'), content }));
   }
 
   function renderError(msg) {
     const errBox = document.createElement("div");
-    errBox.className = TW.errorBox;
+    errBox.className = BUBBLE.tw.errorBox;
     errBox.textContent = `[error] ${msg}`;
     turnsEl.appendChild(errBox);
   }
@@ -716,13 +852,18 @@ function setupAgent(panel) {
     // §3.6 顯示輸入 — reflect the driven user into the panel's own
     // input fields so the student sees the question that was actually asked.
     if (frame && frame.user != null) { promptEl.value = frame.user; lastPrompt = frame.user; }
-    refreshPreview();
+    // user 泡領頭:右側 = 東西進來,你的問題是最先進來的那個
+    if (frame && frame.user) {
+      const { row } = BUBBLE.user({ text: frame.user });
+      turnsEl.appendChild(row);
+      lastRightBubble = row;   // turn 1's sent_prompt attaches here
+    }
   }
   function endRun() { setRunning(false); }
   PANELS["4"] = {
     onDriveStart: beginRun,
     onTurnComplete: (f) =>
-      renderTurnBlock(f.turn, f.message_tokens, f.tool_calls, f.tool_results, f.received_chunk, f.next_prompt),
+      renderTurnBlock(f.turn, f.message_tokens, f.tool_calls, f.tool_results, f.sent_prompt, f.received_chunk),
     onFinal: (f) => { renderFinal(f.content); renderTraceSummary(); endRun(); },
     onError: (f) => { renderError(f.message); endRun(); },
   };
@@ -745,288 +886,408 @@ function setupAgent(panel) {
 window.addEventListener("DOMContentLoaded", connectEvents);
 
 // Initialize panels — basic/advanced/reasoning go through setupPanel;
-// agent uses setupAgent; placeholders (skill/mcp) skip.
-// ⑤ Skill / ⑥ MCP 目前在 main 是「即將推出」placeholder(demo model 載不動
-// skill,內容移到 feature branch 打磨)— setupSkill 保留,完工後移回即可。
-const PLACEHOLDER_PANELS = new Set(["skill", "mcp"]);
+// agent → setupAgent; skill → setupSkillTab; mcp → setupMcpTab.
 document.querySelectorAll(".tab-panel").forEach((panel) => {
   const id = panel.dataset.panel;
-  if (PLACEHOLDER_PANELS.has(id)) return;
   if (id === "agent") setupAgent(panel);
-  else if (id === "skill") setupSkill(panel);
+  else if (id === "skill") setupSkillTab(panel);
+  else if (id === "mcp") setupMcpTab(panel);
   else setupPanel(panel);
 });
 
 
-// ── Tab 5: Skill preview ─────────────────────────────────────────────
-const SKILL_BACKEND_URL = "/skill-agent";
+// ── Tab ⑤ Skill — 三層漸進式揭露,drive 經 /drive relay ────────────────
+function setupSkillTab(panel) {
+  const promptEl = panel.querySelector(".prompt");
+  const runBtn   = panel.querySelector(".run");
+  const turnsEl  = panel.querySelector(".turns");
+  const chipEl   = panel.querySelector(".skill-token-chip");
+  const noSkillsToggle = panel.querySelector(".no-skills-toggle");
+  // 「實際送進 model 的 prompt」由 AI 老師經 POST /preview 取回、在對話裡講解
+  // (同 tab④)— 頁面不再放 preview 框。
 
-function setupSkill(panel) {
-  const preset = panel.querySelector(".skill-preset");
-  const promptEl = panel.querySelector(".skill-prompt");
-  const runBtn = panel.querySelector(".skill-run");
-  const indexEl = panel.querySelector(".skill-index");
-  const toolsEl = panel.querySelector(".skill-tools");
-  const turnsEl = panel.querySelector(".skill-turns");
-  const finalArea = panel.querySelector(".skill-final-area");
-  const finalEl = panel.querySelector(".skill-final");
-  const _isZh2 = LANG.toLowerCase().startsWith("zh");
+  let turns = [];               // {hadTool} for the banner
+  let lastPromptTokens = null;  // context-chip delta
+  let scriptSources = {};
+  let finalDone = false;
+  // lastRightBubble: the most recently rendered right-side bubble (user row,
+  // amber L2-injection row, or a non-script purple row) that hasn't yet
+  // received its "prompt actually sent because of it" expander. A `sent(N)`
+  // frame attaches there and clears it. A script-output purple row is the one
+  // deliberate exception: it sets lastRightBubble = null (script source never
+  // appears in any prompt), so the NEXT `sent` has nowhere to attach and is
+  // dropped silently (spec 2026-07-10-expander-belongs-to-its-own-bubble.md).
+  let lastRightBubble = null;
+  // `received` arrives BEFORE its `turn` frame (loop yield order) — buffer it
+  // here and attach to the model/final bubble once it's built.
+  let pendingReceived = null;
 
-  // Tab ⑤ always runs with skills. To demo "no skills" contrast, reader
-  // switches to Tab ④ Agent (raw function-calling agent, no skill layer).
-  const mode = "proper";
-  let abortCtl = null;
-
-  preset.addEventListener("change", () => {
-    if (preset.value) promptEl.value = preset.value;
-  });
-
-  const _isZh = LANG.toLowerCase().startsWith("zh");
-
-  function reset() {
-    indexEl.innerHTML = "";
-    toolsEl.textContent = _isZh ? "(尚未啟動)" : "(not yet started)";
+  function clearAll() {
+    turns = []; lastPromptTokens = null; finalDone = false;
+    lastRightBubble = null; pendingReceived = null;
     turnsEl.innerHTML = "";
-    finalArea.classList.add("hidden");
-    finalEl.textContent = "";
   }
 
-  let _scriptSources = {};
+  function contextChip(usage) {
+    if (!usage || usage.prompt_tokens == null) return null;
+    const n = usage.prompt_tokens;
+    const delta = lastPromptTokens == null ? "—" : `+${n - lastPromptTokens}`;
+    lastPromptTokens = n;
+    return t('context_chip', { n, delta });
+  }
 
-  function renderIndex(skills) {
-    indexEl.innerHTML = "";
-    indexEl.className = "divide-y divide-edge-soft -mt-2";  // override outer space-y-2
-    for (const s of skills) {
-      const card = document.createElement("div");
-      card.className = "py-3 text-xs space-y-1";
-      const extras = (s.extras || []);
-      const scripts = (s.scripts || []);
-      let html = `
-        <div class="font-medium text-ink-soft text-sm">${s.name}</div>
-        <div class="text-muted leading-relaxed">${s.description}</div>
-        <div class="text-faint text-[10px] font-mono">${s.dir}/</div>
-      `;
-      if (extras.length || scripts.length) {
-        html += `<div class="pt-1 space-y-1">`;
-        if (extras.length) {
-          const ext = extras.map(e => `<code class="text-ink-soft">${e}</code>`).join(" · ");
-          html += `<div class="text-muted">docs:&nbsp; ${ext}</div>`;
-        }
-        if (scripts.length) {
-          html += `<div class="text-muted">scripts:`;
-          for (const script of scripts) {
-            const code = _scriptSources[`${s.name}/${script}`] || "(source not loaded)";
-            html += `
-              <details class="mt-0.5 ml-12">
-                <summary class="cursor-pointer text-tool font-mono inline-block -ml-12">${script}</summary>
-                <pre class="text-[10px] mt-1 p-2 bg-surface-2 rounded whitespace-pre-wrap overflow-auto max-h-60 text-ink-soft">${escape(code)}</pre>
-                <p class="text-[10px] text-faint mt-0.5">human view — model 只看 stdout、不看 source</p>
-              </details>
-            `;
-          }
-          html += `</div>`;
-        }
-        html += `</div>`;
+  function onIndex(f) {
+    scriptSources = f.script_sources || {};
+    chipEl.classList.remove("hidden");
+    if (!f.skills.length) {
+      // no_skills 對照:估算值是對空索引算的、沒意義 — chip 改顯示對照提示
+      chipEl.textContent = t('no_skills_run_note');
+      return;
+    }
+    chipEl.textContent = t('token_cost_chip',
+      { proper: f.proper_tokens_est, naive: f.naive_tokens_est });
+  }
+
+  function onSent(f) {
+    // sent(N).messages is the prompt that produced THIS turn's response — it
+    // belongs to whichever right-side bubble caused it, not the model bubble
+    // that's about to render for turn N.
+    if (lastRightBubble) {
+      lastRightBubble.appendChild(BUBBLE.details(t('sent_prompt_summary', { turn: f.turn }),
+        BUBBLE.wire(JSON.stringify(f.messages, null, 2)), { align: "right" }));
+      lastRightBubble = null;
+    }
+    // else: no home for this prompt — drop silently. Two ways to get here:
+    //   1. it follows the exempt script-output bubble (by design; that bubble
+    //      keeps its script source, which no prompt can replace)
+    //   2. skill_agent retried an empty content-only turn, which rendered no
+    //      right-side bubble — the retry's prompt then has nowhere to hang, so
+    //      that answer's expander is missing. Degraded, not broken; rare.
+  }
+
+  function onReceived(f) { pendingReceived = f.response; }
+
+  function onTurn(f) {
+    const hasCalls = (f.tool_calls || []).length > 0;
+    turns.push({ hadTool: hasCalls });
+    if (!hasCalls) return;  // content-only turn renders at `final` — keep pendingReceived for it
+    const lines = f.tool_calls.map((tc) => {
+      const a = (tc.args || "").trim();
+      return `⟨tool_call⟩ ${tc.name}(${a === "{}" ? "" : a})`;
+    });
+    const { row } = BUBBLE.model({
+      label: t('model_round_label', { n: f.turn }),
+      lines,
+      caption: t('calls_tool_caption'),
+      chip: contextChip(f.usage),
+    });
+    row.dataset.turn = String(f.turn);
+    // attach the buffered wire view for THIS turn (received preceded us)
+    if (pendingReceived) {
+      row.appendChild(BUBBLE.details(t('model_raw_summary'),
+        BUBBLE.wire(JSON.stringify(pendingReceived, null, 2))));
+      pendingReceived = null;
+    }
+    turnsEl.appendChild(row);
+  }
+
+  function onSkillLoaded(f) {
+    // 右側琥珀泡泡 — 注入就是 read_file 的「回傳」,跟 tab④ 的紫泡泡同節奏,
+    // 琥珀色標出「這一發塞的是說明書」。它自己的按鈕是下一發 sent(N+1),
+    // 注入內容就躺在那份 messages 裡(比單看 SKILL.md 全文更接近「注入的現場」)。
+    const { row } = BUBBLE.tool({
+      label: `📥 ${t('l2_injected_label')} — ${f.name}`,
+      body: t('l2_injected_sub'),
+      caption: t('inject_back_caption'),
+      tone: "inject",
+    });
+    turnsEl.appendChild(row);
+    lastRightBubble = row;   // next sent(N+1) attaches here
+  }
+
+  function onL3Loaded(f) {
+    const isScript = f.kind === "script_output";
+    const { row } = BUBBLE.tool({
+      label: isScript ? t('tool_bubble_label', { name: f.filename }) : t('skill_read_file_label'),
+      badge: isScript ? t('no_l3_badge') : null,
+      body: `${t('tool_returns')} ${f.content}`,
+      caption: t('feeds_back_caption'),
+    });
+    if (isScript) {
+      const key = `${f.skill}/${f.filename.replace(/^scripts\//, "")}`;
+      if (scriptSources[key]) {
+        row.appendChild(BUBBLE.details(t('script_source_summary'),
+                                       BUBBLE.pre(scriptSources[key]), { align: "right" }));
       }
-      card.innerHTML = html;
-      indexEl.appendChild(card);
+      // 唯一例外:腳本原始碼永遠不進 prompt — 不接下一發 sent
+      lastRightBubble = null;
+    } else {
+      lastRightBubble = row;   // non-script read_file: next sent(N+1) attaches here
     }
+    turnsEl.appendChild(row);
   }
 
-  function renderMessageRow(m) {
-    // De-nested, no card, no role bg — role as small label + indent.
-    // Keeps the established anchor colors (tool 紫 / result 綠) only on
-    // the actual tool_call line per the cross-tab visual vocabulary.
-    let body = "";
-    if (m.content) {
-      body += `<pre class="text-xs whitespace-pre-wrap text-ink-soft leading-relaxed">${escape(m.content)}</pre>`;
-    }
-    if (m.tool_calls && m.tool_calls.length) {
-      for (const tc of m.tool_calls) {
-        body += `<div class="text-xs font-mono text-tool mt-1">↑ ${tc.function.name}(${escape(tc.function.arguments)})</div>`;
+  function onToolResult(f) {
+    const errBox = document.createElement("div");
+    errBox.className = BUBBLE.tw.errorBox;
+    errBox.textContent = `[error] ${f.result}`;
+    turnsEl.appendChild(errBox);
+  }
+
+  function onFinal(f) {
+    // f.content 空字串 = cancel/stop 的 terminal-final(§3.6)— 只解鎖按鈕,
+    // 不畫空的綠泡泡(同 tab4 renderFinal 的 guard)
+    if (!finalDone && f.content) {
+      const fb = BUBBLE.finalBlock({ caption: t('to_user_caption'), content: f.content });
+      // final turn is content-only, so onTurn skipped its wire view — the
+      // final turn's `received` is the model's own raw response. Label it
+      // to_user_raw_summary like tabs ④⑥'s green block: same position, same
+      // data, so the student must not meet two different names for it.
+      if (pendingReceived) {
+        fb.appendChild(BUBBLE.details(t('to_user_raw_summary'),
+          BUBBLE.wire(JSON.stringify(pendingReceived, null, 2))));
+        pendingReceived = null;
       }
+      turnsEl.appendChild(fb);
+      const rounds = turns.length;
+      const trips = turns.filter((x) => x.hadTool).length;
+      if (rounds) turnsEl.prepend(BUBBLE.banner(
+        trips === 0 ? t('trace_summary_notool') : t('trace_summary', { trips, rounds })));
+      finalDone = true;
     }
-    if (m.tool_call_id) {
-      body += `<div class="text-[10px] text-faint mt-0.5">tool_call_id: ${escape(m.tool_call_id)}</div>`;
-    }
-    return `<div class="py-2">
-      <div class="text-[10px] uppercase tracking-wider font-medium text-faint mb-1">${m.role}</div>
-      <div class="pl-3">${body || '<span class="text-faint text-xs">(empty)</span>'}</div>
-    </div>`;
-  }
-
-  function renderTools(tools) {
-    toolsEl.innerHTML = tools.map((t) => `<code class="inline-block bg-surface px-1.5 py-0.5 rounded border border-edge-soft mr-1">${t}</code>`).join("");
-  }
-
-  function ensureTurnHeader(turnNum) {
-    let wrap = turnsEl.querySelector(`[data-turn="${turnNum}"]`);
-    if (wrap) return wrap.querySelector(".turn-body");
-    wrap = document.createElement("div");
-    wrap.className = "rounded-md border border-edge-soft overflow-hidden";
-    wrap.dataset.turn = turnNum;
-    wrap.innerHTML = `
-      <div class="px-3 py-1.5 bg-surface-2 text-xs uppercase tracking-wider text-muted font-medium">Turn ${turnNum}</div>
-      <div class="turn-body p-3 space-y-2 text-sm"></div>
-    `;
-    turnsEl.appendChild(wrap);
-    return wrap.querySelector(".turn-body");
-  }
-
-  function appendToTurn(turnNum, html) {
-    const body = ensureTurnHeader(turnNum);
-    const div = document.createElement("div");
-    div.innerHTML = html;
-    body.appendChild(div);
-  }
-
-  function escape(s) {
-    return String(s).replace(/[&<>]/g, (c) => ({"&": "&amp;", "<": "&lt;", ">": "&gt;"})[c]);
+    setRunning(false);
   }
 
   let running = false;
   function setRunning(on) { running = on; runBtn.classList.toggle("running", on); }
-  async function run() {
-    if (!promptEl.value.trim()) return;
-    reset();
 
-    setRunning(true);
-    abortCtl = new AbortController();
-
-    let currentTurn = 0;
-    try {
-      const resp = await fetch(SKILL_BACKEND_URL, {
-        method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({mode, user: promptEl.value}),
-        signal: abortCtl.signal,
-      });
-      if (!resp.ok) throw new Error(`backend HTTP ${resp.status}`);
-
-      const reader = resp.body.getReader();
-      const decoder = new TextDecoder();
-      let buf = "";
-      while (true) {
-        const {done, value} = await reader.read();
-        if (done) break;
-        buf += decoder.decode(value, {stream: true});
-        const lines = buf.split("\n\n");
-        buf = lines.pop();
-        for (const block of lines) {
-          if (!block.startsWith("data: ")) continue;
-          const evt = JSON.parse(block.slice(6));
-
-          if (evt.type === "index") {
-            _scriptSources = evt.script_sources || {};
-            renderIndex(evt.skills);
-          } else if (evt.type === "tools_exposed") {
-            renderTools(evt.tools);
-            if (evt.turn > 0) appendToTurn(evt.turn, `<div class="text-xs text-muted">↻ tools now exposed: <span class="font-mono">${evt.tools.join(", ")}</span></div>`);
-          } else if (evt.type === "sent") {
-            currentTurn = evt.turn;
-            const rows = evt.messages.map(renderMessageRow).join("");
-            const rawJson = JSON.stringify(evt.messages, null, 2);
-            appendToTurn(evt.turn, `
-              <details class="border border-edge-soft rounded">
-                <summary class="cursor-pointer text-xs text-muted px-2 py-1 font-medium">📤 Sent to model (${evt.messages.length} messages, tools=[${evt.tools.join(", ")}])</summary>
-                <div class="px-2 divide-y divide-edge-soft">
-                  ${rows}
-                  <details class="py-1.5">
-                    <summary class="cursor-pointer text-[10px] text-faint">raw JSON</summary>
-                    <pre class="text-[10px] mt-1 p-2 bg-surface-2 rounded whitespace-pre-wrap max-h-80 overflow-auto text-ink-soft">${escape(rawJson)}</pre>
-                  </details>
-                </div>
-              </details>
-            `);
-            // loading indicator while waiting for llama (the slow part)
-            appendToTurn(evt.turn, `
-              <div data-loading-turn="${evt.turn}" class="flex items-center gap-2 text-xs text-muted pl-1">
-                <span class="inline-block w-1.5 h-1.5 rounded-full bg-final animate-pulse"></span>
-                <span>${_isZh2 ? "model 思考中…" : "model thinking…"}</span>
-              </div>
-            `);
-          } else if (evt.type === "received") {
-            currentTurn = evt.turn;
-            // remove the per-turn loading indicator
-            const loadingEl = panel.querySelector(`[data-loading-turn="${evt.turn}"]`);
-            if (loadingEl) loadingEl.remove();
-            const choice = (evt.response.choices || [{}])[0];
-            const reply = choice.message || {};
-            const finish = choice.finish_reason;
-            const usage = evt.response.usage || {};
-            const replyRow = renderMessageRow(reply);
-            const metaLine = `<div class="text-[10px] text-faint py-1.5">finish_reason: <code>${finish || "—"}</code> · usage: prompt=${usage.prompt_tokens ?? "?"}, completion=${usage.completion_tokens ?? "?"}, total=${usage.total_tokens ?? "?"}</div>`;
-            const rawJson = JSON.stringify(evt.response, null, 2);
-            appendToTurn(evt.turn, `
-              <details class="border border-edge-soft rounded">
-                <summary class="cursor-pointer text-xs text-muted px-2 py-1 font-medium">📥 Received from model</summary>
-                <div class="px-2 divide-y divide-edge-soft">
-                  ${replyRow}
-                  ${metaLine}
-                  <details class="py-1.5">
-                    <summary class="cursor-pointer text-[10px] text-faint">raw JSON (含 id / object / system_fingerprint 等 metadata)</summary>
-                    <pre class="text-[10px] mt-1 p-2 bg-surface-2 rounded whitespace-pre-wrap max-h-80 overflow-auto text-ink-soft">${escape(rawJson)}</pre>
-                  </details>
-                </div>
-              </details>
-            `);
-          } else if (evt.type === "turn") {
-            currentTurn = evt.turn;
-            if (evt.content) {
-              appendToTurn(evt.turn, `<div><span class="text-xs uppercase tracking-wider text-muted">Assistant:</span> <span class="text-ink whitespace-pre-wrap">${escape(evt.content)}</span></div>`);
-            }
-            for (const tc of (evt.tool_calls || [])) {
-              const isLoad = tc.name === "load_skill";
-              const cls = isLoad ? "text-final" : "text-tool";
-              appendToTurn(evt.turn, `<div class="font-mono text-xs"><span class="${cls}">↑ ${tc.name}</span>(<span class="text-ink-soft">${escape(tc.args)}</span>)</div>`);
-            }
-          } else if (evt.type === "skill_loaded") {
-            appendToTurn(currentTurn, `
-              <details class="rounded bg-final-tint p-2 border border-final/20">
-                <summary class="cursor-pointer text-xs text-final font-medium">📄 L2 SKILL.md body loaded: <code>${evt.name}</code> (${evt.body.length} chars)</summary>
-                <pre class="mt-2 text-xs whitespace-pre-wrap text-ink-soft">${escape(evt.body)}</pre>
-              </details>
-            `);
-          } else if (evt.type === "l3_loaded") {
-            const kindLabel = evt.kind === "script_output"
-              ? `🛠 L3 script executed: <code>${evt.skill}/${evt.filename}</code>${evt.args ? ` <span class="text-faint">args: ${escape(evt.args)}</span>` : ""} <span class="text-faint">(code not in context)</span>`
-              : `📑 L3 reference loaded: <code>${evt.skill}/${evt.filename}</code> (${evt.content.length} chars)`;
-            appendToTurn(currentTurn, `
-              <details class="rounded bg-result-tint p-2 border border-result/20">
-                <summary class="cursor-pointer text-xs text-result font-medium">${kindLabel}</summary>
-                <pre class="mt-2 text-xs whitespace-pre-wrap text-ink-soft">${escape(evt.content)}</pre>
-              </details>
-            `);
-          } else if (evt.type === "tool_result") {
-            const errCls = evt.error ? "text-tool" : "text-result";
-            appendToTurn(currentTurn, `<div class="font-mono text-xs"><span class="${errCls}">↓ ${evt.name}</span> → <span class="text-ink-soft whitespace-pre-wrap">${escape(evt.result)}</span></div>`);
-          } else if (evt.type === "final") {
-            finalArea.classList.remove("hidden");
-            finalEl.textContent = evt.content;
-          } else if (evt.type === "error") {
-            appendToTurn(currentTurn || 1, `<div class="text-tool text-xs">ERROR: ${escape(evt.message)}</div>`);
-          }
-        }
+  PANELS["5"] = {
+    onDriveStart: (f) => {
+      clearAll(); setRunning(true);
+      if (f.user != null) promptEl.value = f.user;
+      if (f.user) {
+        const { row } = BUBBLE.user({ text: f.user });
+        turnsEl.appendChild(row);
+        lastRightBubble = row;   // sent(1) attaches here
       }
-    } catch (err) {
-      if (err.name !== "AbortError") {
-        console.error(err);
-        appendToTurn(currentTurn || 1, `<div class="text-tool text-xs">FETCH ERROR: ${escape(err.message)}</div>`);
-      }
-    } finally {
+      noSkillsToggle.checked = f.mode === "no_skills";
+    },
+    onIndex, onSent, onReceived, onTurn, onSkillLoaded, onL3Loaded, onToolResult,
+    onFinal,
+    onError: (f) => {
+      const errBox = document.createElement("div");
+      errBox.className = BUBBLE.tw.errorBox;
+      errBox.textContent = `[error] ${f.message}`;
+      turnsEl.appendChild(errBox);
       setRunning(false);
-      abortCtl = null;
+    },
+  };
+
+  function driveSkill() {
+    if (!promptEl.value.trim()) return;
+    setRunning(true);
+    postDrive({ tab: "5", user: promptEl.value,
+                mode: noSkillsToggle.checked ? "no_skills" : "proper" })
+      .then((r) => { if (!r || !r.ok) setRunning(false); });
+  }
+  runBtn.addEventListener("click", () => {
+    if (running) { postStop(); setRunning(false); }
+    else driveSkill();
+  });
+  promptEl.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && (e.ctrlKey || e.metaKey) && promptEl.value.trim() && !running) driveSkill();
+  });
+
+  // anatomy card (spec 2026-07-08 §2) — static, fetched once at init
+  const anatomyEl = panel.querySelector(".skill-anatomy");
+  if (anatomyEl) {
+    fetch("/inspect", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ tab: "5" }),
+    }).then((r) => r.json()).then((j) => {
+      const CAPTION = { L1: "anatomy_l1_caption", L2: "anatomy_l2_caption", L3: "anatomy_l3_caption" };
+      const BADGE = {
+        L1: "text-ink-soft border-edge",
+        L2: "text-inject border-inject/40 bg-inject-tint",
+        L3: "text-tool border-tool/40",
+      };
+      for (const f of j.files || []) {
+        const row = document.createElement("div");
+        const label = document.createElement("span");
+        label.className = `inline-block rounded border px-1 mr-2 ${BADGE[f.layer]}`;
+        label.textContent = f.layer;
+        const d = BUBBLE.details(
+          f.path + " — " + t(CAPTION[f.layer], { n: Math.round(f.content.length / 4) }),
+          BUBBLE.pre(f.content));
+        row.append(label, d);
+        anatomyEl.appendChild(row);
+      }
+    }).catch(() => { anatomyEl.textContent = t('anatomy_unavailable'); });
+  }
+}
+
+// ── Tab ⑥ MCP — 真 stdio JSON-RPC 迷你 server,協定幀可視化 ────────────
+function setupMcpTab(panel) {
+  const promptEl    = panel.querySelector(".prompt");
+  const runBtn      = panel.querySelector(".run");
+  const turnsEl     = panel.querySelector(".turns");
+  const handshakeEl = panel.querySelector(".handshake");
+
+  let turns = [];
+  let finalDone = false;
+  // phase:"call" protocol frames stream in BEFORE their turn_complete —
+  // buffer them and flush between the blue bubble and the purple results,
+  // so reading order matches the causality (model decides → wire call →
+  // result).
+  let pendingCallCards = [];
+  // lastRightBubble: the most recently rendered right-side bubble (user row,
+  // or a turn's last purple tool row) that hasn't yet received its "prompt
+  // actually sent because of it" expander. turn_complete(N).sent_prompt is
+  // that prompt — it attaches HERE, not to the model bubble that triggered it
+  // (spec 2026-07-10-expander-belongs-to-its-own-bubble.md).
+  let lastRightBubble = null;
+
+  function protocolCard(f) {
+    const card = document.createElement("div");
+    card.className = "rounded-md bg-surface-2 border border-edge px-3 py-2 font-mono text-xs text-ink-soft";
+    const title = document.createElement("div");
+    title.className = "font-semibold text-ink";
+    title.textContent = f.method;
+    const req = document.createElement("div");
+    req.className = "truncate";
+    req.textContent = `${t('protocol_card_req')} ${JSON.stringify(f.request)}`;
+    card.append(title, req);
+    if (f.response) {
+      const resp = document.createElement("div");
+      resp.className = "truncate";
+      resp.textContent = `${t('protocol_card_resp')} ${JSON.stringify(f.response)}`;
+      card.appendChild(resp);
+    }
+    card.appendChild(BUBBLE.details(t('protocol_expand'),
+      BUBBLE.wire(JSON.stringify({ request: f.request, response: f.response }, null, 2))));
+    return card;
+  }
+
+  function onProtocol(f) {
+    if (f.phase === "handshake") {
+      if (handshakeEl.dataset.filled !== "1") {
+        handshakeEl.innerHTML = "";
+        handshakeEl.dataset.filled = "1";
+      }
+      handshakeEl.appendChild(protocolCard(f));
+    } else {
+      pendingCallCards.push(protocolCard(f));   // flushed in onTurnComplete
     }
   }
 
+  function onTurnComplete(f) {
+    const hasCalls = (f.tool_calls || []).length > 0;
+    turns.push({ hadTool: hasCalls });
+
+    // sent_prompt for THIS turn is what produced this turn's own response —
+    // it belongs to whichever right-side bubble caused it (user bubble for
+    // turn 1, else the previous turn's last purple tool bubble).
+    if (f.sent_prompt && lastRightBubble) {
+      lastRightBubble.appendChild(BUBBLE.details(t('sent_prompt_summary', { turn: f.turn }),
+                                                  BUBBLE.wire(f.sent_prompt),
+                                                  { align: "right" }));
+      lastRightBubble = null;
+    }
+
+    if (hasCalls) {
+      const lines = f.tool_calls.map((tc) => {
+        const a = (tc.args || "").trim();
+        return `⟨tool_call⟩ ${tc.name}(${a === "{}" ? "" : a})`;
+      });
+      const { row } = BUBBLE.model({
+        label: t('model_round_label', { n: f.turn }),
+        lines,
+        caption: t('calls_tool_caption'),
+      });
+      if (f.received_chunk) {
+        row.appendChild(BUBBLE.details(t('model_raw_summary'), BUBBLE.wire(f.received_chunk)));
+      }
+      turnsEl.appendChild(row);
+      // flush this turn's wire calls: blue bubble → protocol card(s) → purple results
+      for (const card of pendingCallCards) turnsEl.appendChild(card);
+      pendingCallCards = [];
+      let lastToolRow = null;
+      (f.tool_results || []).forEach((tr) => {
+        const raw = (tr.result_text || "").trim();
+        const looksJson = raw.startsWith("{") || raw.startsWith("[");
+        const { row: tRow } = BUBBLE.tool({
+          label: t('tool_bubble_label', { name: tr.name }),
+          badge: t('mcp_exec_badge'),
+          body: `${t('tool_returns')} ${looksJson ? raw : JSON.stringify(raw)}`,
+          caption: t('feeds_back_caption'),
+        });
+        turnsEl.appendChild(tRow);
+        lastToolRow = tRow;
+      });
+      lastRightBubble = lastToolRow;
+    } else {
+      finalDone = true;
+      const fb = BUBBLE.finalBlock({ caption: t('to_user_caption'), content: f.content });
+      if (f.received_chunk) {
+        fb.appendChild(BUBBLE.details(t('to_user_raw_summary'), BUBBLE.wire(f.received_chunk)));
+      }
+      turnsEl.appendChild(fb);
+    }
+  }
+
+  function onFinal(f) {
+    if (!finalDone && f.content) {
+      turnsEl.appendChild(BUBBLE.finalBlock({ caption: t('to_user_caption'), content: f.content }));
+      finalDone = true;
+    }
+    const rounds = turns.length;
+    const trips = turns.filter((x) => x.hadTool).length;
+    if (rounds) turnsEl.prepend(BUBBLE.banner(
+      trips === 0 ? t('trace_summary_notool') : t('trace_summary', { trips, rounds })));
+    setRunning(false);
+  }
+
+  let running = false;
+  function setRunning(on) { running = on; runBtn.classList.toggle("running", on); }
+
+  PANELS["6"] = {
+    onDriveStart: (f) => {
+      turns = []; finalDone = false; pendingCallCards = []; lastRightBubble = null;
+      turnsEl.innerHTML = "";
+      handshakeEl.innerHTML = "";
+      handshakeEl.dataset.filled = "0";
+      handshakeEl.textContent = t('handshake_empty');
+      setRunning(true);
+      if (f.user != null) promptEl.value = f.user;
+      if (f.user) {
+        const { row } = BUBBLE.user({ text: f.user });
+        turnsEl.appendChild(row);
+        lastRightBubble = row;   // turn 1's sent_prompt attaches here
+      }
+    },
+    onProtocol,
+    onTurnComplete,
+    onFinal,
+    onError: (f) => {
+      const errBox = document.createElement("div");
+      errBox.className = BUBBLE.tw.errorBox;
+      errBox.textContent = `[error] ${f.message}`;
+      turnsEl.appendChild(errBox);
+      setRunning(false);
+    },
+  };
+
+  function driveMcp() {
+    if (!promptEl.value.trim()) return;
+    setRunning(true);
+    postDrive({ tab: "6", user: promptEl.value })
+      .then((r) => { if (!r || !r.ok) setRunning(false); });
+  }
   runBtn.addEventListener("click", () => {
-    if (running) abortCtl?.abort();   // 生成中:按 = 中止 SSE
-    else run();
+    if (running) { postStop(); setRunning(false); }
+    else driveMcp();
   });
   promptEl.addEventListener("keydown", (e) => {
-    if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
-      e.preventDefault();
-      run();
-    }
+    if (e.key === "Enter" && (e.ctrlKey || e.metaKey) && promptEl.value.trim() && !running) driveMcp();
   });
 }

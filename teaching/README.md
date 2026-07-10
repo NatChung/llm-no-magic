@@ -15,9 +15,11 @@ controlling the pace.
 | 2 | ② Product layer | system prompt / chat template = text stitched into tokens | lesson-2-product.md |
 | 3 | ③ Reasoning | thinking = writing reasoning out as tokens | lesson-3-reasoning.md |
 | 4 | ④ Agent | tool_call convention + real execution; wrap-up 60→90 min framework | lesson-4-agent.md |
+| 5 | ①+⑤ context→Skill | context flips the answer → 3-layer progressive disclosure | lesson-5-skill.md |
+| 6 | ⑥ MCP | handshake tool discovery, cross-process tools/call | lesson-6-mcp.md |
 
-Order is fixed 1→4 (the learner's Hook answers from Lesson 1 are revisited at the Lesson 4
-wrap-up — do not skip ahead).
+Order is fixed 1→6 (lessons chain into each other — e.g. Lesson 3's closing line pays off
+in Lesson 4 — do not skip ahead).
 
 ## Teaching rules
 

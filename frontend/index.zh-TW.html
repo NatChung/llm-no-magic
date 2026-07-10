@@ -26,6 +26,17 @@
             'result-tint':'oklch(96% 0.026 145)',
             final:        'oklch(55% 0.20 255)',  // 藍 final-answer 高亮
             'final-tint': 'oklch(96% 0.045 255)',
+            inject:        'oklch(60% 0.14 75)',   // amber — L2 注入時刻
+            'inject-tint': 'oklch(96% 0.045 85)',
+            // syntax colours for the wire view(展開器內容)——
+            // 刻意與泡泡的教學語意色(tool/result/final/inject)分開命名,
+            // 學生才不會把「這裡是紫色」誤讀成「這裡是工具」。
+            'syn-key':    'oklch(45% 0.16 255)',   // 藍 — JSON key
+            'syn-str':    'oklch(48% 0.14 55)',    // 橘 — 字串值
+            'syn-num':    'oklch(48% 0.12 190)',   // 青綠 — 數字 / true / false / null
+            'syn-tag':    'oklch(48% 0.18 320)',   // 紫 — <tools> <tool_call> 標籤、im_start 的 role
+            'syn-marker': 'oklch(62% 0.020 280)',  // 灰 — <|im_start|> <|im_end|>
+            'syn-punct':  'oklch(68% 0.010 280)',  // 淺灰 — { } [ ] , :
           },
           fontFamily: {
             sans: ['ui-sans-serif', 'system-ui', '"PingFang TC"', '"Helvetica Neue"', 'sans-serif'],
@@ -168,11 +179,6 @@
         <button class="run absolute bottom-2.5 right-2.5 w-8 h-8 rounded-full bg-ink text-surface flex items-center justify-center hover:bg-ink-soft disabled:bg-faint transition-colors" aria-label="送出 / 停止"><svg class="icon-send" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 13V3M4 7l4-4 4 4"/></svg><svg class="icon-stop" width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><rect x="1" y="1" width="10" height="10" rx="2"/></svg></button>
       </div>
 
-      <div class="pt-3 space-y-2">
-        <h3 class="text-xs uppercase tracking-wider text-muted font-medium">實際送進 model 的 prompt</h3>
-        <pre class="final-prompt-preview rounded-lg shadow-[0_1px_3px_oklch(20%_0.012_280_/_0.06)] bg-surface border border-edge p-4 text-xs font-mono whitespace-pre-wrap break-all max-h-80 overflow-auto text-ink-soft"></pre>
-      </div>
-
     </section>
 
     <section class="turns-area mt-8 md:mt-10 space-y-3">
@@ -189,10 +195,110 @@
        Tab 6:placeholder(即將推出)— MCP
        ───────────────────────────────────────────────────────────────── -->
   <main class="tab-panel max-w-6xl mx-auto px-4 md:px-8 py-8 md:py-12" data-panel="mcp">
-    <div class="max-w-3xl mx-auto py-16 md:py-24 text-center space-y-3">
-      <h2 class="text-2xl font-semibold text-ink">⑥ MCP</h2>
-      <p class="text-muted">即將推出(Coming soon)</p>
-      <p class="text-sm text-faint">這個單元還在打磨中,敬請期待。</p>
+    <div class="panel-header mb-6">
+      <h2 class="text-xl font-semibold text-ink">⑥ MCP — 工具不必寫死在 client 裡</h2>
+      <p class="text-sm text-muted mt-1">一個外部 process 用協定告訴 client 它有什麼工具;client 是「問」出來的,不是寫死的。</p>
+    </div>
+    <div class="space-y-6">
+      <section class="prompt-area space-y-3 max-w-2xl">
+        <label for="prompt-mcp" class="block text-sm font-medium text-ink-soft">問題</label>
+        <div class="relative">
+          <textarea class="prompt w-full rounded-lg shadow-[0_1px_3px_oklch(20%_0.012_280_/_0.06)] border border-edge bg-surface px-3 py-2 pr-12 text-sm font-mono resize-none focus:outline-none focus:border-final focus:ring-1 focus:ring-final" id="prompt-mcp" rows="3" placeholder="例:現在幾點?台北天氣如何?"></textarea>
+          <button class="run absolute bottom-2.5 right-2.5 w-8 h-8 rounded-full bg-ink text-surface flex items-center justify-center hover:bg-ink-soft disabled:bg-faint transition-colors" aria-label="送出 / 停止"><svg class="icon-send" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 13V3M4 7l4-4 4 4"/></svg><svg class="icon-stop" width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><rect x="1" y="1" width="10" height="10" rx="2"/></svg></button>
+        </div>
+      </section>
+      <section class="handshake-area space-y-2">
+        <h3 class="text-xs uppercase tracking-wider text-muted font-medium">握手 — client 啟動時才發現工具</h3>
+        <div class="handshake space-y-2 text-sm text-muted">(還沒跑 — 送出一句話,看 client 跟 MCP server 的第一次對話)</div>
+      </section>
+      <section class="turns-area space-y-3">
+        <h2 class="text-xs uppercase tracking-wider text-muted font-medium">代理跑的軌跡</h2>
+        <div class="flex justify-between text-xs text-ink-soft">
+          <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-final" aria-hidden="true"></span>模型</span>
+          <span class="flex items-center gap-1.5">協定幀(JSON-RPC)<span class="w-2.5 h-2.5 rounded-full border border-edge bg-surface-2" aria-hidden="true"></span></span>
+          <span class="flex items-center gap-1.5">工具(外部 process)<span class="w-2.5 h-2.5 rounded-full bg-tool" aria-hidden="true"></span></span>
+        </div>
+        <div class="turns space-y-3"></div>
+      </section>
+      <details class="mt-8">
+        <summary class="cursor-pointer text-sm text-muted hover:text-ink-soft">📖 完整文章:MCP 是什麼、為什麼需要它</summary>
+        <article class="max-w-3xl space-y-10 text-ink-soft leading-relaxed mt-4">
+      <header class="space-y-2">
+        <h2 class="text-2xl font-semibold text-ink">⑥ MCP</h2>
+        <p class="text-muted">工具不固定的時候、AI 自己選工具。</p>
+      </header>
+
+      <section class="space-y-3">
+        <h3 class="text-lg font-medium text-ink">§1. 回顧:你還缺一塊</h3>
+        <p>到 ⑥ 章你會了:</p>
+        <ul class="space-y-1 list-disc list-inside text-muted">
+          <li><strong class="text-ink-soft">指令 / script / API</strong>(⑤) — 知道怎麼讓電腦做事</li>
+          <li><strong class="text-ink-soft">Skill</strong>(⑥) — 知道怎麼把上面包成可選的能力,AI 按需載入</li>
+        </ul>
+        <p>但這套有個前提:<strong>工具是固定的、事先決定好的</strong>。你寫好 <code class="bg-surface-2 px-1 rounded text-sm">weather.py</code> 在 skill 裡,AI 就只能用它查天氣。</p>
+        <p>問題來了:<strong>工具不固定怎麼辦?</strong></p>
+      </section>
+
+      <section class="space-y-3">
+        <h3 class="text-lg font-medium text-ink">§2. 主場景:操控網頁</h3>
+        <p>舉例「幫我從蝦皮抓某商品的價格」。</p>
+        <p>你寫 script?Amazon 結構跟蝦皮不同,腳本只能對一個網站。</p>
+        <p>寫 API?有些網站有公開 API、有些沒。寫不完。</p>
+        <p>更糟:網站隨時改版。你今天能 work 的 script,下週可能整個壞。</p>
+        <p><strong>那 AI 怎麼做?</strong></p>
+        <p>直接「<strong>看著辦</strong>」:讓 AI 看當前網頁長啥樣 → 自己決定點哪個按鈕、抓哪段文字。</p>
+        <p>但 AI 自己看不到網頁,要有人幫它「<strong>看 + 操作</strong>」。這就是 MCP 要解的問題。</p>
+      </section>
+
+      <section class="space-y-3">
+        <h3 class="text-lg font-medium text-ink">§3. MCP 是什麼</h3>
+        <p><strong>MCP</strong> = Model Context Protocol。Anthropic 2024 年 11 月公開、開放規格,所有人都能實作。</p>
+        <p>解決的問題:<strong>AI 跟工具的固定 binding 太死板</strong>。</p>
+        <p>比喻:<strong>USB-C for AI applications</strong>(Anthropic 自家用詞)。</p>
+        <table class="text-sm w-full border border-edge-soft my-2">
+          <thead>
+            <tr class="bg-surface-2 border-b border-edge-soft">
+              <th class="text-left p-2 font-medium">場景</th>
+              <th class="text-left p-2 font-medium">過去</th>
+              <th class="text-left p-2 font-medium">現在</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-edge-soft">
+            <tr><td class="p-2 font-medium">充電線</td><td class="p-2">各家專屬充電頭 / mini-USB / micro-USB / Lightning...</td><td class="p-2">USB-C 一條線、所有手機平板都能用</td></tr>
+            <tr><td class="p-2 font-medium">AI 接工具</td><td class="p-2">每家 AI 自己寫整合(Claude 一套、ChatGPT 一套)</td><td class="p-2">一個 MCP protocol、任何 AI 接任何工具</td></tr>
+          </tbody>
+        </table>
+        <p><strong>運作模式</strong>:client(AI 那邊)跟 server(工具那邊)透過 JSON-RPC 對話,client 動態問 server 有什麼工具、按需呼叫。完整 trace 見 §4。</p>
+        <p>關鍵點:<strong>工具不是事先寫死的、是執行時動態問出來</strong>。換 server 就換工具集、不用改 AI 那邊一行 code。</p>
+      </section>
+
+      <section class="space-y-3">
+        <h3 class="text-lg font-medium text-ink">§4. 實際 trace 範例</h3>
+        <p>用 Playwright MCP server(專門讓 AI 控瀏覽器的 server,Microsoft 開源)看一個簡單任務。</p>
+        <p>任務:「幫我截圖 example.com」。</p>
+        <pre class="bg-surface-2 rounded p-3 text-xs leading-relaxed font-mono overflow-auto">→ tools/list                            <span class="text-muted">← AI 啟動,問 server 你能做什麼?</span>
+← [browser_navigate, browser_click, browser_screenshot, ...]
+                                        <span class="text-muted">← server 回它能做的事</span>
+
+→ browser_navigate(url="example.com")   <span class="text-muted">← AI 挑「打開網頁」</span>
+← {success: true, title: "Example Domain"}
+                                        <span class="text-muted">← server 真的開了瀏覽器</span>
+
+→ browser_screenshot()                  <span class="text-muted">← AI 挑「截圖」</span>
+← {image: "data:image/png;base64,..."}  <span class="text-muted">← 回截圖 binary</span>
+
+→ "已截圖 example.com,結果如上"        <span class="text-muted">← AI 回完整對話</span></pre>
+        <p>幾個觀察:</p>
+        <ul class="space-y-1.5 list-disc list-inside text-muted">
+          <li>AI <strong class="text-ink-soft">完全不需要事先知道</strong> server 有什麼工具 — 啟動才問</li>
+          <li>工具清單可以<strong class="text-ink-soft">換 server 就換</strong> — 想控資料庫?換 DB MCP server,工具變成 <code class="bg-surface-2 px-1 rounded text-sm">db_query</code> / <code class="bg-surface-2 px-1 rounded text-sm">db_insert</code> 之類</li>
+          <li>AI 那邊的 code <strong class="text-ink-soft">不變</strong>,只是 talk 的對象換了</li>
+          <li><strong class="text-ink-soft">裝 MCP server 等於給它對應的權限</strong> — Playwright MCP 能控你瀏覽器、Filesystem MCP 能讀你檔案。用之前看清楚它能做什麼、信不信任(社群維護的 server 跟自家寫的 server 信任程度不一樣)</li>
+        </ul>
+        <p>這就是「<strong>一個 protocol、所有工具</strong>」的價值。</p>
+      </section>
+    </article>
+      </details>
     </div>
   </main>
 
@@ -200,13 +306,41 @@
        Tab 5: Skill(預覽)— SKILL.md body + bundled tools 漸進式載入
        ───────────────────────────────────────────────────────────────── -->
   <main class="tab-panel max-w-6xl mx-auto px-4 md:px-8 py-6 md:py-10" data-panel="skill">
-    <div class="max-w-3xl mx-auto py-16 md:py-24 text-center space-y-3">
-      <h2 class="text-2xl font-semibold text-ink">⑤ Skill</h2>
-      <p class="text-muted">即將推出(Coming soon)</p>
-      <p class="text-sm text-faint">這個單元還在打磨中,敬請期待。</p>
+    <div class="panel-header mb-6">
+      <h2 class="text-xl font-semibold text-ink">⑤ Skill — 按需載入的能力包</h2>
+      <p class="text-sm text-muted mt-1">L1 索引常駐 → 需要才載入 L2 說明書 → L3 腳本只回結果、code 不進 context</p>
+    </div>
+    <div class="lg:grid lg:grid-cols-[1fr_2fr] lg:gap-6 space-y-6 lg:space-y-0">
+      <section class="space-y-4">
+        <div>
+          <h3 class="text-xs uppercase tracking-wider text-muted font-medium mb-2">Skill 解剖 — 一個資料夾、三層</h3>
+          <div class="skill-token-chip hidden rounded-md bg-surface-2 border border-edge-soft px-3 py-2 text-xs text-ink-soft mb-2"></div>
+          <div class="skill-anatomy rounded-lg border border-edge bg-surface p-3 text-xs font-mono space-y-1"></div>
+        </div>
+        <div>
+          <label for="prompt-skill" class="block text-sm font-medium text-ink-soft mb-1.5">問題</label>
+          <div class="relative">
+            <textarea class="prompt w-full rounded-lg shadow-[0_1px_3px_oklch(20%_0.012_280_/_0.06)] border border-edge bg-surface px-3 py-2 pr-12 text-sm font-mono resize-none focus:outline-none focus:border-final focus:ring-1 focus:ring-final" id="prompt-skill" rows="3" placeholder="例:台北今天天氣怎樣?"></textarea>
+            <button class="run absolute bottom-2.5 right-2.5 w-8 h-8 rounded-full bg-ink text-surface flex items-center justify-center hover:bg-ink-soft disabled:bg-faint transition-colors" aria-label="送出 / 停止"><svg class="icon-send" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 13V3M4 7l4-4 4 4"/></svg><svg class="icon-stop" width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><rect x="1" y="1" width="10" height="10" rx="2"/></svg></button>
+          </div>
+          <label class="mt-2 flex items-center gap-2 text-sm text-ink-soft cursor-pointer">
+            <input type="checkbox" class="no-skills-toggle rounded border-edge">
+            無 skill 對照(拿掉索引再跑同一句)
+          </label>
+        </div>
+      </section>
+      <section class="turns-area space-y-3">
+        <h2 class="text-xs uppercase tracking-wider text-muted font-medium">代理跑的軌跡</h2>
+        <div class="flex justify-between text-xs text-ink-soft">
+          <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-final" aria-hidden="true"></span>模型</span>
+          <span class="flex items-center gap-1.5">工具(你的電腦)<span class="w-2.5 h-2.5 rounded-full bg-tool" aria-hidden="true"></span></span>
+        </div>
+        <div class="turns space-y-3"></div>
+      </section>
     </div>
   </main>
 
-  <script src="app.js?v=80"></script>
+  <script src="wire.js?v=1"></script>
+  <script src="app.js?v=92"></script>
 </body>
 </html>

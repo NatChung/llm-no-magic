@@ -13,8 +13,10 @@
 | 2 | ② 產品層 | system prompt / chat template = 拼進 token 的文字 | lesson-2-product.zh-TW.md |
 | 3 | ③ 推理 | thinking = 把推理寫成 token | lesson-3-reasoning.zh-TW.md |
 | 4 | ④ Agent | tool_call 約定 + 真執行;收尾 60→90 分框架 | lesson-4-agent.zh-TW.md |
+| 5 | ①+⑤ context→Skill | context 翻轉答案 → 三層漸進式揭露 | lesson-5-skill.zh-TW.md |
+| 6 | ⑥ MCP | 握手發現工具、跨 process tools/call | lesson-6-mcp.zh-TW.md |
 
-順序固定 1→4(lesson 1 的 Hook 答案會在 lesson 4 收尾對照,中間不要跳過)。
+順序固定 1→6(課與課之間有接龍與對照 — 例如 lesson 3 收尾那句會在 lesson 4 收線,中間不要跳過)。
 
 ## 帶課守則
 

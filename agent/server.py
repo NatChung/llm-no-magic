@@ -3,8 +3,8 @@
 Architecture: stdlib http.server only (no FastAPI). One process on :9000
 serves both:
   - GET /, /index.html, /app.js, /styles.css ... → static files from frontend/
-  - POST /agent, /skill-agent, /preview → API handlers (SSE for /agent
-    and /skill-agent, plain proxy for /preview)
+  - POST /agent, /preview → API handlers (SSE for /agent, plain proxy for /preview)
+  - POST /drive /inspect /stop → relay teaching commands (tabs 1-6)
 
 This collapses what used to be two separate ports (frontend :9000 via
 http.server, backend :8082 via this file) into one. Reduces ports the
@@ -34,7 +34,10 @@ from agent.agent import (
     MODEL_NAME,
     LLAMA_URL,
 )
-from agent.skill_agent import skill_agent_loop
+from agent.skill_agent import (skill_agent_loop, load_index, proper_system_prompt,
+                               no_skills_system_prompt, READ_FILE_TOOL,
+                               RUN_SCRIPT_TOOL, skill_anatomy)
+from agent.mcp_agent import mcp_agent_loop, mcp_preview_tools
 
 
 def sse(event: dict) -> bytes:
@@ -219,7 +222,8 @@ LLAMA_COMPLETION_URL = LLAMA_URL.replace("/v1/chat/completions", "/completion")
 CANCEL = threading.Event()   # set by POST /stop; checked each token by generators
 
 GEN_LOCK = threading.Lock()   # serialize /drive: one generation fans out at a time
-MODEL_FOR_TAB = {"1": "0.6B", "2": "0.6B", "3": "0.6B", "4": "4B"}
+MODEL_FOR_TAB = {"1": "0.6B", "2": "0.6B", "3": "0.6B", "4": "4B",
+                 "5": "4B", "6": "4B"}
 
 # Tab ④ 教學用瘦身配置(spec 2026-07-07-tab4-simplify):頁面只教 get_time,
 # system 只留 /no_think。CLI(agent.py)與 Tab ⑤ 仍用完整 SYSTEM_PROMPT /
@@ -245,6 +249,21 @@ def agent_loop(system: str, user: str) -> Iterable[dict]:
         {"role": "user",   "content": user},
     ]
     for turn in range(1, MAX_TURNS + 1):
+        # "sent" — the exact prompt going into THIS turn's model call (chat
+        # template applied). Computed BEFORE the call so every turn — including
+        # the final, content-only one — carries its own. (turn N's sent_prompt
+        # is what the old next_prompt of turn N-1 used to show.)
+        try:
+            tpl_resp = requests.post(LLAMA_TEMPLATE_URL, json={
+                "messages": messages,
+                "tools":    TAB4_TOOL_SCHEMAS,
+                "add_generation_prompt": True,
+            }, timeout=5)
+            tpl_resp.raise_for_status()
+            sent_prompt = tpl_resp.json().get("prompt", "")
+        except Exception as exc:
+            sent_prompt = f"[template error] {type(exc).__name__}: {exc}"
+
         resp = requests.post(LLAMA_URL, json={
             "model":       MODEL_NAME,
             "messages":    messages,
@@ -281,25 +300,9 @@ def agent_loop(system: str, user: str) -> Iterable[dict]:
             })
 
         # "received" — the raw text the model emitted this turn (concat from logprobs tokens),
-        # wrapped with the chat-template assistant prefix to match the "sent next" perspective.
+        # wrapped with the chat-template assistant prefix to match the chat-template shape.
         received_text = "".join(t.get("token", "") for t in lp) if lp else ""
         received_chunk = f"<|im_start|>assistant\n{received_text}" if received_text else ""
-
-        # "sent next" — the prompt sent into the next model call, after accumulation (chat template applied).
-        # Only computed when there's a next turn (model still in tool_call): no tool_calls = final turn,
-        # nothing will be sent to the model again, so showing "sent next" would mislead.
-        next_prompt = ""
-        if tool_calls:
-            try:
-                tpl_resp = requests.post(LLAMA_TEMPLATE_URL, json={
-                    "messages": messages,
-                    "tools":    TAB4_TOOL_SCHEMAS,
-                    "add_generation_prompt": True,
-                }, timeout=5)
-                tpl_resp.raise_for_status()
-                next_prompt = tpl_resp.json().get("prompt", "")
-            except Exception as exc:
-                next_prompt = f"[template error] {type(exc).__name__}: {exc}"
 
         yield {
             "type":           "turn_complete",
@@ -307,8 +310,8 @@ def agent_loop(system: str, user: str) -> Iterable[dict]:
             "message_tokens": lp,
             "tool_calls":     tool_calls_pub,
             "tool_results":   tool_results_pub,
+            "sent_prompt":    sent_prompt,
             "received_chunk": received_chunk,
-            "next_prompt":    next_prompt,
         }
 
         if not tool_calls:
@@ -459,6 +462,42 @@ def drive(tab: str, user: str, system: str = "", mode: str = "") -> dict:
                 return {"subscribers": subscriber_count(), "tab": tab,
                         "turns": turns, "final": final}
 
+            if tab in ("5", "6"):
+                # Tab ⑤ skill / Tab ⑥ mcp — same cancel/terminal-final
+                # contract as tab 4 above.
+                turns = []
+                extra_key = "skills" if tab == "5" else "protocol_frames"
+                extra = []
+                saw_final = False
+                if tab == "5":
+                    loop = skill_agent_loop(user, mode or "proper")
+                else:
+                    loop = mcp_agent_loop(user)
+                for ev in loop:
+                    publish(ev)
+                    et = ev["type"]
+                    if et in ("turn", "turn_complete"):
+                        turns.append(ev)
+                    elif et == "index" and tab == "5":
+                        extra = ev["skills"]
+                    elif et == "protocol" and tab == "6":
+                        extra.append(ev)
+                    elif et == "final":
+                        final = ev["content"]
+                        saw_final = True
+                    elif et == "error":
+                        return _fail(ev["message"], error_already_published=True)
+                    if CANCEL.is_set():
+                        break
+                if not saw_final:
+                    # terminal-final invariant (§3.6): cancel broke the loop
+                    # before its own final — emit one so Send re-enables.
+                    # (breaking out closes the generator → mcp child reaped
+                    # in its finally)
+                    publish({"type": "final", "content": ""})
+                return {"subscribers": subscriber_count(), "tab": tab,
+                        extra_key: extra, "turns": turns, "final": final}
+
             tokens = []
             for ev in completion_generate(tab, user, system, mode):
                 publish(ev)
@@ -479,7 +518,7 @@ def drive(tab: str, user: str, system: str = "", mode: str = "") -> dict:
 class AgentHandler(SimpleHTTPRequestHandler):
     """One handler:
       - GET → SimpleHTTPRequestHandler serves static files from STATIC_ROOT
-      - POST → /agent / /skill-agent / /preview / /drive / /inspect / /stop API endpoints (below)
+      - POST → /agent / /preview / /drive / /inspect / /stop API endpoints (below)
       - OPTIONS → CORS preflight
     """
 
@@ -575,8 +614,6 @@ class AgentHandler(SimpleHTTPRequestHandler):
     def do_POST(self) -> None:
         if self.path == "/agent":
             self._handle_agent()
-        elif self.path == "/skill-agent":
-            self._handle_skill_agent()
         elif self.path == "/preview":
             self._handle_preview()
         elif self.path == "/drive":
@@ -589,32 +626,6 @@ class AgentHandler(SimpleHTTPRequestHandler):
             self.send_response(404)
             self._send_cors()
             self.end_headers()
-
-    def _handle_skill_agent(self) -> None:
-        """Tab ⑤ preview: skill simulator with naive/proper toggle."""
-        body = self._read_body()
-        if body is None:
-            return
-
-        self.send_response(200)
-        self.send_header("Content-Type", "text/event-stream")
-        self.send_header("Cache-Control", "no-cache")
-        self._send_cors()
-        self.end_headers()
-
-        mode = body.get("mode", "proper")  # "naive" or "proper"
-        user = body.get("user", "")
-
-        try:
-            for event in skill_agent_loop(user, mode):
-                self.wfile.write(sse(event))
-                self.wfile.flush()
-        except Exception as exc:
-            try:
-                self.wfile.write(sse({"type": "error", "message": f"{type(exc).__name__}: {exc}"}))
-                self.wfile.flush()
-            except Exception:
-                pass
 
     def _read_body(self) -> dict | None:
         """Read + parse JSON body. On error, send 400 + return None."""
@@ -662,16 +673,41 @@ class AgentHandler(SimpleHTTPRequestHandler):
         if body is None:
             return
 
-        messages = [
-            {"role": "system", "content": tab4_system(body.get("system", ""))},
-            {"role": "user",   "content": body.get("user", "")},
-        ]
+        if body.get("tab") == "5":
+            # Tab ⑤ pre-send preview (spec 2026-07-08 §3a): the exact turn-1
+            # messages+tools skill_agent_loop would send, template-expanded.
+            mode = body.get("mode") or "proper"
+            if mode == "no_skills":
+                system = no_skills_system_prompt()
+                tools = []
+            else:
+                system = proper_system_prompt(load_index())
+                tools = [READ_FILE_TOOL, RUN_SCRIPT_TOOL]
+            messages = [
+                {"role": "system", "content": system},
+                {"role": "user",   "content": body.get("user", "")},
+            ]
+            payload = {"messages": messages, "add_generation_prompt": True}
+            if tools:
+                payload["tools"] = tools
+        elif body.get("tab") == "6":
+            # Tab ⑥ pre-send preview:跟 mcp_agent_loop 的 turn-1 同構 —
+            # system 只有 /no_think,tools 是跟 mini MCP server 握手問來的。
+            messages = [
+                {"role": "system", "content": "/no_think"},
+                {"role": "user",   "content": body.get("user", "")},
+            ]
+            payload = {"messages": messages, "tools": mcp_preview_tools(),
+                       "add_generation_prompt": True}
+        else:
+            messages = [
+                {"role": "system", "content": tab4_system(body.get("system", ""))},
+                {"role": "user",   "content": body.get("user", "")},
+            ]
+            payload = {"messages": messages, "tools": TAB4_TOOL_SCHEMAS,
+                       "add_generation_prompt": True}
         try:
-            resp = requests.post(LLAMA_TEMPLATE_URL, json={
-                "messages": messages,
-                "tools":    TAB4_TOOL_SCHEMAS,
-                "add_generation_prompt": True,
-            }, timeout=5)
+            resp = requests.post(LLAMA_TEMPLATE_URL, json=payload, timeout=5)
             resp.raise_for_status()
             prompt_text = resp.json().get("prompt", "")
         except Exception as exc:
@@ -699,9 +735,18 @@ class AgentHandler(SimpleHTTPRequestHandler):
         self._send_json(result, code)
 
     def _handle_inspect(self) -> None:
-        """spec §3.2: pop the probability chart for token N on the page."""
+        """spec §3.2 token-chart popup (legacy), or tab-5 skill anatomy data."""
         body = self._read_body()
         if body is None:
+            return
+        if body.get("tab") == "5":
+            # data response only — no relay publish (spec 2026-07-08 §2:
+            # reusing /inspect keeps the endpoint list unchanged; the tab
+            # discriminator keeps tabs ①-③ tokenIndex behavior intact)
+            # skills = L1 index for page-load rendering(新教案:先講 skill
+            # 才開火,索引卡不能等第一次 drive 才出現)
+            self._send_json({"files": skill_anatomy(),
+                             "skills": list(load_index().values())})
             return
         publish({"type": "inspect", "tokenIndex": body.get("tokenIndex", 0)})
         self._send_json({"ok": True, "subscribers": subscriber_count()})

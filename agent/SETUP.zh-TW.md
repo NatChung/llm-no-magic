@@ -12,7 +12,7 @@ Verified 2026-05-29。**Two-port setup** — `:9000` 一個 Python server 同時
 - **Launch server**: `cd ~/projects/llm-no-magic && nohup python3 -u -m agent.server > /tmp/agent-server.log 2>&1 &`
 - **llama 不用手動起!** server startup `_detect_model()` 偵測 :8080;若 down,第一次 `/drive` → trigger swap → 自動 launch(tab-switching 在 v3 是 UI-only)(會帶 `--host $LISTEN_HOST`)
 - **Model source**(若 GGUF 不存在): `hf download Qwen/Qwen3-4B-GGUF Qwen3-4B-Q4_K_M.gguf --local-dir ~/models`(0.6B 同樣語法、換名)
-- **Endpoint**: `/`、`/index.zh-TW.html`、`/app.js`、`/styles.css`(靜態) + `/agent`、`/skill-agent`、`/preview`、`/drive`、`/inspect`、`/stop`(API)+ `/events`、`/health`— 全在 `:9000`。舊 `/frontend/*` URL 會 301 redirect 到 `/*`。llama 直接 endpoint 是 `http://localhost:8080/v1/chat/completions`(只有 CLI agent.py 直接打)
+- **Endpoint**: `/`、`/index.zh-TW.html`、`/app.js`、`/styles.css`(靜態) + `/agent`、`/preview`、`/drive`、`/inspect`、`/stop`(API)+ `/events`、`/health`— 全在 `:9000`。舊 `/frontend/*` URL 會 301 redirect 到 `/*`。llama 直接 endpoint 是 `http://localhost:8080/v1/chat/completions`(只有 CLI agent.py 直接打)
 - **Function calling**: 仰賴 4B(0.6B 不穩);Driving Tab ④(或 ⑤)在 `/drive` 內 trigger swap to 4B
 - **GPU 負擔**: ~3GB max(同時間只一個 model 在 GPU 上;swap 期間舊 process kill 後新 process launch ~5s)
 

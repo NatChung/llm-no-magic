@@ -31,7 +31,7 @@ TOOL_SCHEMAS = [
         "type": "function",
         "function": {
             "name": "get_time",
-            "description": "Get current time in HH:MM:SS format.",
+            "description": "取得目前時間,格式 HH:MM:SS。",
             "parameters": {"type": "object", "properties": {}},
         },
     },

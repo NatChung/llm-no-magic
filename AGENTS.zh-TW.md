@@ -5,34 +5,33 @@
 這個 repo 是 **「LLM, no magic」** — 一個動手實作、完全本地端的 LLM 教學工具:一個網頁 UI
 (分頁 ①–⑥),由執行在 :9000 的純標準庫 Python 伺服器提供服務,驅動執行在 :8080 的
 llama.cpp + Qwen3 GGUF 模型。分頁 ①–④ 是互動式的(tokens/機率、聊天模板、思考模式、函式呼叫代理);
-⑤ Skill 與 ⑥ MCP 在 main 目前是「即將推出」placeholder(內容在 feature branch 打磨中)。
+⑤ 是互動式 Skill demo(三層漸進式揭露);⑥ 是互動式 MCP demo(真 stdio JSON-RPC 迷你 server),文章收在展開段。
 
 **這個 repo 支援 AI 帶領教學。** 你(AI agent)可以主導整個課程。
 
-## 你的第一個動作 — 詢問使用者的身分
+## 預設模式 — 學生(教學)
 
-在做任何事之前,先問:
-
-> 你是這門課的**創作者/教師**(正在開發或維護),
-> 還是來學習 LLM 如何運作的**學生**?
-
-然後依照下方對應的模式進行。請使用使用者的語言(zh-TW 學生 →
+**預設使用者就是學生**,來學習 LLM 如何運作 — **不要**詢問身分,直接進入下方的
+教學模式。只有在使用者明確表明自己是創作者/維護者,或提出開發需求
+(改程式、測試、架構)時,才切換到開發模式。請使用使用者的語言(zh-TW 學生 →
 使用 `.zh-TW` 檔案並以繁體中文回覆)。
 
-## 創作者 → 開發模式
+## 創作者 → 開發模式(僅在明確要求時)
 
 - 架構:
   `agent/server.py`(單埠標準庫伺服器 :9000 — 靜態前端
-  + `/agent` `/skill-agent` `/preview` `/drive` `/inspect` `/stop` API,自動啟動 llama-server :8080)、
+  + `/agent` `/preview` `/drive` `/inspect` `/stop` API(drive 涵蓋分頁 1-6),自動啟動 llama-server :8080)、
   `frontend/app.js`(零建置 Tailwind Play CDN UI)、`agent/agent.py`(CLI agent 迴圈
   + 4 個工具)、`teaching/`(AI 帶領教學素材)、`init.py`(環境檢查工具)。
 - 測試:`pytest agent/tests -q`(純 pytest 函式 + mocks;維持這個風格)。
+- 前端測試:`node --test frontend/wire.test.js`(node 內建 runner,零依賴;
+  只測 `wire.js` 的純解析層 —— DOM 由瀏覽器驗證)。
 - 慣例:**雙語** — 每個面向使用者的變更都必須同時落地於英文和 zh-TW 檔案
   (`index.html`/`index.zh-TW.html`、`README.md`(zh-TW)/`README.en.md`、課程素材)。
   每當前端檔案有變動,務必同時在兩個 HTML 檔案中更新 `?v=NN` 快取破除查詢字串。
 - 啟動伺服器:`nohup python3 -u -m agent.server > /tmp/agent-server.log 2>&1 &`
 
-## 學生 → 教學模式
+## 學生 → 教學模式(預設)
 
 1. 執行 `python3 init.py`。如果最後一行不是 `READY*`,請引導使用者逐一處理
    印出的 `fix:` 行。教學只需要一個能發 HTTP 請求的 AI(Claude Code / Codex,

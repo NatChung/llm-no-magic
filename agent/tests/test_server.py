@@ -92,7 +92,7 @@ def _mock_template_resp(prompt=""):
 def _route_iter(responses):
     """Build a mock requests.post that returns next iter response for chat
     completions, but returns a stub template response for /apply-template
-    (so iter isn't consumed by the per-turn template call added in next_prompt)."""
+    (so iter isn't consumed by the per-turn template call added in sent_prompt)."""
     def route(url, **kw):
         if "apply-template" in str(url):
             return _mock_template_resp(prompt="(stub template)")
@@ -176,6 +176,66 @@ def test_preview_uses_tab4_slim_config(monkeypatch):
     sent = captured["json"]
     assert [t["function"]["name"] for t in sent["tools"]] == ["get_time"]
     assert sent["messages"][0]["content"] == "/no_think"
+
+
+def test_preview_tab5_proper_vs_no_skills(monkeypatch):
+    """POST /preview tab=5:proper 帶 skill index system + 3 tools;no_skills 無 tools。"""
+    import agent.server as server
+
+    captured = {}
+    def fake_post(url, **kw):
+        captured["json"] = kw.get("json")
+        return _mock_template_resp(prompt="TPL5")
+    monkeypatch.setattr(server.requests, "post", fake_post)
+
+    srv, port = _start_server_in_thread()
+    try:
+        def post_preview(body):
+            req = urllib.request.Request(
+                f"http://127.0.0.1:{port}/preview",
+                data=json.dumps(body).encode("utf-8"),
+                headers={"Content-Type": "application/json"}, method="POST")
+            return json.loads(urllib.request.urlopen(req, timeout=5).read())
+
+        out = post_preview({"tab": "5", "user": "台北天氣?", "mode": "proper"})
+        assert out["prompt"] == "TPL5"
+        sent = captured["json"]
+        assert "## Skill 索引(L1)" in sent["messages"][0]["content"]
+        assert sent["messages"][1] == {"role": "user", "content": "台北天氣?"}
+        assert [t["function"]["name"] for t in sent["tools"]] == [
+            "read_file", "run_script"]
+
+        post_preview({"tab": "5", "user": "台北天氣?", "mode": "no_skills"})
+        sent = captured["json"]
+        assert "Skill 索引" not in sent["messages"][0]["content"]
+        assert "tools" not in sent
+    finally:
+        srv.shutdown()
+
+
+def test_preview_tab6_discovers_mcp_tools(monkeypatch):
+    """POST /preview tab=6:tools 是跟 mini MCP server 真握手問來的;system=/no_think。"""
+    import agent.server as server
+
+    captured = {}
+    def fake_post(url, **kw):
+        captured["json"] = kw.get("json")
+        return _mock_template_resp(prompt="TPL6")
+    monkeypatch.setattr(server.requests, "post", fake_post)
+
+    srv, port = _start_server_in_thread()
+    try:
+        req = urllib.request.Request(
+            f"http://127.0.0.1:{port}/preview",
+            data=json.dumps({"tab": "6", "user": "現在幾點?"}).encode("utf-8"),
+            headers={"Content-Type": "application/json"}, method="POST")
+        out = json.loads(urllib.request.urlopen(req, timeout=15).read())
+        assert out["prompt"] == "TPL6"
+        sent = captured["json"]
+        assert sent["messages"][0] == {"role": "system", "content": "/no_think"}
+        assert {t["function"]["name"] for t in sent["tools"]} == {"get_time", "get_weather"}
+    finally:
+        srv.shutdown()
 
 
 def test_do_post_agent_streams_events_via_sse(monkeypatch):
@@ -929,8 +989,7 @@ def test_drive_tab4_cancel_emits_final(monkeypatch):
         # agent_loop ever yielding its own final.
         server.CANCEL.set()
         yield {"type": "turn_complete", "turn": 1, "message_tokens": [],
-               "tool_calls": [], "tool_results": [], "received_chunk": "",
-               "next_prompt": ""}
+               "tool_calls": [], "tool_results": [], "sent_prompt": ""}
 
     monkeypatch.setattr(server, "agent_loop", fake_loop)
     q = server.subscribe()
@@ -1064,3 +1123,218 @@ def test_post_stop_sets_cancel(monkeypatch):
     finally:
         server.CANCEL.clear()
         srv.shutdown()
+
+
+# ── Tab 5/6 drive routing(spec 2026-07-08 tab5/6)──────────────────────
+def test_model_for_tab_5_and_6_are_4b():
+    import agent.server as server
+    assert server.MODEL_FOR_TAB["5"] == "4B"
+    assert server.MODEL_FOR_TAB["6"] == "4B"
+
+
+def _drive_ready(monkeypatch, server):
+    """Neutralize swap + relay so drive() runs the loop synchronously.
+    handle_swap MUST be stubbed: in the red phase MODEL_FOR_TAB lacks "5"/"6"
+    so drive() would call the REAL handle_swap (pkill llama-server + port
+    polling) — slow and destructive to the dev environment."""
+    monkeypatch.setitem(server.GLOBAL_STATE, "model", "4B")
+    monkeypatch.setattr(server, "publish", lambda ev: None)
+    monkeypatch.setattr(server, "handle_swap",
+                        lambda wanted: {"status": "ready", "model": wanted})
+
+
+def test_drive_tab5_aggregates_skills_turns_final(monkeypatch):
+    import agent.server as server
+    _drive_ready(monkeypatch, server)
+    fake_events = [
+        {"type": "index", "skills": [{"name": "check_weather"}], "mode": "proper"},
+        {"type": "turn", "turn": 1, "content": "hi", "tool_calls": [],
+         "usage": {"prompt_tokens": 5, "completion_tokens": 1}},
+        {"type": "final", "content": "hi"},
+    ]
+    monkeypatch.setattr(server, "skill_agent_loop",
+                        lambda user, mode: iter(fake_events))
+    out = server.drive("5", "hello")
+    assert out["tab"] == "5"
+    assert out["skills"] == [{"name": "check_weather"}]
+    assert out["turns"][0]["usage"]["prompt_tokens"] == 5
+    assert out["final"] == "hi"
+
+
+def test_drive_tab6_aggregates_protocol_and_turns(monkeypatch):
+    import agent.server as server
+    _drive_ready(monkeypatch, server)
+    fake_events = [
+        {"type": "protocol", "phase": "handshake", "method": "initialize",
+         "request": {}, "response": {}},
+        {"type": "turn_complete", "turn": 1, "content": "ans", "tool_calls": [],
+         "tool_results": [], "sent_prompt": "",
+         "usage": {"prompt_tokens": 9, "completion_tokens": 2}},
+        {"type": "final", "content": "ans"},
+    ]
+    monkeypatch.setattr(server, "mcp_agent_loop", lambda user: iter(fake_events))
+    out = server.drive("6", "q")
+    assert out["protocol_frames"][0]["method"] == "initialize"
+    assert out["turns"][0]["turn"] == 1
+    assert out["final"] == "ans"
+
+
+def test_drive_tab5_loop_error_returns_error(monkeypatch):
+    import agent.server as server
+    _drive_ready(monkeypatch, server)
+    monkeypatch.setattr(server, "skill_agent_loop",
+                        lambda user, mode: iter([{"type": "error", "message": "boom"}]))
+    out = server.drive("5", "x")
+    assert out["error"] == "boom"
+
+
+def test_drive_tab5_cancel_publishes_empty_final(monkeypatch):
+    import agent.server as server
+    monkeypatch.setitem(server.GLOBAL_STATE, "model", "4B")
+    monkeypatch.setattr(server, "handle_swap",
+                        lambda wanted: {"status": "ready", "model": wanted})
+    published = []
+    monkeypatch.setattr(server, "publish", lambda ev: published.append(ev))
+
+    def loop(user, mode):
+        yield {"type": "turn", "turn": 1, "content": "", "tool_calls": [],
+               "usage": {}}
+        server.CANCEL.set()
+        yield {"type": "turn", "turn": 2, "content": "", "tool_calls": [],
+               "usage": {}}
+        yield {"type": "final", "content": "never"}
+    monkeypatch.setattr(server, "skill_agent_loop", loop)
+    try:
+        out = server.drive("5", "x")
+    finally:
+        server.CANCEL.clear()   # never leak a set CANCEL into later tests
+    assert out["final"] == ""
+    assert published[-1] == {"type": "final", "content": ""}
+
+
+def test_skill_agent_endpoint_removed():
+    import agent.server as server
+    assert not hasattr(server.AgentHandler, "_handle_skill_agent")
+
+
+def test_inspect_tab5_returns_files_and_does_not_publish(monkeypatch):
+    """/inspect {'tab':'5'} → anatomy data, no relay publish;無 tab → 舊行為。"""
+    import agent.server as server
+
+    published = []
+    monkeypatch.setattr(server, "publish", lambda f: published.append(f))
+
+    srv, port = _start_server_in_thread()
+    try:
+        def post_inspect(body):
+            req = urllib.request.Request(
+                f"http://127.0.0.1:{port}/inspect",
+                data=json.dumps(body).encode("utf-8"),
+                headers={"Content-Type": "application/json"}, method="POST")
+            return json.loads(urllib.request.urlopen(req, timeout=5).read())
+
+        out = post_inspect({"tab": "5"})
+        assert any(f["layer"] == "L2" for f in out["files"])
+        assert [s["name"] for s in out["skills"]] == ["check_weather"]
+        assert published == []
+
+        out = post_inspect({"tokenIndex": 3})
+        assert out["ok"] is True
+        assert published == [{"type": "inspect", "tokenIndex": 3}]
+    finally:
+        srv.shutdown()
+
+
+def test_agent_loop_every_turn_carries_sent_prompt_and_received_chunk(monkeypatch):
+    """每個 turn_complete(含 final content-only turn)都帶 sent_prompt 與
+    received_chunk(模型自己那則原始訊息);不再有 next_prompt。"""
+    import agent.server as server
+
+    tool_call = [{"id": "c1", "type": "function",
+                  "function": {"name": "get_time", "arguments": "{}"}}]
+    responses = iter([
+        _mock_llama_resp(content=None, tool_calls=tool_call,
+                          logprobs_content=[{"token": "<tool_call>", "logprob": -0.1,
+                                              "top_logprobs": []}]),
+        _mock_llama_resp(content="現在是 09:00。",
+                          logprobs_content=[{"token": "現在是 09:00。", "logprob": -0.1,
+                                              "top_logprobs": []}]),
+    ])
+    prompts = iter(["TPL-turn1", "TPL-turn2"])
+
+    def route(url, **kw):
+        if "apply-template" in str(url):
+            return _mock_template_resp(prompt=next(prompts))
+        return next(responses)
+
+    monkeypatch.setattr(server.requests, "post", route)
+    monkeypatch.setattr(server, "dispatch_tool_call", lambda *a, **kw: "09:00")
+
+    events = list(server.agent_loop("sys", "現在幾點?"))
+    turns = [e for e in events if e["type"] == "turn_complete"]
+
+    assert len(turns) == 2
+    assert turns[0]["sent_prompt"] == "TPL-turn1"
+    assert turns[1]["sent_prompt"] == "TPL-turn2"
+    # received_chunk 必須是「這一 turn」模型吐的字,不是別 turn 的 —— 兩個 turn
+    # 的 mock token 刻意不同,所以掛錯 turn 會紅。
+    assert turns[0]["received_chunk"] == "<|im_start|>assistant\n<tool_call>"
+    assert turns[1]["received_chunk"] == "<|im_start|>assistant\n現在是 09:00。"
+    for tn in turns:
+        assert "next_prompt" not in tn
+
+
+def test_agent_loop_sent_prompt_templates_pre_call_messages(monkeypatch):
+    """turn 1 的 sent_prompt 是「還沒 append assistant/tool」的 messages 算出來的。"""
+    import agent.server as server
+
+    captured = []
+    tool_call = [{"id": "c1", "type": "function",
+                  "function": {"name": "get_time", "arguments": "{}"}}]
+    responses = iter([
+        _mock_llama_resp(content=None, tool_calls=tool_call),
+        _mock_llama_resp(content="done"),
+    ])
+
+    def route(url, **kw):
+        if "apply-template" in str(url):
+            # snapshot: kw["json"]["messages"] is agent_loop's live list —
+            # agent_loop keeps appending to that same object on later turns,
+            # so without copying here every captured entry would end up
+            # showing the final, fully-accumulated state instead of each
+            # turn's own pre-call snapshot.
+            captured.append({**kw["json"], "messages": list(kw["json"]["messages"])})
+            return _mock_template_resp(prompt="TPL")
+        return next(responses)
+
+    monkeypatch.setattr(server.requests, "post", route)
+    monkeypatch.setattr(server, "dispatch_tool_call", lambda *a, **kw: "09:00")
+
+    list(server.agent_loop("sys", "現在幾點?"))
+
+    # turn 1:只有 system + user
+    assert [m["role"] for m in captured[0]["messages"]] == ["system", "user"]
+    # turn 2:accumulated — assistant(tool_call) + tool result 都進來了
+    assert [m["role"] for m in captured[1]["messages"]] == [
+        "system", "user", "assistant", "tool"]
+    # add_generation_prompt 必須帶,否則算出來的不是「要送出的」prompt
+    assert captured[0]["add_generation_prompt"] is True
+    assert [t["function"]["name"] for t in captured[0]["tools"]] == ["get_time"]
+
+
+def test_agent_loop_sent_prompt_degrades_on_template_error(monkeypatch):
+    """/apply-template 掛掉時 sent_prompt 降級為 [template error] …,不中斷 loop。"""
+    import agent.server as server
+
+    def route(url, **kw):
+        if "apply-template" in str(url):
+            raise RuntimeError("boom")
+        return _mock_llama_resp(content="hi")
+
+    monkeypatch.setattr(server.requests, "post", route)
+
+    events = list(server.agent_loop("sys", "hi"))
+    turns = [e for e in events if e["type"] == "turn_complete"]
+    assert len(turns) == 1
+    assert turns[0]["sent_prompt"].startswith("[template error] RuntimeError")
+    assert events[-1] == {"type": "final", "content": "hi"}
