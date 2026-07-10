@@ -87,8 +87,157 @@ const WIRE = (function () {
     }
   }
 
-  function render(_text) {
-    throw new Error("WIRE.render not implemented yet");
+  // ── DOM 建構(只在 render 被呼叫時執行 —— 此時 app.js 已載入)──────
+
+  // t() 定義在 app.js 的 module scope(classic script → 全域可見)。
+  // wire.js 先載入,所以只能在這裡「延遲」取用,不能在載入期間呼叫。
+  function label(key, vars) {
+    return typeof t === "function" ? t(key, vars) : key;
+  }
+
+  function el(tag, cls, text) {
+    const n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text != null) n.textContent = text;   // 絕不用 innerHTML
+    return n;
+  }
+
+  const SUMMARY_CLS =
+    "cursor-pointer list-none [&::-webkit-details-marker]:hidden " +
+    "hover:text-ink py-0.5";
+
+  // 折疊容器。marker 用 JS 在 toggle 時翻面 —— 不依賴 CSS 的 [open] 變體。
+  function fold(summaryChildren, bodyNode, open) {
+    const d = el("details", "wire-fold");
+    d.open = !!open;
+    const s = el("summary", SUMMARY_CLS);
+    const marker = el("span", "text-syn-punct", d.open ? "▾ " : "▸ ");
+    s.appendChild(marker);
+    for (const c of summaryChildren) s.appendChild(c);
+    d.addEventListener("toggle", () => { marker.textContent = d.open ? "▾ " : "▸ "; });
+    const body = el("div", "pl-4 border-l border-edge-soft ml-1");
+    body.appendChild(bodyNode);
+    d.append(s, body);
+    return d;
+  }
+
+  function textLine(text) {
+    return el("div", "whitespace-pre-wrap text-ink-soft", text);
+  }
+
+  // ── JSON 樹 ────────────────────────────────────────────────────
+
+  function primitive(value) {
+    if (typeof value === "string") return el("span", "text-syn-str", JSON.stringify(value));
+    if (value === null || typeof value === "number" || typeof value === "boolean") {
+      return el("span", "text-syn-num", String(value));
+    }
+    return el("span", "text-ink-soft", String(value));
+  }
+
+  function jsonNode(value) {
+    const isArr = Array.isArray(value);
+    const isObj = value !== null && typeof value === "object";
+    if (!isObj) return primitive(value);
+
+    const entries = isArr
+      ? value.map((v, i) => [String(i), v])
+      : Object.entries(value);
+
+    if (entries.length === 0) {
+      return el("span", "text-syn-punct", isArr ? "[]" : "{}");
+    }
+
+    const chars = JSON.stringify(value).length;
+    const summary = [
+      el("span", "text-syn-punct", isArr ? "[…]" : "{…}"),
+      el("span", "text-muted ml-1",
+        label(isArr ? "wire_arr_summary" : "wire_obj_summary",
+              { n: entries.length, chars })),
+    ];
+
+    const body = el("div");
+    for (const [k, v] of entries) {
+      const row = el("div");
+      if (!isArr) {
+        row.appendChild(el("span", "text-syn-key", JSON.stringify(k)));
+        row.appendChild(el("span", "text-syn-punct", ": "));
+      }
+      row.appendChild(jsonNode(v));
+      body.appendChild(row);
+    }
+    return fold(summary, body, !shouldCollapse(value));
+  }
+
+  // ── chat template ──────────────────────────────────────────────
+
+  function toolsBlock(text) {
+    const rows = parseToolsLines(text);
+    const body = el("div");
+    for (const r of rows) body.appendChild(r.ok ? jsonNode(r.value) : textLine(r.raw));
+    const summary = [
+      el("span", "text-syn-tag", "<tools>"),
+      el("span", "text-muted ml-1",
+        label("wire_tools_summary", { n: rows.length, chars: text.length })),
+    ];
+    return fold(summary, body, false);          // 預設收起
+  }
+
+  function toolCallBlock(text) {
+    const parsed = tryParse(text);              // 陷阱 2:可能失敗,不能拋
+    const body = el("div");
+    body.appendChild(parsed.ok ? jsonNode(parsed.value) : textLine(text));
+    const summary = [
+      el("span", "text-syn-tag", "<tool_call>"),
+      el("span", "text-muted ml-1", label("wire_toolcall_summary", {})),
+    ];
+    return fold(summary, body, true);           // 預設展開
+  }
+
+  function messageBlock(msg) {
+    const marker = () => el("span", "text-syn-marker", "<|im_start|>");
+    const role = () => el("span", "text-syn-tag", msg.role);
+
+    // 陷阱 1:結尾的 assistant body 是空的 —— 只印一行 marker,不給 toggle。
+    if (msg.body.trim() === "") {
+      const line = el("div");
+      line.append(marker(), el("span", "text-syn-tag ml-1", msg.role));
+      return line;
+    }
+
+    const body = el("div");
+    for (const seg of splitBlocks(msg.body)) {
+      if (seg.type === "tools") body.appendChild(toolsBlock(seg.text));
+      else if (seg.type === "tool_call") body.appendChild(toolCallBlock(seg.text));
+      else body.appendChild(textLine(seg.text));
+    }
+    // <|im_end|> 是 template 標記,是教材的一部分 —— 不能弄丟。
+    if (msg.hadEnd) body.appendChild(el("div", "text-syn-marker", "<|im_end|>"));
+
+    const summary = [
+      marker(),
+      el("span", "text-syn-tag ml-1", msg.role),
+      el("span", "text-muted ml-2", label("wire_chars_summary", { chars: msg.body.length })),
+    ];
+    return fold(summary, body, true);
+  }
+
+  function renderChat(text) {
+    const msgs = splitMessages(text);
+    if (msgs.length === 0) return textLine(text);   // 認不出來就原樣顯示
+    const root = el("div", "space-y-1");
+    for (const m of msgs) root.appendChild(messageBlock(m));
+    return root;
+  }
+
+  function render(text) {
+    const src = String(text == null ? "" : text);
+    if (detect(src) === "json") {
+      const parsed = tryParse(src);
+      // parse 失敗就整塊退回純文字 —— 絕不出現空白框。
+      return parsed.ok ? jsonNode(parsed.value) : textLine(src);
+    }
+    return renderChat(src);
   }
 
   return {
