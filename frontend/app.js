@@ -146,6 +146,9 @@ const I18N = {
     'en':    '(anatomy unavailable)',
     'zh-TW': '(解剖資料讀不到)',
   },
+  anatomy_l1_tag: { 'en': 'always-on index', 'zh-TW': '索引常駐' },
+  anatomy_l2_tag: { 'en': 'manual',          'zh-TW': '說明書' },
+  anatomy_l3_tag: { 'en': 'script',          'zh-TW': '腳本' },
   protocol_card_req: { 'en': '→ request',  'zh-TW': '→ 請求' },
   protocol_card_resp:{ 'en': '← response', 'zh-TW': '← 回應' },
   protocol_expand:   { 'en': 'Full JSON-RPC frames', 'zh-TW': '完整 JSON-RPC 內容' },
@@ -1106,6 +1109,7 @@ function setupSkillTab(panel) {
       body: JSON.stringify({ tab: "5" }),
     }).then((r) => r.json()).then((j) => {
       const CAPTION = { L1: "anatomy_l1_caption", L2: "anatomy_l2_caption", L3: "anatomy_l3_caption" };
+      const TAG = { L1: "anatomy_l1_tag", L2: "anatomy_l2_tag", L3: "anatomy_l3_tag" };
       const BADGE = {
         L1: "text-ink-soft border-edge",
         L2: "text-inject border-inject/40 bg-inject-tint",
@@ -1116,10 +1120,14 @@ function setupSkillTab(panel) {
         const label = document.createElement("span");
         label.className = `inline-block rounded border px-1 mr-2 ${BADGE[f.layer]}`;
         label.textContent = f.layer;
+        // 短標籤(索引常駐 / 說明書 / 腳本)—— 原本在頂部副標,搬進解剖卡貼著 badge
+        const tag = document.createElement("span");
+        tag.className = "text-sm text-ink-soft";
+        tag.textContent = t(TAG[f.layer]);
         const d = BUBBLE.details(
           f.path + " — " + t(CAPTION[f.layer], { n: Math.round(f.content.length / 4) }),
           BUBBLE.pre(f.content));
-        row.append(label, d);
+        row.append(label, tag, d);
         anatomyEl.appendChild(row);
       }
     }).catch(() => { anatomyEl.textContent = t('anatomy_unavailable'); });
