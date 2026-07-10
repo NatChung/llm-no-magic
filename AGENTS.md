@@ -26,6 +26,8 @@ use the `.zh-TW` files and reply in 繁體中文).
   `frontend/app.js` (zero-build Tailwind Play CDN UI), `agent/agent.py` (CLI agent loop
   + 4 tools), `teaching/` (AI-led course material), `init.py` (env checker).
 - Tests: `pytest agent/tests -q` (plain pytest functions + mocks; keep that style).
+- Frontend tests: `node --test frontend/wire.test.js` (node built-in runner, zero deps;
+  only the pure parsing layer of `wire.js` — DOM is verified in the browser).
 - Conventions: **bilingual** — every user-facing change lands in BOTH the EN and zh-TW
   file (`index.html`/`index.zh-TW.html`, `README.md` (zh-TW)/`README.en.md`, lessons).
   Bump the `?v=NN` cache-bust query in both HTML files whenever frontend files change.

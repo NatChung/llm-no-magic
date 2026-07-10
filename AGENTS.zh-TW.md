@@ -24,6 +24,8 @@ llama.cpp + Qwen3 GGUF 模型。分頁 ①–④ 是互動式的(tokens/機率�
   `frontend/app.js`(零建置 Tailwind Play CDN UI)、`agent/agent.py`(CLI agent 迴圈
   + 4 個工具)、`teaching/`(AI 帶領教學素材)、`init.py`(環境檢查工具)。
 - 測試:`pytest agent/tests -q`(純 pytest 函式 + mocks;維持這個風格)。
+- 前端測試:`node --test frontend/wire.test.js`(node 內建 runner,零依賴;
+  只測 `wire.js` 的純解析層 —— DOM 由瀏覽器驗證)。
 - 慣例:**雙語** — 每個面向使用者的變更都必須同時落地於英文和 zh-TW 檔案
   (`index.html`/`index.zh-TW.html`、`README.md`(zh-TW)/`README.en.md`、課程素材)。
   每當前端檔案有變動,務必同時在兩個 HTML 檔案中更新 `?v=NN` 快取破除查詢字串。
