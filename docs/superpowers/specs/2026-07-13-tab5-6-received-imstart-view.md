@@ -44,7 +44,8 @@ API **已 parse 的結構化 message**,所以只能丟 JSON。
   ```python
   lp = resp["choices"][0].get("logprobs", {}) or {}
   received_text = "".join(t.get("token", "") for t in lp.get("content", []))
-  received_chunk = f"<|im_start|>assistant\n{received_text}"
+  # 對齊 tab④ server.py:305 的 `if received_text else ""` —— 空回應不掛空泡泡
+  received_chunk = f"<|im_start|>assistant\n{received_text}" if received_text else ""
   ```
 - `received` frame(`skill_agent.py:400-404`)改成帶 `received_chunk`(字串),
   **移除 `response`/`usage`**:
@@ -61,13 +62,24 @@ API **已 parse 的結構化 message**,所以只能丟 JSON。
 ### 2. 後端 tab⑥(`agent/mcp_agent.py`)
 
 - llama 請求 `body`(`mcp_agent.py:143`)加 `"logprobs": True, "top_logprobs": 1`。
-- 移除檔頭 `:8` 的「requests no logprobs」註解(不再成立)。
-- `received_chunk`(`mcp_agent.py:185`)從 `json.dumps(msg, …)` 改成同 §1 的重建:
+- **⚠️ 同一個 `body` 還要加 `"chat_template_kwargs": {"enable_thinking": False}`。**
+  現況 tab⑥ 只靠 `/no_think` system message 壓 thinking(`mcp_agent.py:127`),但那是
+  **軟開關** —— 實測 token 流仍含 `<think>\n\n</think>\n\n`。tab④/⑤ 用的是硬的
+  `enable_thinking:false` kwarg,token 流才乾淨。少了這行,tab⑥ 重建出來的
+  received_chunk 會比 ④⑤ 多一行 `<think></think>`,正好違反「三端看起來一致」。
+  (這只影響 generation body;sent_prompt 是另一個 `/apply-template` 呼叫算的
+  〔`mcp_agent.py:135-139`〕,不帶此 kwarg,所以 `/no_think` system 行仍會出現在
+  藍泡的 sent 視圖裡,不受影響。)
+- 檔頭 `:8-9` 的註解只改「the loop requests no logprobs」那半句(不再成立);
+  「no message_tokens」仍然成立(frame 還是不帶 `message_tokens`),保留。
+- `received_chunk`(`mcp_agent.py:185`)從 `json.dumps(msg, …)` 改成同 §1 的重建
+  (含 §1 的 `if received_text else ""` 護欄):
   ```python
   lp = resp_llm["choices"][0].get("logprobs", {}) or {}
   received_text = "".join(t.get("token", "") for t in lp.get("content", []))
   ...
-  "received_chunk": f"<|im_start|>assistant\n{received_text}",
+  "received_chunk": (f"<|im_start|>assistant\n{received_text}"
+                     if received_text else ""),
   ```
 
 ### 3. 前端
@@ -86,13 +98,19 @@ tab④ 一致(皆無結尾 `<|im_end|>`,因為 token 流本來就不含)。
 
 - `agent/tests/test_skill_agent.py:42-55`(`test_received_frame_is_emitted_per_turn`):
   現在斷言 `received[0]["response"].keys() == {"message","usage"}`。改成斷言
-  `received_chunk` 是含 `<|im_start|>assistant` 的字串。**mock 要提供 logprobs**
-  —— 現有 mock 的 `R.json()`(`test_skill_agent.py:8-13`)沒有 `logprobs` key,
-  重建會得到空字串;要在 mock 回應裡加
-  `"logprobs": {"content": [{"token": "hi"}]}`,測試才驗得到內容。
+  `received[0]["received_chunk"]` 是含 `<|im_start|>assistant` **且含 token 內容**的字串。
+  **mock 要提供 logprobs,而且要 nest 在 `choices[0]` 裡**——重建讀的是
+  `resp["choices"][0].get("logprobs")`。現有 mock 的 `R.json()`
+  (`test_skill_agent.py:8-13`)回 `{"choices":[{"message":msg}]}`,要改成
+  `{"choices":[{"message":msg, "logprobs":{"content":[{"token":"hi"}]}}]}`。
+  **斷言要驗 token 內容(`"hi" in received_chunk`),不能只驗前綴**——前綴
+  `<|im_start|>assistant` 永遠都在,只驗前綴等於沒驗到重建有沒有真的動。
 - `agent/tests/test_mcp_agent.py:129-131`:現在 `json.loads(received_chunk)` +
-  斷言 `role`/`content`。改成 `received_chunk` 是 `<|im_start|>assistant\n` 字串、
-  含預期內容。**mcp mock 的 `_llama_resp` 也要加 logprobs 欄位**(否則重建空字串)。
+  斷言 `role`/`content`。改成斷言 `received_chunk` 是 `<|im_start|>assistant\n` 開頭、
+  **含 token 內容(`"answer" in received_chunk`)、且不含 `<think>`**(守 §2 的
+  enable_thinking Critical)。**mcp mock 的 `_llama_resp` 也要在 `choices[0]` 裡加
+  `logprobs`**——把 `answer` 拆成 token,例如
+  `"logprobs":{"content":[{"token":"answer"}]}`,否則重建空字串、`"answer" in …` 會紅。
 
 ### 5. 教材 —— 不用改(已查證)
 
@@ -121,6 +139,8 @@ EN 對應(`lesson-5-skill.md:66`、`lesson-6-mcp.md:42`):它們只描述「模�
 2. 瀏覽器,三端各驅動一次,展開藍泡的「模型吐的原始訊息」:
    - ④⑤⑥ **都是 `<|im_start|>assistant` 視圖**,不再有任何一個是 JSON 樹
    - tab⑤/⑥ 的 tool-calling turn:展開看得到 `<tool_call>\n{"name":…}` 上色
+   - **tab⑥ 的 received 開頭直接是 `<tool_call>` / 內容,不能有 `<think></think>`**
+     (守 §2 的 enable_thinking Critical —— 這正是 tab⑥ 跟 ④⑤ 唯一會不一致的點)
    - tab⑤/⑥ 的 content-only final turn:看得到 `<|im_start|>assistant\n{最終答案}`
 3. **迴歸**:tab⑤/⑥ 的 context chip(context: N tokens)仍正常(它走 turn frame 的 usage,
    不受 received 改動影響);每泡仍 ≤1 直接子 `<details>`;console 0 errors。
