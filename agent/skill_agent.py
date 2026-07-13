@@ -354,6 +354,8 @@ def skill_agent_loop(user_query, mode):
             # 同 tab4 agent_loop:壓掉 Qwen3 thinking — 中文輸入特別容易觸發
             # <think>,token 全花在思考、content 變空(空 final 偶發的主因)
             "chat_template_kwargs": {"enable_thinking": False},
+            "logprobs": True,
+            "top_logprobs": 1,
         }
         if active_tools:
             req_body["tools"] = active_tools
@@ -394,13 +396,17 @@ def skill_agent_loop(user_query, mode):
         usage = {"prompt_tokens": usage_raw.get("prompt_tokens"),
                  "completion_tokens": usage_raw.get("completion_tokens")}
 
-        # surface the model response — trimmed to the assistant message +
-        # usage (the full llama json bloats every relay frame; the UI's
-        # ▸ expander only needs these two)
+        # 模型吐的原始訊息 —— 從 logprobs token 流重建 <|im_start|>assistant\n…
+        # (同 tab④ server.py:304-305,讓三個 tab 的 received 視圖一致)
+        lp = resp["choices"][0].get("logprobs", {}) or {}
+        received_text = "".join(t.get("token", "") for t in lp.get("content", []))
+        received_chunk = (f"<|im_start|>assistant\n{received_text}"
+                          if received_text else "")
+
         yield {
             "type": "received",
             "turn": turn,
-            "response": {"message": msg, "usage": usage},
+            "received_chunk": received_chunk,
         }
 
         content = msg.get("content") or ""

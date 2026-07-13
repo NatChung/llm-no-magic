@@ -7,7 +7,8 @@ def _resp(content=None, tool_calls=None, prompt_tokens=500):
         msg["tool_calls"] = tool_calls
     class R:
         def json(self):
-            return {"choices": [{"message": msg}],
+            return {"choices": [{"message": msg,
+                                 "logprobs": {"content": [{"token": content}] if content else []}}],
                     "usage": {"prompt_tokens": prompt_tokens,
                               "completion_tokens": 7}}
     return R()
@@ -41,8 +42,9 @@ def test_turn_carries_usage(monkeypatch):
 
 def test_received_frame_is_emitted_per_turn(monkeypatch):
     """received frame 恢復 —— 藍泡/綠泡要掛「模型自己那則原始訊息」,
-    只有 response = {message, usage} 兩個 key(全量 llama json 太肥,expander
-    不需要)。sent frame 仍在:lesson-5 的「注入現場」證物靠它。"""
+    帶 templated received_chunk(跟 tab④一致,從 logprobs token 流重建
+    <|im_start|>assistant\\n…,不再是 {message, usage})。sent frame 仍在:
+    lesson-5 的「注入現場」證物靠它。"""
     import agent.skill_agent as sa
     monkeypatch.setattr(sa.requests, "post", _route(lambda *a, **kw: _resp(content="hi")))
     events = list(sa.skill_agent_loop("hello", "proper"))
@@ -50,9 +52,11 @@ def test_received_frame_is_emitted_per_turn(monkeypatch):
     received = [e for e in events if e["type"] == "received"]
     assert len(received) == 1
     assert received[0]["turn"] == 1
-    assert set(received[0]["response"].keys()) == {"message", "usage"}
-    assert received[0]["response"]["message"]["role"] == "assistant"
-    assert received[0]["response"]["message"]["content"] == "hi"
+    # received 現在帶 templated 字串(跟 tab④ 一致),不再是 {message, usage}
+    assert "response" not in received[0]
+    rc = received[0]["received_chunk"]
+    assert rc.startswith("<|im_start|>assistant")
+    assert "hi" in rc            # 驗 token 內容,不能只驗永遠都在的前綴
 
     sent = next(e for e in events if e["type"] == "sent")
     assert sent["turn"] == 1
