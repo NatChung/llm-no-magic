@@ -972,7 +972,7 @@ function setupSkillTab(panel) {
     //      that answer's expander is missing. Degraded, not broken; rare.
   }
 
-  function onReceived(f) { pendingReceived = f.response; }
+  function onReceived(f) { pendingReceived = f.received_chunk; }
 
   function onTurn(f) {
     const hasCalls = (f.tool_calls || []).length > 0;
@@ -992,7 +992,7 @@ function setupSkillTab(panel) {
     // attach the buffered wire view for THIS turn (received preceded us)
     if (pendingReceived) {
       row.appendChild(BUBBLE.details(t('model_raw_summary'),
-        BUBBLE.wire(JSON.stringify(pendingReceived, null, 2))));
+        BUBBLE.wire(pendingReceived)));
       pendingReceived = null;
     }
     turnsEl.appendChild(row);
@@ -1052,7 +1052,7 @@ function setupSkillTab(panel) {
       // data, so the student must not meet two different names for it.
       if (pendingReceived) {
         fb.appendChild(BUBBLE.details(t('to_user_raw_summary'),
-          BUBBLE.wire(JSON.stringify(pendingReceived, null, 2))));
+          BUBBLE.wire(pendingReceived)));
         pendingReceived = null;
       }
       turnsEl.appendChild(fb);
