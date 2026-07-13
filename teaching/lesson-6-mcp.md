@@ -43,7 +43,9 @@ MCP solves.
 - Read: blue bubble (model emits a tool_call) → protocol card (tools/call
   request/response — the line that crosses processes) → purple bubble (result fed back to
   the model, and its own expander carries the next turn's prompt) → repeat → green final
-  fuses both results
+  fuses both results. In every sent prompt, the last block (amber-tinted, tagged
+  `← new this turn — being sent`) is the fresh input just appended this turn — the question
+  on turn 1, the fed-back tool result after.
 - Contrast with Tab ④: the model side is **exactly the same** (it emits the tool_call
   convention tag); what changes is where the client goes to execute once it gets a
   tool_call — a built-in function vs asking an external process

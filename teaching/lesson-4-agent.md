@@ -44,7 +44,9 @@ has been building toward.
   the tool's result appended (noticeably longer); the green bubble ▸ "the raw message sent to
   you" — the model's final `<|im_start|>assistant` reply. Put the user bubble's prompt and the
   purple bubble's prompt side by side: same conversation, one tool result longer — that growth
-  *is* the accumulation lesson.
+  *is* the accumulation lesson. In each of those prompts, the last block (amber-tinted, tagged
+  `← new this turn — being sent`) is the fresh input just appended this turn — the question on
+  turn 1, the fed-back tool result after.
 
 ## Hands-On
 Have participants type **a question that needs no tool** (e.g. `1+1 等於幾?`) into the input box themselves and submit it.
