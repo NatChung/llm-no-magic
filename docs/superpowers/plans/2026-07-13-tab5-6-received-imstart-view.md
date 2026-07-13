@@ -28,7 +28,7 @@ Spec: `docs/superpowers/specs/2026-07-13-tab5-6-received-imstart-view.md`
 | `agent/skill_agent.py` | req_body 加 logprobs;重建 received_chunk;received frame 改帶字串、丟 response/usage |
 | `agent/tests/test_skill_agent.py` | `_resp` mock 加 logprobs;received 斷言改成驗 `<|im_start|>` 字串 |
 | `agent/mcp_agent.py` | body 加 logprobs **+ enable_thinking:false**;重建 received_chunk;改檔頭註解 |
-| `agent/tests/test_mcp_agent.py` | `_llama_resp` mock 加 logprobs;received_chunk 斷言改成字串 + 無 `<think>` |
+| `agent/tests/test_mcp_agent.py` | `_llama_resp` mock 加 logprobs;received_chunk 斷言改字串;擷取 generation body 斷言 `enable_thinking:False`(真守 Critical) |
 | `frontend/app.js` | tab⑤ onReceived 改吃 received_chunk;2 個 render site 去掉 JSON.stringify |
 | `frontend/index.html`、`index.zh-TW.html` | `app.js?v=95` |
 
@@ -86,13 +86,22 @@ Expected: FAIL — `KeyError: 'received_chunk'`(frame 還沒改)
 
 - [ ] **Step 3: 改 `agent/skill_agent.py`**
 
-req_body(`:350-359`)加 logprobs(`chat_template_kwargs` 已經在了,不動):
+req_body(`:350-359`)**只插入兩行 logprobs**(既有的 `chat_template_kwargs` 那行與它
+上面的 `# 同 tab4 agent_loop…` 註解都保留、不動)。在 `"chat_template_kwargs": …,` 那行
+**之後**插:
 
+```python
+            "logprobs": True,
+            "top_logprobs": 1,
+```
+插完長這樣(上半保留原樣):
 ```python
         req_body = {
             "model": "any",
             "messages": messages,
             "temperature": 0.3,
+            # 同 tab4 agent_loop:壓掉 Qwen3 thinking — 中文輸入特別容易觸發
+            # <think>,token 全花在思考、content 變空(空 final 偶發的主因)
             "chat_template_kwargs": {"enable_thinking": False},
             "logprobs": True,
             "top_logprobs": 1,
@@ -166,15 +175,31 @@ def _llama_resp(content=None, tool_calls=None):
     return R()
 ```
 
-`test_turn_complete_carries_templated_sent_prompt`(`:113-131`)的 received 斷言
-(原本 `json.loads(received_chunk)`)改成:
+`test_turn_complete_carries_templated_sent_prompt`(`:113-131`)——
+它的 `route` 目前只擷取 apply-template 的 body(`captured["json"]`)。**generation POST
+的 body 也要擷取**,才能真正守 enable_thinking Critical:
+
+```python
+    def route(url, **kw):
+        if "apply-template" in str(url):
+            captured["json"] = kw["json"]
+            return _template_resp("TPL-6")
+        captured["gen"] = kw["json"]        # generation POST 的 body
+        return _llama_resp(content="answer")
+```
+
+received 斷言(原本 `json.loads(received_chunk)`)改成:
 
 ```python
     rc = turns[0]["received_chunk"]
     assert rc.startswith("<|im_start|>assistant")
     assert "answer" in rc            # 驗 token 內容
-    assert "<think>" not in rc       # 守 enable_thinking Critical:不能有 think 區塊
     assert captured["json"]["add_generation_prompt"] is True
+    # ⚠️ enable_thinking Critical 的「真」守衛:直接斷言 generation body 有設 kwarg。
+    # 不能靠 "<think>" not in rc —— mock 的 logprobs 是從 content 衍生的、根本不吐
+    # <think> token,那條不管 kwarg 在不在都會過(空洞)。真正的行為只有瀏覽器
+    # 驗收(對真實 llama)看得到,unit 層就用 body 斷言守住 code 有設 kwarg。
+    assert captured["gen"]["chat_template_kwargs"] == {"enable_thinking": False}
 ```
 
 - [ ] **Step 2: 跑測試確認失敗**
@@ -217,11 +242,13 @@ def _received_chunk(resp):
 > 用 helper 是因為 `received_chunk` 在 dict literal 裡,inline 重建不好塞;
 > skill_agent 那邊在 yield 前有獨立語句空間所以 inline 即可,這裡包成函式較乾淨。
 
-檔頭註解(`:8-9`)只改「the loop requests no logprobs」半句(「no message_tokens」保留):
+檔頭是**模組 docstring**(`:1-9` 的 `"""…"""`),不是 `#` 註解 —— 替換文字**不要帶 `#`**。
+只改「the loop requests no logprobs」半句(「no message_tokens」保留),`:8-9` 那兩行
+docstring 內文改成:
 
-```python
-# teaching artifact. Turn frames are Tab ④-shaped (no message_tokens; received
-# is reconstructed from logprobs into a <|im_start|> view like tab④/⑤).
+```text
+teaching artifact. Turn frames are Tab ④-shaped (no message_tokens; received
+is reconstructed from logprobs into a <|im_start|> view like tab④/⑤).
 ```
 
 - [ ] **Step 4: 跑測試確認通過**
@@ -240,8 +267,9 @@ mcp_agent 生成 body 加 logprobs,received_chunk 從 json.dumps(msg) 改成
 
 ⚠️ 同時加 chat_template_kwargs enable_thinking:False —— tab⑥ 原本只靠
 /no_think 軟開關,token 流仍含 <think></think>;tab④/⑤ 用硬 kwarg 才乾淨。
-少了它 tab⑥ 的 received 會比 ④⑤ 多一行 <think>,違反三端一致。測試斷言
-含 `<think> not in received_chunk` 守住。"
+少了它 tab⑥ 的 received 會比 ④⑤ 多一行 <think>,違反三端一致。unit 測試擷取
+generation body 斷言 chat_template_kwargs（'<think>' not in rc 是空洞的——mock
+不吐 think token；真行為靠瀏覽器驗收）。"
 ```
 
 ---
