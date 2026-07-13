@@ -33,6 +33,7 @@ from pathlib import Path
 import requests
 
 LLAMA_URL = "http://localhost:8080/v1/chat/completions"
+LLAMA_TEMPLATE_URL = LLAMA_URL.replace("/v1/chat/completions", "/apply-template")
 SKILLS_DIR = Path(__file__).parent / "skills"
 MAX_TURNS = 8
 
@@ -358,6 +359,20 @@ def skill_agent_loop(user_query, mode):
             req_body["tools"] = active_tools
             req_body["tool_choice"] = "auto"
 
+        # 顯示用的 templated prompt —— 跟 tab④ 一致,讓三個 tab 同格式。
+        # ⚠️ 不傳 chat_template_kwargs:傳 enable_thinking:false 會讓 Qwen3 把
+        # <think></think> 塞進結尾生成提示 assistant,結尾就不再是空 body,前端
+        # 的 highlight(_lastContentfulIndex)會落到錯的訊息上。
+        tpl_payload = {"messages": messages, "add_generation_prompt": True}
+        if active_tools:
+            tpl_payload["tools"] = active_tools
+        try:
+            tpl = requests.post(LLAMA_TEMPLATE_URL, json=tpl_payload, timeout=5)
+            tpl.raise_for_status()
+            sent_prompt = tpl.json().get("prompt", "")
+        except Exception as exc:
+            sent_prompt = f"[template error] {type(exc).__name__}: {exc}"
+
         # surface what is being sent to the model — reader sees the
         # accumulated messages + active tools for this turn (Tab ④ pattern)
         yield {
@@ -365,6 +380,7 @@ def skill_agent_loop(user_query, mode):
             "turn": turn,
             "messages": messages,
             "tools": [t["function"]["name"] for t in active_tools],
+            "sent_prompt": sent_prompt,
         }
 
         try:

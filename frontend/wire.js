@@ -87,6 +87,18 @@ const WIRE = (function () {
     }
   }
 
+  // sent-prompt 一律以 add_generation_prompt 產生,結尾是空 body 的
+  // <|im_start|>assistant 生成提示 —— 所以「最後一個非空 body」就是這一 turn
+  // 剛 append 的新輸入。前提:apply-template 不傳 enable_thinking:false
+  // (見 skill_agent.py / server.py 的 apply-template 呼叫);若傳了,<think></think>
+  // 會塞進結尾 assistant,這個函式會回錯的 index。
+  function lastContentfulIndex(msgs) {
+    for (let i = msgs.length - 1; i >= 0; i--) {
+      if (msgs[i].body.trim() !== "") return i;
+    }
+    return -1;
+  }
+
   // ── DOM 建構(只在 render 被呼叫時執行 —— 此時 app.js 已載入)──────
 
   // t() 定義在 app.js 的 module scope(classic script → 全域可見)。
@@ -107,10 +119,10 @@ const WIRE = (function () {
     "hover:text-ink py-0.5";
 
   // 折疊容器。marker 用 JS 在 toggle 時翻面 —— 不依賴 CSS 的 [open] 變體。
-  function fold(summaryChildren, bodyNode, open) {
+  function fold(summaryChildren, bodyNode, open, summaryClass) {
     const d = el("details", "wire-fold");
     d.open = !!open;
-    const s = el("summary", SUMMARY_CLS);
+    const s = el("summary", SUMMARY_CLS + (summaryClass ? " " + summaryClass : ""));
     const marker = el("span", "text-syn-punct", d.open ? "▾ " : "▸ ");
     s.appendChild(marker);
     for (const c of summaryChildren) s.appendChild(c);
@@ -196,11 +208,12 @@ const WIRE = (function () {
     return fold(summary, body, true);           // 預設展開
   }
 
-  function messageBlock(msg) {
+  function messageBlock(msg, isTarget) {
     const marker = () => el("span", "text-syn-marker", "<|im_start|>");
     const role = () => el("span", "text-syn-tag ml-1", msg.role);
 
     // 陷阱 1:結尾的 assistant body 是空的 —— 只印一行 marker,不給 toggle。
+    // (target 依定義非空,永遠不會落在這條,不用改。)
     if (msg.body.trim() === "") {
       const line = el("div");
       line.append(marker(), role());
@@ -221,25 +234,29 @@ const WIRE = (function () {
       role(),
       el("span", "text-muted ml-2", label("wire_chars_summary", { chars: msg.body.length })),
     ];
-    return fold(summary, body, true);
+    if (isTarget) summary.push(el("span", "text-inject ml-2", label("wire_sent_now")));
+    return fold(summary, body, true, isTarget ? "bg-inject-tint rounded px-1" : "");
   }
 
-  function renderChat(text) {
+  function renderChat(text, opts = {}) {
     const msgs = splitMessages(text);
     if (msgs.length === 0) return textLine(text);   // 認不出來就原樣顯示
+    const target = opts.markSent ? lastContentfulIndex(msgs) : -1;
     const root = el("div", "space-y-1");
-    for (const m of msgs) root.appendChild(messageBlock(m));
+    for (let i = 0; i < msgs.length; i++) {
+      root.appendChild(messageBlock(msgs[i], i === target));
+    }
     return root;
   }
 
-  function render(text) {
+  function render(text, opts = {}) {
     const src = String(text == null ? "" : text);
     if (detect(src) === "json") {
       const parsed = tryParse(src);
       // parse 失敗就整塊退回純文字 —— 絕不出現空白框。
       return parsed.ok ? jsonNode(parsed.value, true) : textLine(src);
     }
-    return renderChat(src);
+    return renderChat(src, opts);
   }
 
   return {
@@ -250,6 +267,7 @@ const WIRE = (function () {
     _parseToolsLines: parseToolsLines,
     _tryParse: tryParse,
     _shouldCollapse: shouldCollapse,
+    _lastContentfulIndex: lastContentfulIndex,
   };
 })();
 

@@ -13,9 +13,27 @@ def _resp(content=None, tool_calls=None, prompt_tokens=500):
     return R()
 
 
+class _Tpl:
+    """apply-template 的 stub 回應:有 raise_for_status、有 prompt key。"""
+    def raise_for_status(self):
+        pass
+
+    def json(self):
+        return {"prompt": "<|im_start|>system\nSTUB<|im_end|>\n<|im_start|>assistant\n"}
+
+
+def _route(gen_post):
+    """把 /apply-template 的 POST 導到 stub,不從 generation 迭代器取值。"""
+    def post(url, *a, **kw):
+        if "apply-template" in str(url):
+            return _Tpl()
+        return gen_post(url, *a, **kw)
+    return post
+
+
 def test_turn_carries_usage(monkeypatch):
     import agent.skill_agent as sa
-    monkeypatch.setattr(sa.requests, "post", lambda *a, **kw: _resp(content="hi"))
+    monkeypatch.setattr(sa.requests, "post", _route(lambda *a, **kw: _resp(content="hi")))
     events = list(sa.skill_agent_loop("hello", "proper"))
     turn = next(e for e in events if e["type"] == "turn")
     assert turn["usage"] == {"prompt_tokens": 500, "completion_tokens": 7}
@@ -26,7 +44,7 @@ def test_received_frame_is_emitted_per_turn(monkeypatch):
     只有 response = {message, usage} 兩個 key(全量 llama json 太肥,expander
     不需要)。sent frame 仍在:lesson-5 的「注入現場」證物靠它。"""
     import agent.skill_agent as sa
-    monkeypatch.setattr(sa.requests, "post", lambda *a, **kw: _resp(content="hi"))
+    monkeypatch.setattr(sa.requests, "post", _route(lambda *a, **kw: _resp(content="hi")))
     events = list(sa.skill_agent_loop("hello", "proper"))
 
     received = [e for e in events if e["type"] == "received"]
@@ -39,11 +57,12 @@ def test_received_frame_is_emitted_per_turn(monkeypatch):
     sent = next(e for e in events if e["type"] == "sent")
     assert sent["turn"] == 1
     assert isinstance(sent["messages"], list)
+    assert "<|im_start|>" in sent["sent_prompt"]
 
 
 def test_no_skills_mode_empty_index(monkeypatch):
     import agent.skill_agent as sa
-    monkeypatch.setattr(sa.requests, "post", lambda *a, **kw: _resp(content="guess"))
+    monkeypatch.setattr(sa.requests, "post", _route(lambda *a, **kw: _resp(content="guess")))
     events = list(sa.skill_agent_loop("台北天氣?", "no_skills"))
     index = next(e for e in events if e["type"] == "index")
     assert index["skills"] == []
@@ -60,7 +79,7 @@ def test_read_file_error_yields_tool_result(monkeypatch):
                                         "arguments": '{"path": "skills/nope/SKILL.md"}'}}]),
         _resp(content="sorry"),
     ])
-    monkeypatch.setattr(sa.requests, "post", lambda *a, **kw: next(calls))
+    monkeypatch.setattr(sa.requests, "post", _route(lambda *a, **kw: next(calls)))
     events = list(sa.skill_agent_loop("x", "proper"))
     tr = next(e for e in events if e["type"] == "tool_result")
     assert tr["error"] is True
@@ -76,7 +95,7 @@ def test_read_file_escapes_are_blocked(monkeypatch):
                                         "arguments": '{"path": "skills/../agent.py"}'}}]),
         _resp(content="ok"),
     ])
-    monkeypatch.setattr(sa.requests, "post", lambda *a, **kw: next(calls))
+    monkeypatch.setattr(sa.requests, "post", _route(lambda *a, **kw: next(calls)))
     events = list(sa.skill_agent_loop("x", "proper"))
     tr = next(e for e in events if e["type"] == "tool_result")
     assert tr["error"] is True
@@ -91,7 +110,7 @@ def test_read_skill_md_yields_skill_loaded(monkeypatch):
                                         "arguments": '{"path": "skills/check_weather/SKILL.md"}'}}]),
         _resp(content="done"),
     ])
-    monkeypatch.setattr(sa.requests, "post", lambda *a, **kw: next(calls))
+    monkeypatch.setattr(sa.requests, "post", _route(lambda *a, **kw: next(calls)))
     events = list(sa.skill_agent_loop("台北天氣?", "proper"))
     loaded = next(e for e in events if e["type"] == "skill_loaded")
     assert loaded["name"] == "check_weather"
@@ -130,7 +149,7 @@ def test_empty_final_retried_once(monkeypatch):
     def fake_post(url, **kw):
         sent_bodies.append(kw.get("json"))
         return next(calls)
-    monkeypatch.setattr(sa.requests, "post", fake_post)
+    monkeypatch.setattr(sa.requests, "post", _route(fake_post))
     events = list(sa.skill_agent_loop("hi", "proper"))
     finals = [e for e in events if e["type"] == "final"]
     assert finals == [{"type": "final", "content": "answer!"}]
@@ -142,7 +161,7 @@ def test_empty_final_gives_up_after_one_retry(monkeypatch):
     """護欄只重試一次:連兩次空回應 → 第二次照實 yield 空 final(不無限重試)。"""
     import agent.skill_agent as sa
     calls = iter([_resp(content=""), _resp(content="")])
-    monkeypatch.setattr(sa.requests, "post", lambda *a, **kw: next(calls))
+    monkeypatch.setattr(sa.requests, "post", _route(lambda *a, **kw: next(calls)))
     events = list(sa.skill_agent_loop("hi", "proper"))
     assert events[-1] == {"type": "final", "content": ""}
 

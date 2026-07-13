@@ -138,3 +138,29 @@ test("_shouldCollapse: 序列化(不帶 indent)超過 200 字元才收起", () =
   assert.strictEqual(WIRE._shouldCollapse({ a: "x".repeat(250) }), true);
   assert.strictEqual(WIRE._shouldCollapse([]), false);
 });
+
+// ── _lastContentfulIndex ────────────────────────────────────────
+// sent-prompt 結尾一定是空 body 的 <|im_start|>assistant 生成提示;
+// 「最後一個非空 body」就是這一 turn 剛加進來、要送出的新輸入。
+test("_lastContentfulIndex: 跳過結尾空 body,回最後一個非空", () => {
+  const msgs = [
+    { role: "system", body: "x" },
+    { role: "user", body: "現在幾點?" },
+    { role: "assistant", body: "<tool_call>…" },
+    { role: "user", body: "16:31:40" },   // ← 目標:最後一個非空
+    { role: "assistant", body: "" },        // 結尾生成提示,空 body
+  ];
+  assert.strictEqual(WIRE._lastContentfulIndex(msgs), 3);
+});
+
+test("_lastContentfulIndex: 全部空 → -1", () => {
+  assert.strictEqual(WIRE._lastContentfulIndex([{ body: "" }, { body: "  " }]), -1);
+});
+
+test("_lastContentfulIndex: 單一非空 → 0", () => {
+  assert.strictEqual(WIRE._lastContentfulIndex([{ body: "hi" }]), 0);
+});
+
+test("_lastContentfulIndex: 空陣列 → -1", () => {
+  assert.strictEqual(WIRE._lastContentfulIndex([]), -1);
+});

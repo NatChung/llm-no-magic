@@ -164,6 +164,10 @@ const I18N = {
     'en':    '{chars} chars',
     'zh-TW': '{chars} 字元',
   },
+  wire_sent_now: {
+    'en':    '← new this turn — being sent',
+    'zh-TW': '← 這次新增、要送出的',
+  },
   wire_obj_summary: {
     'en':    '{n} keys, {chars} chars',
     'zh-TW': '{n} 個欄位,{chars} 字元',
@@ -361,10 +365,10 @@ const BUBBLE = {
   // wire 內容(prompt / JSON)→ 上色 + 可折。外層必須是 <div> 不是 <pre>:
   // <details> 不能合法巢狀在 <pre> 裡,而且 npPre 的 break-all 會把上色後的
   // token 從中間折斷。純碼(腳本原始碼、解剖卡)仍然走 BUBBLE.pre。
-  wire(text) {
+  wire(text, opts = {}) {
     const box = document.createElement("div");
     box.className = BUBBLE.tw.npWire;
-    box.appendChild(WIRE.render(text));
+    box.appendChild(WIRE.render(text, opts));
     return box;
   },
   user({ text }) {
@@ -769,7 +773,7 @@ function setupAgent(panel) {
     // turn 1, else the previous turn's last purple tool bubble).
     if (sent_prompt && lastRightBubble) {
       lastRightBubble.appendChild(BUBBLE.details(t('sent_prompt_summary', { turn }),
-                                                  BUBBLE.wire(sent_prompt),
+                                                  BUBBLE.wire(sent_prompt, { markSent: true }),
                                                   { align: "right" }));
       lastRightBubble = null;
     }
@@ -952,12 +956,12 @@ function setupSkillTab(panel) {
   }
 
   function onSent(f) {
-    // sent(N).messages is the prompt that produced THIS turn's response — it
-    // belongs to whichever right-side bubble caused it, not the model bubble
-    // that's about to render for turn N.
+    // sent(N).sent_prompt is the templated prompt that produced THIS turn's
+    // response — it belongs to whichever right-side bubble caused it, not the
+    // model bubble that's about to render for turn N.
     if (lastRightBubble) {
       lastRightBubble.appendChild(BUBBLE.details(t('sent_prompt_summary', { turn: f.turn }),
-        BUBBLE.wire(JSON.stringify(f.messages, null, 2)), { align: "right" }));
+        BUBBLE.wire(f.sent_prompt, { markSent: true }), { align: "right" }));
       lastRightBubble = null;
     }
     // else: no home for this prompt — drop silently. Two ways to get here:
@@ -1197,7 +1201,7 @@ function setupMcpTab(panel) {
     // turn 1, else the previous turn's last purple tool bubble).
     if (f.sent_prompt && lastRightBubble) {
       lastRightBubble.appendChild(BUBBLE.details(t('sent_prompt_summary', { turn: f.turn }),
-                                                  BUBBLE.wire(f.sent_prompt),
+                                                  BUBBLE.wire(f.sent_prompt, { markSent: true }),
                                                   { align: "right" }));
       lastRightBubble = null;
     }

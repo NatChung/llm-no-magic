@@ -36,7 +36,9 @@
   `<tool_call>`。)
 - 讀回應:藍色泡泡(model 吐 tool_call)→ 協定卡(tools/call 請求/回應,
   跨 process 的那條線)→ 紫色泡泡(結果餵回模型,它自己的展開器帶著下一輪的 prompt)
-  → 重複 → 綠色 final 融合兩個結果
+  → 重複 → 綠色 final 融合兩個結果。每一份送出的 prompt 裡,最後一則(琥珀底、標
+  「← 這次新增、要送出的」)都是這一發剛加進來、要送給 model 的新輸入 —— turn 1
+  是你的問題,之後是餵回的工具結果。
 - 對照 Tab ④:model 端**一模一樣**(吐 tool_call 約定標籤);變的是 client
   拿到 tool_call 之後去哪執行 — 內建 function vs 問外部 process
 
