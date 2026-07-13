@@ -4,8 +4,8 @@ discovers its tools over real JSON-RPC (initialize → notifications/initialized
 model tool_calls via tools/call.
 
 Every JSON-RPC exchange is yielded as a `protocol` event — the wire IS the
-teaching artifact. Turn frames are Tab ④-shaped (no message_tokens; the loop
-requests no logprobs).
+teaching artifact. Turn frames are Tab ④-shaped (no message_tokens; received
+is reconstructed from logprobs into a <|im_start|> view like tab④/⑤).
 """
 import json
 import queue
@@ -64,6 +64,12 @@ class McpClient:
             self.proc.kill()
         except Exception:
             pass
+
+
+def _received_chunk(resp):
+    lp = resp["choices"][0].get("logprobs", {}) or {}
+    text = "".join(t.get("token", "") for t in lp.get("content", []))
+    return f"<|im_start|>assistant\n{text}" if text else ""
 
 
 def mcp_tools_to_openai(tools: list[dict]) -> list[dict]:
@@ -141,7 +147,9 @@ def mcp_agent_loop(user_query: str):
                 sent_prompt = f"[template error] {type(exc).__name__}: {exc}"
 
             body = {"model": "any", "messages": messages, "temperature": 0.3,
-                    "tools": openai_tools, "tool_choice": "auto"}
+                    "tools": openai_tools, "tool_choice": "auto",
+                    "chat_template_kwargs": {"enable_thinking": False},
+                    "logprobs": True, "top_logprobs": 1}
             try:
                 resp_llm = requests.post(LLAMA_URL, json=body, timeout=120).json()
             except Exception as exc:
@@ -182,7 +190,8 @@ def mcp_agent_loop(user_query: str):
                 "type": "turn_complete", "turn": turn, "content": content,
                 "tool_calls": tcs, "tool_results": tool_results,
                 "sent_prompt": sent_prompt,
-                "received_chunk": json.dumps(msg, ensure_ascii=False, indent=2),
+                # 模型吐的原始訊息 —— 從 logprobs token 流重建(同 tab④/⑤,三端一致)
+                "received_chunk": _received_chunk(resp_llm),
                 "usage": {"prompt_tokens": usage.get("prompt_tokens"),
                           "completion_tokens": usage.get("completion_tokens")},
             }

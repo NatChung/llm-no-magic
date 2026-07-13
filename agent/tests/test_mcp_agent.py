@@ -8,7 +8,8 @@ def _llama_resp(content=None, tool_calls=None):
         msg["tool_calls"] = tool_calls
     class R:
         def json(self):
-            return {"choices": [{"message": msg}],
+            return {"choices": [{"message": msg,
+                                 "logprobs": {"content": [{"token": content}] if content else []}}],
                     "usage": {"prompt_tokens": 100, "completion_tokens": 10}}
     return R()
 
@@ -118,6 +119,7 @@ def test_turn_complete_carries_templated_sent_prompt(monkeypatch):
         if "apply-template" in str(url):
             captured["json"] = kw["json"]
             return _template_resp("TPL-6")
+        captured["gen"] = kw["json"]        # generation POST 的 body
         return _llama_resp(content="answer")
 
     monkeypatch.setattr(m.requests, "post", route)
@@ -126,10 +128,15 @@ def test_turn_complete_carries_templated_sent_prompt(monkeypatch):
 
     assert turns[0]["sent_prompt"] == "TPL-6"
     assert "next_prompt" not in turns[0]
-    received = json.loads(turns[0]["received_chunk"])
-    assert received["role"] == "assistant"
-    assert received["content"] == "answer"
+    rc = turns[0]["received_chunk"]
+    assert rc.startswith("<|im_start|>assistant")
+    assert "answer" in rc            # 驗 token 內容
     assert captured["json"]["add_generation_prompt"] is True
+    # ⚠️ enable_thinking Critical 的「真」守衛:直接斷言 generation body 有設 kwarg。
+    # 不能靠 "<think>" not in rc —— mock 的 logprobs 是從 content 衍生的、根本不吐
+    # <think> token,那條不管 kwarg 在不在都會過(空洞)。真正的行為只有瀏覽器
+    # 驗收(對真實 llama)看得到,unit 層就用 body 斷言守住 code 有設 kwarg。
+    assert captured["gen"]["chat_template_kwargs"] == {"enable_thinking": False}
     assert [t["function"]["name"] for t in captured["json"]["tools"]] == [
         "get_time", "get_weather"]
 
