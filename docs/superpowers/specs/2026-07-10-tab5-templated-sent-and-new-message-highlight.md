@@ -97,7 +97,9 @@ def _route(gen_post):   # gen_post: 原本那個回 generation 回應的 callabl
         return gen_post(url, **kw)
     return post
 ```
-把七個 `monkeypatch.setattr(sa.requests, "post", …)` 全部包一層 `_route(...)`。
+把**八個** `monkeypatch.setattr(sa.requests, "post", …)` 全部包一層 `_route(...)`
+(`grep -n 'setattr(sa.requests, "post"' agent/tests/test_skill_agent.py` 找出全部
+—— 含 `:133` 那個非 lambda 的 `fake_post`,別漏)。
 新增/更新一個測試斷言 `sent["sent_prompt"]` 是含 `<|im_start|>` 的字串。
 
 ### 2. 前端 `frontend/app.js`:tab 5 onSent 改用 sent_prompt

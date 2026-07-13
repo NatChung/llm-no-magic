@@ -268,7 +268,7 @@ Expected: PASS,`# pass 19`(原 15 + 新 4)
 整個 `renderChat` 函式替換掉(原本開頭是 `function renderChat(text) {`):
 
 ```js
-  function renderChat(text, opts) {
+  function renderChat(text, opts = {}) {
     const msgs = splitMessages(text);
     if (msgs.length === 0) return textLine(text);   // 認不出來就原樣顯示
     const target = opts.markSent ? lastContentfulIndex(msgs) : -1;
