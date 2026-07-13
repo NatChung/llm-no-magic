@@ -2,6 +2,10 @@
 
 Date: 2026-07-13
 Status: approved (brainstorming → ready for plan)
+Supersedes(限 tab⑤ 綠泡):`2026-07-10-expander-belongs-to-its-own-bubble.md` 的
+「每泡 `<details>` ≤ 1」(該 spec 驗收 #5)與「每顆泡泡的按鈕展開的都是它自己那則訊息」
+(該 spec `:24`)—— tab⑤ 綠泡改為**兩個**展開器,且第二個展開的是**產生這個答案的
+輸入 prompt**(非綠泡自己的輸出訊息)。其餘泡泡與 tab④/⑥ 仍受舊規則約束。
 
 ## 問題
 
@@ -93,14 +97,22 @@ final   → 綠泡              「送給使用者的原始訊息」
   final bubble as a second expander」。
 - `app.js:967-972` 原本的「drop silently … 」註解已被 §1 的新 else 分支取代。
 
-### 5. 教材(雙語)
+### 5. 教材(雙語)—— 兩處要改
 
-`teaching/lesson-5-skill.zh-TW.md:63`(與 EN `lesson-5-skill.md` 對應)現在寫
-「綠泡 ▸『送給使用者的原始訊息』— 模型最終的回覆」,只描述一個展開器。改成綠泡有
+**(a) 綠泡展開器描述。** `teaching/lesson-5-skill.zh-TW.md:63`(EN `lesson-5-skill.md:75-76`
+「Green ▸ "the raw message sent to you"」)現在只描述綠泡一個展開器。改成綠泡有
 **兩個**:「送給使用者的原始訊息」+「送給 AI 的 prompt(turn 3)」,並點出後者就是
 **工具結果餵回模型**的現場(琥珀標記),補足「腳本泡把按鈕讓給腳本碼,那發餵回的
-prompt 改在綠泡看」。lesson-5:74 / zh:62 描述腳本泡「唯一例外 = 腳本原始碼」仍然成立,
-不動。雙語同步。
+prompt 改在綠泡看」。
+
+**(b) 展開器總數與「各展各自訊息」的不變式。** `teaching/lesson-5-skill.zh-TW.md:53`
+(EN `lesson-5-skill.md:63`)現在寫「**六顆泡泡、六個展開器,展開的都是它自己那則訊息**」
+/ "six bubbles, **six expanders** — each shows that bubble's own message"。改動後綠泡多
+一個 → **六顆泡泡、七個展開器**;而且「各展各自訊息」對綠泡第二個展開器不成立(它展的是
+turn 3 的**輸入** prompt,不是綠泡自己的輸出)。改成:數字改七,並補一句綠泡是例外
+——它同時展「自己的最終回覆」與「產生這個回覆的那份 prompt(工具結果餵回的現場)」。
+
+lesson-5:74 / zh:62 描述腳本泡「唯一例外 = 腳本原始碼」仍然成立,不動。雙語同步。
 
 ### 6. 不動的東西
 
@@ -118,6 +130,11 @@ prompt 改在綠泡看」。lesson-5:74 / zh:62 描述腳本泡「唯一例外 =
 
 - **孤兒 sent 不只一發(多工具流程):** `orphanedSent` 取**最後一發**(overwrite)。對
   check_weather 這種「一個腳本泡 → final」只有一發孤兒,取最後即取到 sent(final),正確。
+  ⚠️ 這個「取最後一發」只在孤兒發生在流程尾端(腳本泡後直到 final 之間)時保證正確 ——
+  假設性流程「腳本泡(null)→ 再讀一個參考檔(重設 lastRightBubble)→ final」會讓
+  **腳本後那發**被緩衝、而參考檔那發正常掛上,`orphanedSent` 就會抓到非 final turn 的
+  prompt、綠泡的 turn 標籤會標錯。**目前 check_weather skill 不會產生這種流程**(它是
+  read_file → run_script → final),所以不影響出貨;列此以免日後加多工具 skill 時踩到。
 - **empty-final-retry(`onSent` 註解原本的 case 2):** skill_agent 對空回應 retry 時那個
   turn 也不產生右側泡泡,其 sent 也會變孤兒;overwrite 規則下最後一發勝出,仍掛到綠泡。
   degraded 情形,可接受(比原本直接丟好)。

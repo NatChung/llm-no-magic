@@ -56,6 +56,11 @@ Status: approved, supersedes §3 of `2026-07-10-chat-bubble-user-right-single-ex
 | 紫 腳本回傳 | 右 | **腳本原始碼**(唯一例外) | `scriptSources[...]` |
 | 綠(final turn F) | 全寬 | 送給使用者的原始訊息 | `received(F).response` |
 
+> ⚠️ **後續 supersede(限 tab⑤ 綠泡):** `2026-07-13-tab5-orphaned-sent-to-green.md`
+> 讓 tab⑤ 綠泡多掛一個「送給 AI 的 prompt(final turn)」展開器(那份被腳本泡例外
+> 丟棄的 sent),所以 tab⑤ 綠泡有**兩個**展開器、本表「綠泡單一展開器」對 tab⑤
+> 不再是鐵律。tab④/⑥ 綠泡與其餘所有泡泡仍照本表。
+
 > 綠泡的標籤三個 tab 一律用「送給使用者的原始訊息」。同一個位置、同一種資料,
 > 不能讓學生遇到兩個名字。(⑤ 的資料來源是 `received` frame、④⑥ 是
 > `received_chunk`,但對學生而言是同一件事。)
@@ -130,7 +135,8 @@ user 泡現在**有**按鈕了(它的原文是整份 prompt,跟本體差很多)�
    - 紫泡 ▸ 腳本原始碼(含 `def get_weather`)
    - 綠泡 ▸ 模型原始 response
 4. ⑥ 送「現在幾點?」:user 泡的 prompt 裡 `<tools>` 含握手問來的 `get_time` + `get_weather`
-5. 每顆泡泡的 `<details>` 數量 ≤ 1
+5. 每顆泡泡的 `<details>` 數量 ≤ 1(⚠️ **例外,見 `2026-07-13-tab5-orphaned-sent-to-green.md`**:
+   tab⑤ 綠泡改為 2 個展開器;tab④/⑥ 綠泡與其餘所有泡泡仍 ≤ 1)
 6. **迴歸**:tab③ token 仍不可點(`cursor: default`);tab① 仍可點
 7. **迴歸**:console 0 errors
 
