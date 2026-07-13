@@ -956,9 +956,9 @@ function setupSkillTab(panel) {
   }
 
   function onSent(f) {
-    // sent(N).messages is the prompt that produced THIS turn's response — it
-    // belongs to whichever right-side bubble caused it, not the model bubble
-    // that's about to render for turn N.
+    // sent(N).sent_prompt is the templated prompt that produced THIS turn's
+    // response — it belongs to whichever right-side bubble caused it, not the
+    // model bubble that's about to render for turn N.
     if (lastRightBubble) {
       lastRightBubble.appendChild(BUBBLE.details(t('sent_prompt_summary', { turn: f.turn }),
         BUBBLE.wire(f.sent_prompt, { markSent: true }), { align: "right" }));

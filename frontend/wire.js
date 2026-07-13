@@ -226,6 +226,7 @@ const WIRE = (function () {
       else if (seg.type === "tool_call") body.appendChild(toolCallBlock(seg.text));
       else body.appendChild(textLine(seg.text));
     }
+    // <|im_end|> 是 template 標記,是教材的一部分 —— 不能弄丟。
     if (msg.hadEnd) body.appendChild(el("div", "text-syn-marker", "<|im_end|>"));
 
     const summary = [
