@@ -2,6 +2,13 @@
 
 Date: 2026-07-13
 Status: approved (brainstorming → ready for plan)
+**REVISED 2026-07-14:** shipped as spec'd (orphaned sent → green 2nd expander), but on
+seeing it live the placement was moved from the **green** bubble to the **purple script
+bubble** —— that bubble's caption is literally「結果餵回模型」, so the fed-back prompt belongs
+there, right next to its「腳本原始碼」expander (the pair reads: model saw the OUTPUT, never the
+CODE). The ≤1-expander exception now lives on the tab⑤ script bubble, not green; green is back
+to a single「送給使用者的原始訊息」expander. See the `onL3Loaded`/`onSent`/`onFinal` changes on
+branch `feat/tab5-sent-to-script-bubble`. Everything below describes the original green design.
 Supersedes(限 tab⑤ 綠泡):`2026-07-10-expander-belongs-to-its-own-bubble.md` 的
 「每泡 `<details>` ≤ 1」(該 spec 驗收 #5)與「每顆泡泡的按鈕展開的都是它自己那則訊息」
 (該 spec `:24`)—— tab⑤ 綠泡改為**兩個**展開器,且第二個展開的是**產生這個答案的
