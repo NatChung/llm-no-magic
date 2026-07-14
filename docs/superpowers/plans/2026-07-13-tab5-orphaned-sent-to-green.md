@@ -1,5 +1,9 @@
 # tab⑤ 孤兒 sent prompt 掛到綠泡 Implementation Plan
 
+> ⚠️ **SUPERSEDED 2026-07-14** — 這個「掛綠泡」設計有實作+出貨,但 live 看過後改成掛到
+> **紫色腳本泡**(見 spec 的 REVISED note + commit `aab528b`)。以下內容是原始綠泡設計,
+> 已被反轉,勿照此重做。
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** tab⑤ 腳本泡後被靜默丟棄的 `sent(final turn)` prompt 改成掛到綠泡當第二個展開器,讓學生看得到「工具結果餵回模型、產生最終答案」的那份 prompt。
