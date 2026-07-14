@@ -235,7 +235,11 @@ const WIRE = (function () {
       el("span", "text-muted ml-2", label("wire_chars_summary", { chars: msg.body.length })),
     ];
     if (isTarget) summary.push(el("span", "text-inject ml-2", label("wire_sent_now")));
-    return fold(summary, body, true, isTarget ? "bg-inject-tint rounded px-1" : "");
+    // 預設收合訊息(只留標題列)—— 展開器一打開是一排乾淨的 <|im_start|> 標題,
+    // 要再點才看內容。唯一例外:markSent 標記的「這次新增」那則(注入的 SKILL.md /
+    // 餵回的工具結果)預設展開,一眼就看到這回合新塞了什麼(琥珀 highlight 也在它身上)。
+    // received 視圖沒有 target → 全部收合。
+    return fold(summary, body, isTarget, isTarget ? "bg-inject-tint rounded px-1" : "");
   }
 
   function renderChat(text, opts = {}) {

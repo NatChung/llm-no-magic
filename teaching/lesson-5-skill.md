@@ -60,7 +60,7 @@ round trips**.
 - Key point to narrate: the model is using **generic tools** (read a file, run a script) —
   there is no skill-specific machinery at all. This is exactly Anthropic's official
   approach: a skill = file structure + convention, no magic
-- For details: six bubbles, seven expanders — each shows that bubble's own message, except the green one, which has two: its own final reply, and the prompt that produced it. The grey
+- For details: six bubbles, seven expanders — each shows that bubble's own message, except the purple script bubble, which has two: the script source, and the prompt that fed the script's result back to the model. The grey
   user bubble ▸ "the prompt sent to the AI (turn 1)" — the same `<|im_start|>` accumulated view
   as tab ④/⑥: system + user, nothing skill-related in it yet. Blue turn 1 ▸ "the raw message the
   model emitted" — the model's `read_file` call. The amber bubble ▸ "the prompt sent to the AI
@@ -70,14 +70,14 @@ round trips**.
   the student to see — no second fold needed. That same block is the one tagged amber, with a
   trailing `← new this turn — being sent`, because it's the last non-empty message before the
   trailing empty-assistant generation prompt — the highlight is pointing straight at the
-  injection. Blue turn 2 ▸ the model's raw `run_script` call. The purple bubble is the one
-  deliberate exception to "expander = a prompt": it shows "script source" — the script's own
-  code, which never once appears in any prompt the model saw. Green has two expanders ▸ "the raw
-  message sent to you" — the model's final reply, and ▸ "the prompt sent to the AI (turn 3)" —
-  the prompt that wrapped the tool result in `<tool_response>` and fed it back to the model to
-  produce this final answer (the amber highlight sits on that fed-back tool result); the script
-  bubble gave up its own button to "script source", so that fed-back prompt shows on green
-  instead. Tell the student it's one click, not two: expand the amber
+  injection. Blue turn 2 ▸ the model's raw `run_script` call. The purple script bubble has **two**
+  expanders — a neat contrast ▸ "script source" — the script's own code, which never once
+  appears in any prompt the model saw, and ▸ "the prompt sent to the AI (turn 3)" — the prompt
+  that wrapped the tool result in `<tool_response>` and fed it back to the model to produce the
+  final answer (the amber highlight sits on that fed-back tool result). Side by side, right under
+  this "result fed back to the model" bubble, the student sees at a glance that the model only
+  ever got the script's **output**, never its **source**. Green ▸ "the raw message sent to you"
+  — the model's final reply. Tell the student it's one click, not two: expand the amber
   bubble and SKILL.md — already amber-highlighted as this turn's fresh input — is right there.
 
 ## Hands-On — no-skill contrast

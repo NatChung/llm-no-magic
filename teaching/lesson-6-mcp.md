@@ -35,10 +35,10 @@ MCP solves.
 
 ### Segment 2 — reading bubbles and protocol cards interleaved
 - The stream starts with your question (grey bubble, right) — and it's this bubble, not the
-  model's, that holds the punchline: expand its "prompt sent to the AI (turn 1)" and you'll find
-  a `▸ <tools> 2 個工具,423 字元` fold, collapsed by default because it's long — click it open
-  and get_time + get_weather are sitting right there, asked for over the handshake, not
-  hardcoded. (The blue bubble's own expander shows something different: the raw `<tool_call>`
+  model's, that holds the punchline: expand its "prompt sent to the AI (turn 1)" and the messages
+  sit as a folded list; open the `<|im_start|> system` message and inside is a
+  `▸ <tools> 2 個工具,423 字元` fold — click it open and get_time + get_weather are sitting
+  right there, asked for over the handshake, not hardcoded. (The blue bubble's own expander shows something different: the raw `<tool_call>`
   the model emitted.)
 - Read: blue bubble (model emits a tool_call) → protocol card (tools/call
   request/response — the line that crosses processes) → purple bubble (result fed back to

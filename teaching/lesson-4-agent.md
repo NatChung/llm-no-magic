@@ -36,8 +36,9 @@ has been building toward.
   it always shows *that bubble's own message*: right-side bubbles show what got sent to the
   model because of them; the left-side blue/green bubbles show what the model itself emitted.
   Walk the learner through all four: the grey user bubble ▸ "the prompt sent to the AI (turn 1)"
-  — the templated prompt with your question and, folded shut by default because it's long, a
-  `▸ <tools>` block; click the arrow and `get_time` is sitting right there — **no tool result
+  — the templated prompt; expand it and the messages sit as a folded list, with your question
+  (the highlighted "new this turn" one) already open. Click open the `<|im_start|> system`
+  message and its `<tools>` block is right there — `get_time` sitting inside, **no tool result
   yet**; the blue
   bubble ▸ "the raw message the model emitted" — the `<tool_call>` tag itself; the purple tool
   bubble ▸ "the prompt sent to the AI (turn 2)" — the *same* prompt as the user bubble, now with
