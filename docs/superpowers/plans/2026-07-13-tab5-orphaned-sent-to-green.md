@@ -198,7 +198,7 @@ git commit -m "feat(tab5): orphaned sent(final) hangs on green as 2nd expander"
 
 **Files:**
 - Modify: `teaching/lesson-5-skill.zh-TW.md:53`(六→七個展開器 + 綠泡例外)、`:63`(綠泡加第二個展開器)
-- Modify: `teaching/lesson-5-skill.md:63`(six→seven expanders + 綠泡例外)、`:76`(綠泡加第二個展開器)
+- Modify: `teaching/lesson-5-skill.md:63`(six→seven expanders + 綠泡例外)、`:75-76`(綠泡加第二個展開器)
 
 **Interfaces:**
 - Consumes:Task 1 決定的綠泡行為 —— 綠泡有兩個展開器:「送給使用者的原始訊息」+「送給 AI 的 prompt(turn 3)」,後者的 wire 視圖裡餵回的工具結果帶琥珀 highlight。
@@ -254,7 +254,7 @@ git commit -m "feat(tab5): orphaned sent(final) hangs on green as 2nd expander"
 
 - [ ] **Step 4: en — line 76 綠泡加第二個展開器描述**
 
-`teaching/lesson-5-skill.md:76`,把:
+`teaching/lesson-5-skill.md:75-76`,把:
 
 ```
   code, which never once appears in any prompt the model saw. Green ▸ "the raw message sent to
