@@ -922,16 +922,22 @@ function setupSkillTab(panel) {
   // received its "prompt actually sent because of it" expander. A `sent(N)`
   // frame attaches there and clears it. A script-output purple row is the one
   // deliberate exception: it sets lastRightBubble = null (script source never
-  // appears in any prompt), so the NEXT `sent` has nowhere to attach and is
-  // dropped silently (spec 2026-07-10-expander-belongs-to-its-own-bubble.md).
+  // appears in any prompt), so the NEXT `sent` has no right-side home — it is
+  // buffered as `orphanedSent` and attached to the green final bubble as a
+  // second expander (spec 2026-07-13-tab5-orphaned-sent-to-green.md, which
+  // supersedes the ≤1-expander rule of 2026-07-10 for tab⑤ green only).
   let lastRightBubble = null;
   // `received` arrives BEFORE its `turn` frame (loop yield order) — buffer it
   // here and attach to the model/final bubble once it's built.
   let pendingReceived = null;
+  // The `sent` that follows the exempt script bubble has no right-side bubble
+  // to hang on — buffer it here so onFinal can hang it on the green bubble.
+  // { prompt, turn }; latest wins (see clearAll / onSent / onFinal).
+  let orphanedSent = null;
 
   function clearAll() {
     turns = []; lastPromptTokens = null; finalDone = false;
-    lastRightBubble = null; pendingReceived = null;
+    lastRightBubble = null; pendingReceived = null; orphanedSent = null;
     turnsEl.innerHTML = "";
   }
 
@@ -963,13 +969,20 @@ function setupSkillTab(panel) {
       lastRightBubble.appendChild(BUBBLE.details(t('sent_prompt_summary', { turn: f.turn }),
         BUBBLE.wire(f.sent_prompt, { markSent: true }), { align: "right" }));
       lastRightBubble = null;
+    } else {
+      // No right-side bubble to hang on. Buffer it — onFinal attaches it to the
+      // green bubble as a second expander. This is THE prompt that fed the tool
+      // result back into the model to produce the final answer (the green
+      // bubble IS that answer). Two ways to reach here, latest wins:
+      //   1. it follows the exempt script-output bubble (by design; that bubble
+      //      keeps its script source, which no prompt can replace) — the normal
+      //      check_weather path, where this orphan is exactly sent(final turn).
+      //   2. skill_agent retried an empty content-only turn, which rendered no
+      //      right-side bubble. Degraded, not broken; rare. Overwrite means the
+      //      last orphan (closest to final) wins — correct while orphans are
+      //      end-consecutive (script bubble → final), which check_weather is.
+      orphanedSent = { prompt: f.sent_prompt, turn: f.turn };
     }
-    // else: no home for this prompt — drop silently. Two ways to get here:
-    //   1. it follows the exempt script-output bubble (by design; that bubble
-    //      keeps its script source, which no prompt can replace)
-    //   2. skill_agent retried an empty content-only turn, which rendered no
-    //      right-side bubble — the retry's prompt then has nowhere to hang, so
-    //      that answer's expander is missing. Degraded, not broken; rare.
   }
 
   function onReceived(f) { pendingReceived = f.received_chunk; }
@@ -1054,6 +1067,16 @@ function setupSkillTab(panel) {
         fb.appendChild(BUBBLE.details(t('to_user_raw_summary'),
           BUBBLE.wire(pendingReceived)));
         pendingReceived = null;
+      }
+      // The sent(final turn) dropped by the exempt script bubble — hang it on
+      // the green bubble as a second expander so the student can see the prompt
+      // that fed the tool result back into the model. received first, sent
+      // second. Full-width green → no { align: "right" }; markSent highlights
+      // the fed-back tool result inside the prompt.
+      if (orphanedSent) {
+        fb.appendChild(BUBBLE.details(t('sent_prompt_summary', { turn: orphanedSent.turn }),
+          BUBBLE.wire(orphanedSent.prompt, { markSent: true })));
+        orphanedSent = null;
       }
       turnsEl.appendChild(fb);
       const rounds = turns.length;
