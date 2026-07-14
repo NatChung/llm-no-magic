@@ -23,8 +23,8 @@ flat — and the key point: **peaked ≠ true**.
 - **Always say this**: every token the model produces on screen is clickable, not just this one — click any of them to pop up its own probability chart (no need to repeat this in later segments, but make sure the learner knows it here first)
 
 ### Segment 2 — The made-up planet (peaked ≠ true)
-- Set-up: "This time we send `祖樹星上最高的山叫做` — `祖樹星` is a planet I made up. Guess: will the model say 'I don't know', or will it invent a mountain name?" (Collect learner predictions first!)
-- Drive: `POST /drive {"tab":"1","user":"祖樹星上最高的山叫做"}` → the page auto-switches to Tab ① and renders token by token
+- Set-up: "This time we send `祖樹星上最高的山叫做什麼？` ('What is the tallest mountain on planet Zushu?') — `祖樹星` is a planet I made up. Guess: will the model say 'I don't know', or will it invent a mountain name?" (Collect learner predictions first!)
+- Drive: `POST /drive {"tab":"1","user":"祖樹星上最高的山叫做什麼？"}` → the page auto-switches to Tab ① and renders token by token
 - Read: first token is still high-confidence, inventing a mountain name → Narrate: high confidence output anyway → peaked ≠ true
 - Inspect: `POST /inspect {"tokenIndex":0}` → the page pops up that token's probability chart
 
