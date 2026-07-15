@@ -1245,6 +1245,51 @@ def test_inspect_tab5_returns_files_and_does_not_publish(monkeypatch):
         srv.shutdown()
 
 
+def test_inspect_action_expand_publishes_expand_frame(monkeypatch):
+    """/inspect {'action':'expand'|'collapse',...} → expand frame(spec
+    2026-07-15);turn 選填、缺 role/tab → 400、不影響舊分支。"""
+    import agent.server as server
+
+    published = []
+    monkeypatch.setattr(server, "publish", lambda f: published.append(f))
+
+    srv, port = _start_server_in_thread()
+    try:
+        def post_inspect(body):
+            req = urllib.request.Request(
+                f"http://127.0.0.1:{port}/inspect",
+                data=json.dumps(body).encode("utf-8"),
+                headers={"Content-Type": "application/json"}, method="POST")
+            return json.loads(urllib.request.urlopen(req, timeout=5).read())
+
+        out = post_inspect({"action": "expand", "tab": "4",
+                            "role": "sent", "turn": 1})
+        assert out["ok"] is True
+        assert published == [{"type": "expand", "tab": "4", "role": "sent",
+                              "turn": 1, "open": True}]
+
+        published.clear()
+        out = post_inspect({"action": "collapse", "tab": "5", "role": "final"})
+        assert out["ok"] is True
+        assert published == [{"type": "expand", "tab": "5", "role": "final",
+                              "turn": None, "open": False}]
+
+        # 缺 role → 400,不 publish
+        published.clear()
+        try:
+            post_inspect({"action": "expand", "tab": "4"})
+            assert False, "expected 400"
+        except urllib.error.HTTPError as e:
+            assert e.code == 400
+        assert published == []
+
+        # action 帶 tab=5 時不可誤入 anatomy 分支(anatomy 回 files,無 ok)
+        out = post_inspect({"action": "expand", "tab": "5", "role": "script"})
+        assert out["ok"] is True and "files" not in out
+    finally:
+        srv.shutdown()
+
+
 def test_agent_loop_every_turn_carries_sent_prompt_and_received_chunk(monkeypatch):
     """每個 turn_complete(含 final content-only turn)都帶 sent_prompt 與
     received_chunk(模型自己那則原始訊息);不再有 next_prompt。"""

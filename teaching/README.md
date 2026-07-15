@@ -11,8 +11,8 @@ controlling the pace.
 
 | Lesson | Tab | Core concept | File |
 |--------|-----|-------------|------|
-| 1 | ① Basics | token chaining + probability distribution; peaked ≠ real | lesson-1-basics.md |
-| 2 | ② Product layer | system prompt / chat template = text stitched into tokens | lesson-2-product.md |
+| 1 | ① Chaining | token chaining + probability distribution; peaked ≠ real | lesson-1-basics.md |
+| 2 | ② Q&A | system prompt / chat template = text stitched into tokens | lesson-2-product.md |
 | 3 | ③ Reasoning | thinking = writing reasoning out as tokens | lesson-3-reasoning.md |
 | 4 | ④ Agent | tool_call convention + real execution; wrap-up 60→90 min framework | lesson-4-agent.md |
 | 5 | ①+⑤ context→Skill | context flips the answer → 3-layer progressive disclosure | lesson-5-skill.md |

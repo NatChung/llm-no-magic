@@ -249,6 +249,25 @@ function activateTabUI(panelName) {
   if (sel && sel.value !== panelName) sel.value = panelName;
 }
 
+// ── Relay expand frame → open/close a bubble's ▸ expander (spec 2026-07-15) ──
+// 全域處理、不走 active panel:anatomy 卡不需要 drive 就存在,且 reload 後
+// active 是 null。以 (tab, role[, turn]) 定位 data-x-role/turn;多顆取最後
+// (方便 final / 省 turn 的 role);找不到就靜默(degraded, not broken)。
+function handleExpand(f) {
+  const panelName = TAB_TO_PANEL[f.tab];
+  const panel = document.querySelector(`.tab-panel[data-panel="${panelName}"]`);
+  if (!panel) return;
+  let candidates = [...panel.querySelectorAll(`details[data-x-role="${f.role}"]`)];
+  if (f.turn != null) {
+    candidates = candidates.filter((d) => d.dataset.xTurn === String(f.turn));
+  }
+  const target = candidates[candidates.length - 1];
+  if (!target) return;
+  target.open = f.open;
+  activateTabUI(panelName);   // AI 說「看這裡」— 把學員的畫面帶到該分頁
+  target.scrollIntoView({ behavior: "smooth", block: "center" });
+}
+
 // ── Lesson bridge: carry the last-used prompt across tab switches ──
 // lastPrompt tracks the most recently edited/driven interactive prompt.
 // On a user tab click it is copied into the destination tab's .prompt so
@@ -345,9 +364,15 @@ const BUBBLE = {
     errorBox:   "mt-3 rounded-md bg-surface-2 border border-edge p-3 text-sm font-mono text-ink-soft",
   },
   // align: "right" 給右側泡泡用 —— summary 跟著泡泡靠右,不要孤零零留在列左緣
-  details(summaryText, contentEl, { align = "left" } = {}) {
+  // expandKey: {role, turn} 刻成 data-x-role/turn,讓 relay 的 expand frame
+  // 能遠端定位這顆展開器(spec 2026-07-15)
+  details(summaryText, contentEl, { align = "left", expandKey = null } = {}) {
     const details = document.createElement("details");
     details.className = BUBBLE.tw.npDetails;
+    if (expandKey) {
+      details.dataset.xRole = expandKey.role;
+      if (expandKey.turn != null) details.dataset.xTurn = String(expandKey.turn);
+    }
     const summary = document.createElement("summary");
     summary.className = align === "right"
       ? `${BUBBLE.tw.npSummary} ${BUBBLE.tw.npSummaryRight}`
@@ -525,6 +550,7 @@ function connectEvents() {
         active && active.onFinal && active.onFinal(f);
         break;
       case "inspect":        active && active.onInspect && active.onInspect(f); break;
+      case "expand":         handleExpand(f); break;
       case "error":
         hideSwapBanner();
         // active is null on a swap failure (reset at swap_start) or a
@@ -774,7 +800,7 @@ function setupAgent(panel) {
     if (sent_prompt && lastRightBubble) {
       lastRightBubble.appendChild(BUBBLE.details(t('sent_prompt_summary', { turn }),
                                                   BUBBLE.wire(sent_prompt, { markSent: true }),
-                                                  { align: "right" }));
+                                                  { align: "right", expandKey: { role: "sent", turn } }));
       lastRightBubble = null;
     }
 
@@ -789,7 +815,8 @@ function setupAgent(panel) {
         caption: t('calls_tool_caption'),
       });
       if (received_chunk) {
-        mRow.appendChild(BUBBLE.details(t('model_raw_summary'), BUBBLE.wire(received_chunk)));
+        mRow.appendChild(BUBBLE.details(t('model_raw_summary'), BUBBLE.wire(received_chunk),
+                                        { expandKey: { role: "raw", turn } }));
       }
       block.appendChild(mRow);
 
@@ -814,7 +841,8 @@ function setupAgent(panel) {
       const content = (message_tokens || []).map((s) => s.token).join("");
       const fb = BUBBLE.finalBlock({ caption: t('to_user_caption'), content });
       if (received_chunk) {
-        fb.appendChild(BUBBLE.details(t('to_user_raw_summary'), BUBBLE.wire(received_chunk)));
+        fb.appendChild(BUBBLE.details(t('to_user_raw_summary'), BUBBLE.wire(received_chunk),
+                                      { expandKey: { role: "final", turn } }));
       }
       block.appendChild(fb);
     }
@@ -965,7 +993,8 @@ function setupSkillTab(panel) {
     // model bubble that's about to render for turn N.
     if (lastRightBubble) {
       lastRightBubble.appendChild(BUBBLE.details(t('sent_prompt_summary', { turn: f.turn }),
-        BUBBLE.wire(f.sent_prompt, { markSent: true }), { align: "right" }));
+        BUBBLE.wire(f.sent_prompt, { markSent: true }),
+        { align: "right", expandKey: { role: "sent", turn: f.turn } }));
       lastRightBubble = null;
     }
     // else: no right-side bubble to hang on — drop silently. Only reachable if
@@ -996,7 +1025,7 @@ function setupSkillTab(panel) {
     // attach the buffered wire view for THIS turn (received preceded us)
     if (pendingReceived) {
       row.appendChild(BUBBLE.details(t('model_raw_summary'),
-        BUBBLE.wire(pendingReceived)));
+        BUBBLE.wire(pendingReceived), { expandKey: { role: "raw", turn: f.turn } }));
       pendingReceived = null;
     }
     turnsEl.appendChild(row);
@@ -1028,7 +1057,8 @@ function setupSkillTab(panel) {
       const key = `${f.skill}/${f.filename.replace(/^scripts\//, "")}`;
       if (scriptSources[key]) {
         row.appendChild(BUBBLE.details(t('script_source_summary'),
-                                       BUBBLE.pre(scriptSources[key]), { align: "right" }));
+                                       BUBBLE.pre(scriptSources[key]),
+                                       { align: "right", expandKey: { role: "script" } }));
       }
       // The script source never enters a prompt, but this row's caption is
       // "結果餵回模型" — the NEXT sent (which wraps the script result in
@@ -1059,7 +1089,7 @@ function setupSkillTab(panel) {
       // data, so the student must not meet two different names for it.
       if (pendingReceived) {
         fb.appendChild(BUBBLE.details(t('to_user_raw_summary'),
-          BUBBLE.wire(pendingReceived)));
+          BUBBLE.wire(pendingReceived), { expandKey: { role: "final" } }));
         pendingReceived = null;
       }
       turnsEl.appendChild(fb);
@@ -1137,7 +1167,8 @@ function setupSkillTab(panel) {
         tag.textContent = t(TAG[f.layer]);
         const d = BUBBLE.details(
           f.path + " — " + t(CAPTION[f.layer], { n: Math.round(f.content.length / 4) }),
-          BUBBLE.pre(f.content));
+          BUBBLE.pre(f.content),
+          { expandKey: { role: `anatomy_${f.layer.toLowerCase()}` } });
         row.append(label, tag, d);
         anatomyEl.appendChild(row);
       }

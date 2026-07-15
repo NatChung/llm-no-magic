@@ -9,10 +9,10 @@
 
 | 課 | Tab | 核心概念 | 檔案 |
 |---|-----|---------|------|
-| 1 | ① 基礎 | token 接龍 + 機率分佈;peaked ≠ 真實 | lesson-1-basics.zh-TW.md |
-| 2 | ② 產品層 | system prompt / chat template = 拼進 token 的文字 | lesson-2-product.zh-TW.md |
+| 1 | ① 接龍 | token 接龍 + 機率分佈;peaked ≠ 真實 | lesson-1-basics.zh-TW.md |
+| 2 | ② 問答 | system prompt / chat template = 拼進 token 的文字 | lesson-2-product.zh-TW.md |
 | 3 | ③ 推理 | thinking = 把推理寫成 token | lesson-3-reasoning.zh-TW.md |
-| 4 | ④ Agent | tool_call 約定 + 真執行;收尾 60→90 分框架 | lesson-4-agent.zh-TW.md |
+| 4 | ④ 代理 | tool_call 約定 + 真執行;收尾 60→90 分框架 | lesson-4-agent.zh-TW.md |
 | 5 | ①+⑤ context→Skill | context 翻轉答案 → 三層漸進式揭露 | lesson-5-skill.zh-TW.md |
 | 6 | ⑥ MCP | 握手發現工具、跨 process tools/call | lesson-6-mcp.zh-TW.md |
 
