@@ -1,4 +1,4 @@
-# Lesson 2 — Tab ② 產品層加工:接龍怎麼變問答
+# Lesson 2 — Tab ② 問答:接龍怎麼變問答
 
 > English: [lesson-2-product.md](./lesson-2-product.md)
 

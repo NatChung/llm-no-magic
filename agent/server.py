@@ -735,9 +735,21 @@ class AgentHandler(SimpleHTTPRequestHandler):
         self._send_json(result, code)
 
     def _handle_inspect(self) -> None:
-        """spec §3.2 token-chart popup (legacy), or tab-5 skill anatomy data."""
+        """spec §3.2 token-chart popup (legacy), tab-5 skill anatomy data,
+        or bubble-expander remote control (spec 2026-07-15, action branch)."""
         body = self._read_body()
         if body is None:
+            return
+        if body.get("action") in ("expand", "collapse"):
+            # AI 帶課用:展開/收合指定泡泡的 ▸ 展開器。turn 選填(省略 =
+            # 該 role 的最後一顆);前端以 data-x-role/turn 定位,找不到就靜默。
+            if not body.get("role") or not body.get("tab"):
+                self._send_json({"ok": False, "error": "role and tab required"}, 400)
+                return
+            publish({"type": "expand", "tab": body["tab"],
+                     "role": body["role"], "turn": body.get("turn"),
+                     "open": body["action"] == "expand"})
+            self._send_json({"ok": True, "subscribers": subscriber_count()})
             return
         if body.get("tab") == "5":
             # data response only — no relay publish (spec 2026-07-08 §2:

@@ -1,4 +1,4 @@
-# Lesson 2 — Tab ② Product Layer: How Chaining Becomes Q&A
+# Lesson 2 — Tab ② Q&A: How Chaining Becomes Q&A
 
 > 中文版: [lesson-2-product.zh-TW.md](./lesson-2-product.zh-TW.md)
 

@@ -1,4 +1,4 @@
-# Lesson 1 — Tab ① Basics: Tokens & Probability Distributions
+# Lesson 1 — Tab ① Chaining: Tokens & Probability Distributions
 
 > 中文版: [lesson-1-basics.zh-TW.md](./lesson-1-basics.zh-TW.md)
 
@@ -27,6 +27,7 @@ flat — and the key point: **peaked ≠ true**.
 - Drive: `POST /drive {"tab":"1","user":"祖樹星上最高的山叫做什麼？"}` → the page auto-switches to Tab ① and renders token by token
 - Read: first token is still high-confidence, inventing a mountain name → Narrate: high confidence output anyway → peaked ≠ true
 - Inspect: `POST /inspect {"tokenIndex":0}` → the page pops up that token's probability chart
+- **Deeper dive (depends on that run's sample, don't force it every time)**: compare the per-token probabilities — sentence scaffolding like "答" "案" "是" ("the ans-", "-wer", "is") sits at 90%+, but the token that actually invents content (e.g. the first character of the made-up mountain name) often drops to single digits, one of the lowest points in the whole run. This is a sharper version of "peaked ≠ true": the model is genuinely **uncertain at the moment it hallucinates** (that one step is a flat distribution) — sampling still forces a pick, and once picked, the model confidently continues the sentence around it, sometimes even self-affirming "that's correct." This doesn't show up every run (depends on that sample), so only bring it up if the learner spots it themselves or you happen to see it in the data
 
 ### Segment 3 — No clear next token (flat)
 - Set-up: "`他打開冰箱,拿出一包` ('He opened the fridge and took out a pack of') — what do you think the top-10 chart looks like?"
