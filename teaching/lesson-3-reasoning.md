@@ -11,18 +11,50 @@
 - "Dad has 3 apples, his son has 2 more than him — how many does the son have? Do you think a 0.6 B small model will get this right if it answers directly?"
 - "Have you ever used ChatGPT's 'thinking…' mode? What do you think it's doing?"
 
+## ⚠️ Prompt punctuation trap (read before teaching)
+
+The apple problem is **extremely sensitive to punctuation** — send the wrong variant and the
+whole contrast collapses. `agent/server.py`'s `/completion` call hardcodes `temperature: 0`
+→ **fully deterministic, no sampling**: the same prompt always yields the same output. So
+"just hit send a few more times and it'll eventually be wrong" does not work — you have to
+send the right characters.
+
+| What you send | Direct-mode answer |
+|---|---|
+| `爸爸有3顆蘋果,兒子多他2顆。請問兒子幾顆?` (**halfwidth** `,` `?`, no spaces around digits) | **1** ❌ use this one |
+| `爸爸有 3 顆蘋果，兒子多他 2 顆。請問兒子幾顆？` (fullwidth `，` `？`, or added spaces) | **5** ✅ contrast broken |
+
+Halfwidth: the model sets up `x`, writes `x + 2 = 3` → solves to 1 (it read "the son has 2
+more" backwards). Fullwidth: the model writes out "1. 2." steps → `3 + 2 = 5` — it performed
+**chain-of-thought inside the visible answer**, getting it right with no `<think>` at all.
+
+**Rule**: always send the text via `POST /drive`, or tell learners **not to edit the input
+box** (`frontend/index.html:145` is pre-filled with the halfwidth version). Learners typing
+it by hand easily produce the fullwidth form.
+
+Backups (for a more robust wrong answer — all of these answer `2`, grabbing the last number
+in the question because there's no room to write steps):
+- Append `只回答一個數字。` ("Answer with a single number only.") to the question ← **recommended**, closest to a real production prompt
+- Add a system prompt: `直接給答案,不要解釋、不要列步驟。` ("Answer directly, no explanation, no steps.")
+- Prefill the assistant turn with `兒子有` ("The son has")
+
+Tried and **did not work** (0.6B still gets these right — don't waste time): reversing the
+problem (dad has 2 more than son), or adding a third step (a mother).
+
 ## Demo segments
 
-### Segment 1 — Direct answer (often wrong)
+### Segment 1 — Direct answer (wrong)
 - **Picks up from last lesson**: the input box already holds `爸爸有3顆蘋果,兒子多他2顆。請問兒子幾顆?` — the exact question Lesson 2 closed on, auto-carried when you switched tabs. Last lesson it *answered* but got it wrong (computing son = 1); this lesson we'll see how to make it answer correctly
 - Preview: "Direct-answer mode = we force-inject an empty `<think></think>`, leaving the model no room to think — it just blurts out an answer. Guess what number it gives?"
 - Drive: `POST /drive {"tab":"3","user":"爸爸有3顆蘋果,兒子多他2顆。請問兒子幾顆?","mode":"direct"}` → the page auto-switches to Tab ③ and renders (the prompt reads: "Dad has 3 apples, son has 2 more than him — how many does the son have?")
-- Read: small models answering directly often get it wrong (saying 3 apples, or some random number) → Narrate: they're just completing "the most plausible next number"
+- Read: it sets up `x`, writes `x + 2 = 3`, and solves to **son = 1** — it read "the son has 2 more than him" backwards → Narrate: it set up the wrong equation on step one and everything after follows that error; it's just completing "the most plausible next equation"
 
 ### Segment 2 — With thinking (usually correct)
 - Preview: "Same question, but this time we let it write out its reasoning. Notice the screen gains a 'full reply (including `<think>`)' section."
 - Drive: `POST /drive {"tab":"3","user":"爸爸有3顆蘋果,兒子多他2顆。請問兒子幾顆?","mode":"thinking"}` → the page renders the thinking section + final answer
-- Read: the thinking-content fills with `<think>…</think>`; the generated-text after `</think>` is the final answer (often correctly 5) → Narrate: Look at the thinking section — the reasoning is genuinely written out one token at a time, not invisible magic — only after `</think>` does the final answer appear, and it's usually correct
+- Read: the thinking-content fills with `<think>…</think>`; the generated-text after `</think>` is the final answer (correctly 5) → Narrate: Look at the thinking section — the reasoning is genuinely written out one token at a time, not invisible magic — only after `</think>` does the final answer appear, and it's correct
+- **Worth pointing out**: inside `<think>` the model **raises the "wait, did I read it backwards?" possibility itself and then rules it out** ("could '2 more than him' mean something else? … but the question clearly says the son has 2 more than dad"). Direct mode has no room to do that, so a wrong equation on step one is unrecoverable. The difference isn't intelligence — it's **having somewhere to double-check itself**
+- Small heads-up: 0.6B often emits Simplified Chinese inside the thinking section (儿子, 苹果) — mention it so nobody asks
 
 ## Learner practice
 Have learners change the numbers (dad has 7 apples, son has 3 fewer…) and run both modes; experience how thinking is slower but more reliable.
