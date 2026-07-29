@@ -7,7 +7,7 @@ This repo is **"LLM, no magic"** — a hands-on, fully-local LLM teaching tool: 
 models on :8080. Tabs ①–④ are interactive (tokens/probabilities, chat template,
 thinking mode, function-calling agent); ⑤ is an interactive Skill demo (3-layer
 progressive disclosure); ⑥ is an interactive MCP demo (real stdio JSON-RPC
-mini-server) with the article tucked in an expander.
+mini-server).
 
 **This repo supports AI-led teaching.** You (the AI agent) can run the course.
 

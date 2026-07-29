@@ -56,26 +56,107 @@ watch the model pick only get_time — just one tools/call card. Whether to use 
 which one, is still the model's decision.
 
 ## Reveal and Wrap-Up
-- Some learners will notice: Taipei's weather here is 16°C 有雨, but last lesson's skill
-  said 28°C 晴! Deliberate — two "tools" with different implementations and different
-  sources give different answers. **Where the tool comes from is where the answer comes
-  from** — and that's exactly why plugging in third-party tools means knowing who's
-  behind them
-- Tying the three lessons together — three ways of **registering tools** (use this table
-  when explaining to clients):
 
-  | | Tab ④ hard-coded | Tab ⑤ Skill | Tab ⑥ MCP |
-  |---|---|---|---|
-  | Where the ability list lives | in the client code | folders on disk (code ships only 2 generic tools) | external process, asked via handshake |
-  | Adding an ability | code change + redeploy | drop in a folder | the other side updates their server |
-  | Who maintains it | you | you (docs + scripts) | someone else |
+### 1. Different source, different answer
+Some learners will notice: Taipei's weather here is 16°C 有雨, but last lesson's skill
+said 28°C 晴! Deliberate — two "tools" with different implementations and different
+sources give different answers. **Where the tool comes from is where the answer comes
+from** — and that's exactly why plugging in third-party tools means knowing who's
+behind them.
 
-  Analogy: ④ a menu printed inside the restaurant (adding a dish = reprint), ⑤ the
-  kitchen consulting its own recipe shelf (add a recipe book and it just works), ⑥
-  ordering delivery (the menu is another restaurant's; they update, you get it for
-  free). It's all the same move: getting context and tools in front of the model;
-  what differs is the source and the trust boundary
-- Want to go deeper: expand the "full article" at the bottom of the page
+### 2. Not just the answer differs — so does the *phrasing* ← the point of this lesson
+Have the learner type the same `台北天氣如何?` in both ⑤ and ⑥ (measured 2026-07-29):
+
+| | Tab ⑤ Skill | Tab ⑥ MCP |
+|---|---|---|
+| Model's answer | `台北:28°C, 晴` | `台北的天氣是16度,有雨。` |
+| Turns | 3 | 2 |
+| turn 1 prompt_tokens | 506 | 218 |
+| Final turn prompt_tokens | 912 | 270 |
+
+Same model, same question. ⑤ holds the line on `°C`, the colon, no trailing period —
+because SKILL.md carries a "response format + cautions" section. ⑥ improvises a
+sentence — because all it got was a JSON schema.
+
+**`tools/list` gives you name + description + inputSchema. There is nowhere to put
+"always °C, no emoji, one city at a time".** That's the difference between
+**"can do it" and "does it right"**.
+
+**The honest counter-example (say it, don't skip it)**: the slogan says MCP should be
+more expensive because tool definitions ride along every turn. But the screen says ⑥ is
+270 and ⑤ is 912 — the other way round. Because ⑤, in order to "load only when needed",
+must spend a whole turn reading SKILL.md into context. This toy scale is too small; the
+flip needs seven or eight tools (codegraph ships 8 tools but exposes only 1 by default —
+its source comment reads `long instructions burn tokens`). **This repo's stance is that
+the number on screen wins — including against slogans.**
+
+### 3. Tying the three lessons together — where the ability list comes from
+(use this table when explaining to clients)
+
+| | Tab ④ hard-coded | Tab ⑤ Skill | Tab ⑥ MCP |
+|---|---|---|---|
+| Where the ability list lives | in the client code | folders on disk (code ships only 2 generic tools) | external process, asked via handshake |
+| Adding an ability | code change + redeploy | drop in a folder | the other side updates their server |
+| Who maintains it | you | you (docs + scripts) | someone else |
+| **Where the rules go** (format/order/limits) | in the code | **SKILL.md** | **nowhere to put them** |
+
+Analogy: ④ a menu printed inside the restaurant (adding a dish = reprint), ⑤ the
+kitchen consulting its own recipe shelf (add a recipe book and it just works), ⑥
+ordering delivery (the menu is another restaurant's; they update, you get it for free).
+**But ordering delivery doesn't mean you skip plating** — delivery brings the dish (MCP
+supplies the ability); whether to change the plate, what to do about a customer who
+can't take spice, is your kitchen's job (Skill supplies the rules). In the real world
+it's usually: **order in, plate it yourself.**
+
+### 4. "So when I package a service, do I ship a Skill or an MCP server?"
+
+Learners always ask. **The answer takes two cuts, not one.**
+
+**Cut 1 — shipped or hosted?**
+> Does a copy go onto their machine, or does it run on yours and they connect to it?
+
+- **shipped → Skill / Plugin.** They hold a copy; your logic and data are on their machine
+- **hosted → MCP or your own API.** You run a machine, but you can revoke it and see usage
+
+**Cut 2 — if hosted, how do they connect? This cut is decided by *their* client, not by you.**
+
+Can a skill's bundled script make outbound HTTP calls (verified 2026-07 — this changes,
+re-check before teaching):
+
+| Environment | Outbound HTTP? |
+|---|---|
+| Claude Code | ✅ unrestricted |
+| claude.ai / Cowork | ⚠️ **allowlist of 16 domains by default** (package managers + github.com); an admin can widen it to all domains |
+| Claude API | ❌ explicitly "no network access" |
+
+So:
+- They use **Claude Code** → **Skill + your API is enough**; MCP is optional
+- They use **Cowork / claude.ai (default)** → the script can't reach your API → **MCP connector only**
+- They use **some other client** → **MCP**
+
+> **Half of "do I need MCP" isn't your choice — your users' environment decides it for you.**
+
+This is also why the community argument never resolves: the "skills + CLI locally is
+plenty" camp and the "ChatGPT can't run CLIs, so any CLI-based skill is dead on arrival"
+camp **have different users — and both are right**.
+
+### 5. These are NOT criteria (each has a counter-example; learners misjudge here most)
+
+| ❌ Not a criterion | Counter-example |
+|---|---|
+| How well-specified the task is | codegraph's `add-lang` is a rigid Step 1→10 flow yet it's a Skill; `codegraph_explore` takes natural language yet it's MCP |
+| Whether it reaches outside | A skill's script can curl just fine |
+| Whether auth is needed | A script can check for a token and open a browser to log in (the `gh auth login` shape) |
+| Whether state must persist | A script can write local jsonl / SQLite |
+| Whether it can be revoked | **A hosted skill can be deleted via API** — the real axis is hosted vs shipped |
+| Metering / rate limiting | Vendors sell API-gateway access through a skill, tiered limits included |
+| Context cost | See the measurement above — it often points the other way |
+
+### 6. Never forget the other half
+**"How to do it right" can only be a Skill** — order, format, limits, when *not* to use it.
+The MCP protocol has no field for it (server `instructions` is one blob per server,
+present every session — it can't be layered or switched per task). So the most common
+real-world answer is **ship both**: **MCP for the ability, Skill for the rules.**
 
 ## Common Participant Questions
 - "Can an MCP server be written by someone else?" — Yes, that's precisely the point;
