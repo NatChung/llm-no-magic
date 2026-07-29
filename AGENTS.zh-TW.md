@@ -5,7 +5,7 @@
 這個 repo 是 **「LLM, no magic」** — 一個動手實作、完全本地端的 LLM 教學工具:一個網頁 UI
 (分頁 ①–⑥),由執行在 :9000 的純標準庫 Python 伺服器提供服務,驅動執行在 :8080 的
 llama.cpp + Qwen3 GGUF 模型。分頁 ①–④ 是互動式的(tokens/機率、聊天模板、思考模式、函式呼叫代理);
-⑤ 是互動式 Skill demo(三層漸進式揭露);⑥ 是互動式 MCP demo(真 stdio JSON-RPC 迷你 server),文章收在展開段。
+⑤ 是互動式 Skill demo(三層漸進式揭露);⑥ 是互動式 MCP demo(真 stdio JSON-RPC 迷你 server)。
 
 **這個 repo 支援 AI 帶領教學。** 你(AI agent)可以主導整個課程。
 
