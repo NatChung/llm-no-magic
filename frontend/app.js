@@ -149,8 +149,9 @@ const I18N = {
   anatomy_l1_tag: { 'en': 'always-on index', 'zh-TW': '索引常駐' },
   anatomy_l2_tag: { 'en': 'manual',          'zh-TW': '說明書' },
   anatomy_l3_tag: { 'en': 'script',          'zh-TW': '腳本' },
-  protocol_card_req: { 'en': '→ request',  'zh-TW': '→ 請求' },
-  protocol_card_resp:{ 'en': '← response', 'zh-TW': '← 回應' },
+  protocol_card_dir: { 'en': 'Client → MCP Server', 'zh-TW': 'Client → MCP Server' },
+  protocol_card_req: { 'en': '→ request (Client sends)',   'zh-TW': '→ 請求(Client 發出)' },
+  protocol_card_resp:{ 'en': '← response (Server replies)', 'zh-TW': '← 回應(Server 回覆)' },
   protocol_expand:   { 'en': 'Full JSON-RPC frames', 'zh-TW': '完整 JSON-RPC 內容' },
   wire_tools_summary: {
     'en':    '{n} tool(s), {chars} chars',
@@ -1199,10 +1200,17 @@ function setupMcpTab(panel) {
 
   function protocolCard(f) {
     const card = document.createElement("div");
-    card.className = "rounded-md bg-surface-2 border border-edge px-3 py-2 font-mono text-xs text-ink-soft";
+    // 回合流程裡右縮到跟右側泡泡(tRow)同一條線 — 接線帶是 Client 發往外部的;
+    // 握手區維持全寬(獨立區塊,無左右語彙)
+    const lane = f.phase === "handshake" ? "" : "ml-auto max-w-[88%] md:max-w-[75%] ";
+    card.className = lane + "rounded-md bg-surface-2 border border-edge px-3 py-2 font-mono text-xs text-ink-soft";
     const title = document.createElement("div");
     title.className = "font-semibold text-ink";
     title.textContent = f.method;
+    const dir = document.createElement("span");
+    dir.className = "ml-2 font-normal text-muted";
+    dir.textContent = t('protocol_card_dir');
+    title.appendChild(dir);
     const req = document.createElement("div");
     req.className = "truncate";
     req.textContent = `${t('protocol_card_req')} ${JSON.stringify(f.request)}`;
