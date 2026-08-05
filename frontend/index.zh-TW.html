@@ -70,6 +70,7 @@
         <option value="agent">④ 代理</option>
         <option value="skill">⑤ Skill</option>
         <option value="mcp">⑥ MCP</option>
+        <option value="choose">⑦ 選型</option>
       </select>
     </div>
   </nav>
@@ -260,7 +261,51 @@
     </div>
   </main>
 
+  <!-- ─────────────────────────────────────────────────────────────────
+       Tab 7: 選型 — 能 Skill 就先 Skill(靜態講解頁,不經模型)
+       ───────────────────────────────────────────────────────────────── -->
+  <main class="tab-panel max-w-6xl mx-auto px-4 md:px-8 py-6 md:py-10" data-panel="choose">
+    <div class="panel-header mb-6">
+      <h2 class="text-xl font-semibold text-ink">⑦ 選型 — 能 Skill 就先 Skill</h2>
+      <p class="text-sm text-muted mt-1">要提供服務給別人時,該做成 Skill 還是 MCP?</p>
+    </div>
+    <div class="space-y-8 max-w-3xl">
+      <section class="rounded-lg border border-final/25 bg-final-tint px-5 py-4">
+        <h3 class="text-xs uppercase tracking-wider text-final font-medium mb-1">結論</h3>
+        <p class="text-base text-ink leading-relaxed font-semibold">能 Skill 就先 Skill。MCP 是被條件逼出來的升級,不是更進階的選擇。</p>
+      </section>
+      <section class="space-y-4">
+        <h3 class="text-xs uppercase tracking-wider text-muted font-medium">分析 — 為什麼 Skill 先行</h3>
+        <div class="rounded-lg border border-edge bg-surface px-5 py-4">
+          <p class="font-semibold text-ink">1. Skill 反正都要寫,先寫永遠不白費</p>
+          <p class="text-sm text-ink-soft mt-1 leading-relaxed">「怎麼用得對」—— 順序、格式、邊界、什麼時候別用 —— MCP 協定裡沒有欄位放,只能寫在 Skill。所以 Skill 是兩條路共同的必交作業;之後真要升級 MCP,只是把資料搬出去,不是打掉重練。</p>
+        </div>
+        <div class="rounded-lg border border-edge bg-surface px-5 py-4">
+          <p class="font-semibold text-ink">2. Flow 的修理權在我手上</p>
+          <p class="text-sm text-ink-soft mt-1 leading-relaxed">Skill 是我寫的流程文件,MCP 是給一疊工具卡、順序由模型當場決定。要誠實:SKILL.md 也只是給模型看的指示,兩邊都擋不住模型即興;MCP 甚至在「單一呼叫」層更確定(typed schema、server 可測試)。真正的差別在<span class="text-ink font-semibold">出錯之後</span>:Skill 的流程錯了,改文件即生效;MCP 的編排錯了,沒有文件可改 —— 你只能換模型或加 prompt。修理成本,才是服務品質可重現的關鍵。</p>
+        </div>
+        <div class="rounded-lg border border-edge bg-surface px-5 py-4">
+          <p class="font-semibold text-ink">3. 零維運</p>
+          <p class="text-sm text-ink-soft mt-1 leading-relaxed">Skill 是檔案,交付即結束;MCP 是 server,從部署那一秒起就要 24/7 養著它。</p>
+        </div>
+      </section>
+      <section class="rounded-lg border border-inject/25 bg-inject-tint px-5 py-4">
+        <h3 class="text-xs uppercase tracking-wider text-inject font-medium mb-2">例外 — 任一成立才上 MCP</h3>
+        <ul class="text-sm text-ink space-y-1.5 list-disc pl-5">
+          <li><span class="font-semibold">資料不能落在對方手上</span> — Skill 裡寫的權限檢查只是「給模型看的指示」,擋不住人;要真授權、撤銷、分級,只有 hosted 一條路</li>
+          <li><span class="font-semibold">對方的 client 跑不了腳本</span> — claude.ai/Cowork 預設打不出 HTTP、別家 client 讀不懂 SKILL.md</li>
+          <li><span class="font-semibold">資料必須 live</span> — Skill 的資料是打包當下的 snapshot</li>
+        </ul>
+      </section>
+      <section class="rounded-lg border border-edge bg-surface-2 px-5 py-4">
+        <h3 class="text-xs uppercase tracking-wider text-muted font-medium mb-1">Security 注意</h3>
+        <p class="text-sm text-ink-soft leading-relaxed">Skill 本質是「在對方機器上跑你給的腳本」—— 對方裝你的 Skill,跟裝瀏覽器外掛是同一種信任判斷。企業環境常因為治理(governance)理由反而偏好 MCP 的集中管控:工具在 server 端、行為可稽核、權限可收回。這是例外一的另一面,對聽眾裡的資安背景要主動講。</p>
+      </section>
+      <p class="text-sm text-muted leading-relaxed">而且被逼上 MCP 之後,Skill 也不退場 —— 它瘦身成規矩層,繼續管「怎麼用得對」。<span class="text-ink font-semibold">MCP 給能力,Skill 給規矩。</span></p>
+    </div>
+  </main>
+
   <script src="wire.js?v=3"></script>
-  <script src="app.js?v=100"></script>
+  <script src="app.js?v=103"></script>
 </body>
 </html>
