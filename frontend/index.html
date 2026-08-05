@@ -70,6 +70,7 @@
         <option value="agent">④ Agent</option>
         <option value="skill">⑤ Skill</option>
         <option value="mcp">⑥ MCP</option>
+        <option value="choose">⑦ Choose</option>
       </select>
     </div>
   </nav>
@@ -260,7 +261,51 @@
     </div>
   </main>
 
+  <!-- ─────────────────────────────────────────────────────────────────
+       Tab 7: Choose — Skill first (static explainer, no model involved)
+       ───────────────────────────────────────────────────────────────── -->
+  <main class="tab-panel max-w-6xl mx-auto px-4 md:px-8 py-6 md:py-10" data-panel="choose">
+    <div class="panel-header mb-6">
+      <h2 class="text-xl font-semibold text-ink">⑦ Choose — Skill first, whenever you can</h2>
+      <p class="text-sm text-muted mt-1">When offering a service to others: build it as a Skill or as MCP?</p>
+    </div>
+    <div class="space-y-8 max-w-3xl">
+      <section class="rounded-lg border border-final/25 bg-final-tint px-5 py-4">
+        <h3 class="text-xs uppercase tracking-wider text-final font-medium mb-1">Conclusion</h3>
+        <p class="text-base text-ink leading-relaxed font-semibold">Skill first, whenever you can. MCP is an upgrade forced on you by specific conditions — not the more advanced option.</p>
+      </section>
+      <section class="space-y-4">
+        <h3 class="text-xs uppercase tracking-wider text-muted font-medium">Analysis — why Skill comes first</h3>
+        <div class="rounded-lg border border-edge bg-surface px-5 py-4">
+          <p class="font-semibold text-ink">1. You have to write the Skill anyway — it's never wasted</p>
+          <p class="text-sm text-ink-soft mt-1 leading-relaxed">"How to use it right" — order, format, boundaries, when NOT to use it — has no field in the MCP protocol; it can only live in a Skill. So the Skill is homework both paths owe. If you later upgrade to MCP, you're moving the data out, not starting over.</p>
+        </div>
+        <div class="rounded-lg border border-edge bg-surface px-5 py-4">
+          <p class="font-semibold text-ink">2. I own the repair of the flow</p>
+          <p class="text-sm text-ink-soft mt-1 leading-relaxed">A Skill is a flow document I wrote; MCP hands over a stack of tool cards and the model decides the order on the spot. To be honest: SKILL.md is also just instructions for the model — neither side can stop the model from improvising, and at the single-call level MCP is actually more deterministic (typed schemas, testable server code). The real difference shows <span class="text-ink font-semibold">after something goes wrong</span>: a broken Skill flow is fixed by editing a document, effective immediately; a broken MCP orchestration has no document to edit — you can only swap models or pile on prompts. Repair cost is what makes service quality reproducible.</p>
+        </div>
+        <div class="rounded-lg border border-edge bg-surface px-5 py-4">
+          <p class="font-semibold text-ink">3. Zero operations</p>
+          <p class="text-sm text-ink-soft mt-1 leading-relaxed">A Skill is files — delivery is the end of it. MCP is a server you babysit 24/7 from the second it's deployed.</p>
+        </div>
+      </section>
+      <section class="rounded-lg border border-inject/25 bg-inject-tint px-5 py-4">
+        <h3 class="text-xs uppercase tracking-wider text-inject font-medium mb-2">Exceptions — any one of these forces MCP</h3>
+        <ul class="text-sm text-ink space-y-1.5 list-disc pl-5">
+          <li><span class="font-semibold">Data can't sit on their machine</span> — permission checks written in a Skill are just "instructions for the model to read"; real auth, revocation, and tiered access only exist on the hosted path</li>
+          <li><span class="font-semibold">Their client can't run scripts</span> — claude.ai/Cowork blocks outbound HTTP by default; other clients can't read your SKILL.md</li>
+          <li><span class="font-semibold">Data must be live</span> — a Skill's data is a snapshot from the moment it was packed</li>
+        </ul>
+      </section>
+      <section class="rounded-lg border border-edge bg-surface-2 px-5 py-4">
+        <h3 class="text-xs uppercase tracking-wider text-muted font-medium mb-1">Security note</h3>
+        <p class="text-sm text-ink-soft leading-relaxed">A Skill is, at its core, "your scripts running on their machine" — installing your Skill is the same trust call as installing a browser extension. Enterprises often prefer MCP's centralized control for exactly this governance reason: tools stay server-side, behaviour is auditable, access is revocable. This is the flip side of exception #1 — raise it yourself before the security folks in the audience do.</p>
+      </section>
+      <p class="text-sm text-muted leading-relaxed">And even when you're forced onto MCP, the Skill doesn't retire — it slims down into the rules layer, still governing "how to use it right". <span class="text-ink font-semibold">MCP provides the capability; the Skill provides the rules.</span></p>
+    </div>
+  </main>
+
   <script src="wire.js?v=3"></script>
-  <script src="app.js?v=100"></script>
+  <script src="app.js?v=103"></script>
 </body>
 </html>

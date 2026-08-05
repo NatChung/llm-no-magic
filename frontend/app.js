@@ -922,12 +922,14 @@ function setupAgent(panel) {
 window.addEventListener("DOMContentLoaded", connectEvents);
 
 // Initialize panels — basic/advanced/reasoning go through setupPanel;
-// agent → setupAgent; skill → setupSkillTab; mcp → setupMcpTab.
+// agent → setupAgent; skill → setupSkillTab; mcp → setupMcpTab;
+// choose → 靜態講解頁,無互動、不經模型,跳過 setup.
 document.querySelectorAll(".tab-panel").forEach((panel) => {
   const id = panel.dataset.panel;
   if (id === "agent") setupAgent(panel);
   else if (id === "skill") setupSkillTab(panel);
   else if (id === "mcp") setupMcpTab(panel);
+  else if (id === "choose") { /* static */ }
   else setupPanel(panel);
 });
 
